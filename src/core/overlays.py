@@ -60,6 +60,7 @@ class Overlay:
     feeds: list[str]
     quality: OverlayQuality
     status: OverlayStatus
+    installed: bool | None = None
 
     def __str__(self) -> str:
         return f"{self.name} ({self.status.value})"
@@ -244,5 +245,50 @@ def fetch(source_url: str | None = None) -> list[Overlay]:
         
         if overlay is not None:
             overlays.append(overlay)
+
+    return overlays
+
+
+def get_installed() -> list[str]:
+    """
+    Get list of installed overlay names.
+
+    Returns:
+        List of directory names from /var/db/repos.
+    """
+    repos_path = Path("/var/db/repos")
+
+    if not repos_path.exists():
+        return []
+
+    return [
+        item.name
+        for item in repos_path.iterdir()
+        if item.is_dir()
+    ]
+
+
+def fetch_extra(source_url: str | None = None) -> list['Overlay']:
+    """
+    Fetch overlays and populate installation status.
+
+    This is more efficient than calling is_installed() on each overlay
+    individually, as it only reads the filesystem once.
+
+    Args:
+        source_url: Optional specific URL to fetch from.
+
+    Returns:
+        List of Overlay objects with 'installed' field populated.
+
+    Raises:
+        urllib.error.URLError: If fetching fails.
+        xml.etree.ElementTree.ParseError: If XML parsing fails.
+    """
+    overlays: list[Overlay] = fetch(source_url)
+    installed_names: set[str] = set(get_installed())
+
+    for overlay in overlays:
+        overlay.installed = overlay.name in installed_names
 
     return overlays
