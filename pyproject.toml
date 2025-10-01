@@ -1,0 +1,25 @@
+[build-system]
+requires = ["flit_core >=3.11,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "carnage"
+authors = [{name = "dsafxP", email = "ghostyn678+git@gmail.com"}]
+requires-python = ">=3.8"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+dynamic = ["version", "description"]
+
+[project.urls]
+Home = "https://github.com/dsafxP/carnage"
+
+[tool.pyrefly]
+project-includes = ["src"]
+project-excludes = ["**/.[!/.]*", "**/tests"]
+search-path = ["src"]
+site-package-path = [".venv/lib/python3.14/site-packages"]
+
+python-platform = "linux"
+python-version = "3.14"
+python-interpreter = ".venv/bin/python3"
