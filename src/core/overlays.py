@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
+from subprocess import CompletedProcess
 from typing import Literal, Any
 import xml.etree.ElementTree as ET
 import urllib.request
@@ -64,6 +66,18 @@ class Overlay:
 
     def __repr__(self) -> str:
         return f"Overlay(name={self.name!r}, status={self.status.value})"
+
+    def is_installed(self) -> bool:
+        """
+        Check if this overlay is installed.
+
+        Returns:
+            True if the overlay directory exists in /var/db/repos, False otherwise.
+        """
+        from pathlib import Path
+
+        overlay_path: Path = Path("/var/db/repos") / self.name
+        return overlay_path.exists() and overlay_path.is_dir()
 
     def enable(self) -> tuple[int, str, str]:
         """
