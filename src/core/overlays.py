@@ -65,6 +65,57 @@ class Overlay:
     def __repr__(self) -> str:
         return f"Overlay(name={self.name!r}, status={self.status.value})"
 
+    def enable(self) -> tuple[int, str, str]:
+        """
+        Enable this overlay using eselect.
+
+        Returns:
+            Tuple of (return_code, stdout, stderr)
+        """
+        import subprocess
+
+        result: CompletedProcess[str] = subprocess.run(
+            ["eselect", "repository", "enable", self.name],
+            capture_output=True,
+            text=True
+        )
+        return result.returncode, result.stdout, result.stderr
+
+    def sync(self) -> tuple[int, str, str]:
+        """
+        Sync this overlay using emerge.
+
+        Returns:
+            Tuple of (return_code, stdout, stderr)
+        """
+        import subprocess
+
+        result: CompletedProcess[str] = subprocess.run(
+            ["emerge", "--sync", self.name],
+            capture_output=True,
+            text=True
+        )
+        return result.returncode, result.stdout, result.stderr
+
+    def enable_and_sync(self) -> tuple[int, str, str]:
+        """
+        Enable and sync this overlay in one operation.
+
+        Returns:
+            Tuple of (return_code, stdout, stderr) from the combined operation.
+            If enable fails, sync is not attempted.
+        """
+        import subprocess
+
+        cmd: str = f"eselect repository enable {self.name} && emerge --sync {self.name}"
+        result: CompletedProcess[str] = subprocess.run(
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True
+        )
+        return result.returncode, result.stdout, result.stderr
+
 
 def _parse_owner(repo_elem: ET.Element) -> Owner | None:
     """Parse owner information from XML element."""
