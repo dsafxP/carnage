@@ -1,0 +1,29 @@
+"""Eix package management functionality."""
+
+# Basic eix operations
+from .eix import (
+    is_found,
+    has_cache,
+    has_remote_cache,
+    has_protobuf_support,
+    eix_update,
+    eix_remote_update,
+)
+
+# Package search
+from .search import Package, PackageVersion, PackageDatabase, search_packages
+
+__all__ = [
+    # Eix operations
+    "is_found",
+    "has_cache",
+    "has_remote_cache",
+    "has_protobuf_support",
+    "eix_update",
+    "eix_remote_update",
+    # Search
+    "Package",
+    "PackageVersion",
+    "PackageDatabase",
+    "search_packages",
+]
