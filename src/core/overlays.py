@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from subprocess import CompletedProcess
 from typing import Literal, Any
 import xml.etree.ElementTree as ET
 import urllib.request
@@ -83,53 +82,34 @@ class Overlay:
     def enable(self) -> tuple[int, str, str]:
         """
         Enable this overlay using eselect.
-
         Returns:
-            Tuple of (return_code, stdout, stderr)
+            Tuple of (return_code, stdout,< >stderr)
         """
-        import subprocess
+        from .privilege import run_privileged
 
-        result: CompletedProcess[str] = subprocess.run(
-            ["eselect", "repository", "enable", self.name],
-            capture_output=True,
-            text=True
-        )
-        return result.returncode, result.stdout, result.stderr
+        return run_privileged(["eselect", "repository", "enable", self.name])
 
     def sync(self) -> tuple[int, str, str]:
         """
         Sync this overlay using emerge.
-
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
-        import subprocess
+        from .privilege import run_privileged
 
-        result: CompletedProcess[str] = subprocess.run(
-            ["emerge", "--sync", self.name],
-            capture_output=True,
-            text=True
-        )
-        return result.returncode, result.stdout, result.stderr
+        return run_privileged(["emerge", "--sync", self.name])
 
     def enable_and_sync(self) -> tuple[int, str, str]:
         """
         Enable and sync this overlay in one operation.
-
         Returns:
             Tuple of (return_code, stdout, stderr) from the combined operation.
             If enable fails, sync is not attempted.
         """
-        import subprocess
+        from .privilege import run_privileged
 
         cmd: str = f"eselect repository enable {self.name} && emerge --sync {self.name}"
-        result: CompletedProcess[str] = subprocess.run(
-            cmd,
-            shell=True,
-            capture_output=True,
-            text=True
-        )
-        return result.returncode, result.stdout, result.stderr
+        return run_privileged(["sh", "-c", cmd])
 
 
 def _parse_owner(repo_elem: ET.Element) -> Owner | None:
@@ -195,8 +175,8 @@ def _parse_overlay(repo_elem: ET.Element) -> Overlay | None:
     sources: list[Source] = _parse_sources(repo_elem)
     feeds: list[str] = _parse_feeds(repo_elem)
 
-    quality_str = repo_elem.get("quality", "experimental")
-    status_str = repo_elem.get("status", "unofficial")
+    quality_str: str = repo_elem.get("quality", "experimental")
+    status_str: str = repo_elem.get("status", "unofficial")
 
     try:
         quality = OverlayQuality(quality_str)
@@ -271,9 +251,6 @@ def get_installed() -> list[str]:
 def fetch_extra(source_url: str | None = None) -> list['Overlay']:
     """
     Fetch overlays and populate installation status.
-
-    This is more efficient than calling is_installed() on each overlay
-    individually, as it only reads the filesystem once.
 
     Args:
         source_url: Optional specific URL to fetch from.
