@@ -111,6 +111,52 @@ class Overlay:
         cmd: str = f"eselect repository enable {self.name} && emerge --sync {self.name}"
         return run_privileged(["sh", "-c", cmd])
 
+    def to_dict(self) -> dict:
+        """Convert overlay to dictionary for serialization."""
+        return {
+            'name': self.name,
+            'description': self.description,
+            'homepage': self.homepage,
+            'owner': {
+                'name': self.owner.name,
+                'email': self.owner.email,
+                'owner_type': self.owner.owner_type
+            },
+            'sources': [
+                {'source_type': s.source_type.value, 'url': s.url}
+                for s in self.sources
+            ],
+            'feeds': self.feeds,
+            'quality': self.quality.value,
+            'status': self.status.value,
+            'installed': self.installed
+        }
+
+    @staticmethod
+    def from_dict(data: dict) -> 'Overlay':
+        """Create overlay from dictionary after deserialization."""
+        return Overlay(
+            name=data['name'],
+            description=data['description'],
+            homepage=data['homepage'],
+            owner=Owner(
+                name=data['owner']['name'],
+                email=data['owner']['email'],
+                owner_type=data['owner']['owner_type']
+            ),
+            sources=[
+                Source(
+                    source_type=SourceType(s['source_type']),
+                    url=s['url']
+                )
+                for s in data['sources']
+            ],
+            feeds=data['feeds'],
+            quality=OverlayQuality(data['quality']),
+            status=OverlayStatus(data['status']),
+            installed=data.get('installed')
+        )
+
 
 def _parse_owner(repo_elem: ET.Element) -> Owner | None:
     """Parse owner information from XML element."""
