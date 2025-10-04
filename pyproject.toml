@@ -24,11 +24,5 @@ dev = [
 Home = "https://github.com/dsafxP/carnage"
 
 [tool.pyrefly]
-project-includes = ["src"]
-project-excludes = ["**/.[!/.]*", "**/tests"]
-search-path = ["src"]
-site-package-path = [".venv/lib/python3.14/site-packages"]
-
-python-platform = "linux"
 python-version = "3.14"
-python-interpreter = ".venv/bin/python3"
+python-interpreter = "*venv/bin/python3"
