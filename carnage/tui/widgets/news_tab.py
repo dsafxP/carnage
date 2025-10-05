@@ -50,8 +50,8 @@ class NewsTab(Widget):
         loading: LoadingIndicator = self.query_one("#news-loading", LoadingIndicator)
         table: DataTable = self.query_one("#news-table", DataTable)
 
-        self.app.call_from_thread(setattr, loading, "display", True)
-        self.app.call_from_thread(setattr, table, "display", False)
+        loading.display = True
+        table.display = False
 
         try:
             # This runs in a thread, so it won't block the UI
