@@ -210,14 +210,12 @@ def mark_all_news_read() -> tuple[int, str, str]:
 
 def purge_read_news() -> tuple[int, str, str]:
     """
-    Purge (delete) all read news items.
-
-    This removes read news from the system to clean up the news list.
+    Purge all read news items.
 
     Returns:
         Tuple of (return_code, stdout, stderr)
     """
-    result = subprocess.run(
+    result: CompletedProcess[str] = subprocess.run(
         ["eselect", "news", "purge"],
         capture_output=True,
         text=True

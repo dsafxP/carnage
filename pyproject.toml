@@ -12,12 +12,14 @@ license-files = ["LICENSE"]
 dynamic = ["version", "description"]
 dependencies = [
     "msgpack >= 1.1.1",
+    "textual >= 6.2.1",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pyrefly >= 0.35.0",
     "msgpack-types >= 0.5.0",
+    "textual-dev >= 1.7.0",
 ]
 
 [project.urls]

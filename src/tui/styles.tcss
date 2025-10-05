@@ -1,0 +1,181 @@
+/* Carnage TUI Styles */
+
+Screen {
+    background: $background;
+}
+
+#main-container {
+    width: 100%;
+    height: 100%;
+    padding: 1;
+}
+
+/* Search input styling */
+#search-input {
+    width: 100%;
+    margin-bottom: 1;
+    border: solid $primary;
+}
+
+#search-input:focus {
+    border: double $accent;
+}
+
+#search-input:disabled {
+    opacity: 0.5;
+}
+
+/* Tabbed content */
+TabbedContent {
+    width: 100%;
+    height: 1fr;
+}
+
+Tabs {
+    width: 100%;
+    background: $surface;
+}
+
+Tab {
+    padding: 0 2;
+    background: $surface;
+    color: $text-muted;
+}
+
+Tab:hover {
+    background: $boost;
+    color: $text;
+}
+
+Tab.-active {
+    background: $primary;
+    color: $text;
+    text-style: bold;
+}
+
+ContentSwitcher {
+    width: 100%;
+    height: 1fr;
+    background: $panel;
+    border: solid $primary;
+    padding: 1;
+}
+
+TabPane {
+    width: 100%;
+    height: 1fr;
+}
+
+/* Header and Footer */
+Header {
+    background: $primary;
+    color: $text;
+}
+
+Footer {
+    background: $surface;
+}
+
+/* General widget styling */
+Label {
+    width: 100%;
+    height: auto;
+    content-align: center middle;
+    padding: 1;
+}
+
+DataTable {
+    width: 100%;
+    height: 1fr;
+}
+
+DataTable > .datatable--header {
+    background: $primary;
+    color: $text;
+    text-style: bold;
+}
+
+DataTable > .datatable--cursor {
+    background: $accent;
+}
+
+DataTable:focus > .datatable--cursor {
+    background: $accent;
+}
+
+ListView {
+    width: 100%;
+    height: 1fr;
+    border: solid $primary;
+}
+
+ListItem {
+    padding: 0 1;
+}
+
+ListItem:hover {
+    background: $boost;
+}
+
+ListItem.-selected {
+    background: $accent;
+}
+
+/* Buttons */
+Button {
+    width: auto;
+    min-width: 16;
+    margin: 0 1;
+}
+
+Button.-primary {
+    background: $primary;
+    color: $text;
+}
+
+Button:hover {
+    background: $accent;
+}
+
+Button:disabled {
+    opacity: 0.5;
+}
+
+/* Containers */
+Vertical {
+    width: 100%;
+    height: auto;
+}
+
+Horizontal {
+    width: 100%;
+    height: auto;
+}
+
+Container {
+    width: 100%;
+    height: auto;
+}
+
+/* Scrollbars */
+ScrollableContainer {
+    scrollbar-gutter: stable;
+}
+
+/* Text areas and input */
+TextArea {
+    width: 100%;
+    height: 1fr;
+    border: solid $primary;
+}
+
+TextArea:focus {
+    border: double $accent;
+}
+
+/* Loading indicator */
+LoadingIndicator {
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+}

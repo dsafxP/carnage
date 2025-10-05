@@ -21,7 +21,7 @@ from .overlays import (
 from .glsas import GLSA, fetch_glsas, get_affected_glsas, fix_glsas
 
 # News management
-from .news import News, get_news, mark_news_read, mark_all_news_read
+from .news import News, get_news, mark_news_read, mark_all_news_read, purge_read_news
 
 __all__ = [
     # Cache
@@ -50,4 +50,5 @@ __all__ = [
     "get_news",
     "mark_news_read",
     "mark_all_news_read",
+    "purge_read_news"
 ]
