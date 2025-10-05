@@ -1,12 +1,14 @@
 """News tab widget for displaying Gentoo repository news."""
+
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
+from textual.coordinate import Coordinate
 from textual.widget import Widget
 from textual.widgets import DataTable, Static, Button, LoadingIndicator
 
-from ...core import get_news, mark_news_read, mark_all_news_read, News, purge_read_news
+from ...core import get_news, mark_news_read, mark_all_news_read, purge_read_news, News
 
 
 class NewsTab(Widget):
@@ -48,8 +50,8 @@ class NewsTab(Widget):
         loading: LoadingIndicator = self.query_one("#news-loading", LoadingIndicator)
         table: DataTable = self.query_one("#news-table", DataTable)
 
-        loading.display = True
-        table.display = False
+        self.app.call_from_thread(setattr, loading, "display", True)
+        self.app.call_from_thread(setattr, table, "display", False)
 
         try:
             # This runs in a thread, so it won't block the UI
@@ -76,6 +78,42 @@ class NewsTab(Widget):
 
         self.update_button_states()
 
+    def _update_single_row(self, news_index: int) -> None:
+        """Update a single row in the table when news is marked as read."""
+        table: DataTable = self.query_one("#news-table", DataTable)
+
+        # Find the row index by matching news index in our data
+        for i, news in enumerate(self.news_items):
+            if news.index == news_index:
+                # Update the specific row (add 1 because cursor_row is 0-based but we need the actual row)
+                table.update_cell_at(Coordinate(i, 0), "Read")
+                break
+
+        self.update_button_states()
+
+    def _remove_read_rows(self) -> None:
+        """Remove all read news from the table and data."""
+        table: DataTable = self.query_one("#news-table", DataTable)
+        
+        # Remove read items from our data
+        self.news_items = [news for news in self.news_items if not news.read]
+        
+        # Clear and repopulate table with remaining items
+        table.clear(columns=True)
+        table.add_columns("Status", "Date", "Title")
+
+        for news in self.news_items:
+            status: str = "Read" if news.read else "New"
+            table.add_row(status, news.date, news.title, key=str(news.index))
+
+        # Clear selection if the selected news was purged
+        if self.selected_news and self.selected_news.read:
+            self.selected_news = None
+            content_widget: Static = self.query_one("#news-content", Static)
+            content_widget.update("Select a news item to view details")
+
+        self.update_button_states()
+
     def _hide_loading(self) -> None:
         """Hide loading indicator and show table."""
         loading: LoadingIndicator = self.query_one("#news-loading", LoadingIndicator)
@@ -84,17 +122,13 @@ class NewsTab(Widget):
         loading.display = False
         table.display = True
 
-    def _reload_news(self) -> None:
-        """Trigger a news reload (non-worker wrapper)."""
-        self.load_news()
-
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection in the news table."""
         if event.row_key is None:
             return
 
         # Find the selected news item
-        news_index = int(event.row_key.value) #  type: ignore
+        news_index = int(event.row_key.value)  # type: ignore
         self.selected_news = next(
             (n for n in self.news_items if n.index == news_index),
             None
@@ -131,7 +165,7 @@ class NewsTab(Widget):
         mark_all_btn: Button = self.query_one("#mark-all-read-btn", Button)
         purge_btn: Button = self.query_one("#purge-btn", Button)
 
-        # Enable "Mark All as Read" only if there are unread items
+        # Enable "Mark all as Read" only if there are unread items
         has_unread: bool = any(not n.read for n in self.news_items)
         mark_all_btn.disabled = not has_unread
 
@@ -151,12 +185,21 @@ class NewsTab(Widget):
         if self.selected_news is None or self.selected_news.read:
             return
 
+        news_index: int = self.selected_news.index
+
         try:
-            returncode, _, stderr = mark_news_read(self.selected_news.index)
+            returncode, _, stderr = mark_news_read(news_index)
 
             if returncode == 0:
-                self.app.call_from_thread(self.notify, f"Marked news {self.selected_news.index} as read")
-                self.app.call_from_thread(self._reload_news)
+                self.app.call_from_thread(self.notify, f"Marked news {news_index} as read")
+
+                # Update the data and refresh just that row
+                for news in self.news_items:
+                    if news.index == news_index:
+                        news.read = True
+                        break
+
+                self.app.call_from_thread(self._update_single_row, news_index)
             else:
                 self.app.call_from_thread(self.notify, f"Failed to mark as read: {stderr}", severity="error")
         except Exception as e:
@@ -173,7 +216,10 @@ class NewsTab(Widget):
 
             if returncode == 0:
                 self.app.call_from_thread(self.notify, "Marked all news as read")
-                self.app.call_from_thread(self._reload_news)
+                # Update all items in data and refresh table
+                for news in self.news_items:
+                    news.read = True
+                self.app.call_from_thread(self._populate_table, self.news_items)
             else:
                 self.app.call_from_thread(self.notify, f"Failed to mark all as read: {stderr}", severity="error")
         except Exception as e:
@@ -181,7 +227,7 @@ class NewsTab(Widget):
 
     @work(exclusive=True, thread=True)
     async def action_purge(self) -> None:
-        """Purge all (read) news items."""
+        """Purge all read news items."""
         if not self.news_items:
             return
 
@@ -190,7 +236,8 @@ class NewsTab(Widget):
 
             if returncode == 0:
                 self.app.call_from_thread(self.notify, "Purged all read news.")
-                self.app.call_from_thread(self._reload_news)
+                # Just remove read items from our data and table
+                self.app.call_from_thread(self._remove_read_rows)
             else:
                 self.app.call_from_thread(self.notify, f"Failed to purge: {stderr}", severity="error")
         except Exception as e:

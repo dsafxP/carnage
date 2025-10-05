@@ -23,7 +23,10 @@ dev = [
 ]
 
 [project.urls]
-Home = "https://github.com/dsafxP/carnage"
+Source = "https://github.com/dsafxP/carnage"
+
+[project.scripts]
+carnage = "carnage:main"
 
 [tool.pyrefly]
 python-version = "3.14"
