@@ -198,6 +198,10 @@ LoadingIndicator {
     margin-bottom: 1;
 }
 
+#news-content {
+    padding: 1;
+}
+
 #news-actions {
     width: 100%;
     height: auto;
