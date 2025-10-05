@@ -179,3 +179,33 @@ LoadingIndicator {
     height: 100%;
     content-align: center middle;
 }
+
+/* News tab specific styles */
+#news-table {
+    height: 8;
+    margin-bottom: 1;
+}
+
+#news-detail {
+    height: 1fr;
+    border: solid $primary;
+    padding: 1;
+}
+
+#news-content-scroll {
+    height: 1fr;
+    border: solid $primary;
+    margin-bottom: 1;
+}
+
+#news-actions {
+    width: 100%;
+    height: auto;
+    align: center middle;
+    layout: horizontal;
+    margin-top: 1;
+}
+
+#news-actions Button {
+    margin: 0 1;
+}

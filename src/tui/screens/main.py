@@ -1,3 +1,4 @@
+
 """Main screen with tabs for Carnage."""
 
 from textual.app import ComposeResult
@@ -6,6 +7,7 @@ from textual.screen import Screen
 from textual.widgets import Header, Footer, TabbedContent, TabPane, Input, Label
 
 from ...core.eix import is_found, has_cache
+from ..widgets.news_tab import NewsTab
 
 
 class MainScreen(Screen):
@@ -29,7 +31,7 @@ class MainScreen(Screen):
             # Tabbed content
             with TabbedContent(initial="news"):
                 with TabPane("News", id="news"):
-                    yield Label("News content will go here")
+                    yield NewsTab()
 
                 with TabPane("GLSAs", id="glsas"):
                     yield Label("GLSAs content will go here")
