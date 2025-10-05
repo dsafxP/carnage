@@ -8,7 +8,7 @@ from textual.widgets import Header, Footer, TabbedContent, TabPane, Input, Label
 
 from ...core.eix import is_found, has_cache
 from ..widgets.news_tab import NewsTab
-
+from ..widgets.glsa_tab import GLSATab
 
 class MainScreen(Screen):
     """Main screen with search bar and tabbed content."""
@@ -34,7 +34,7 @@ class MainScreen(Screen):
                     yield NewsTab()
 
                 with TabPane("GLSAs", id="glsas"):
-                    yield Label("GLSAs content will go here")
+                    yield GLSATab()
 
                 with TabPane("Browse", id="browse", disabled=True):
                     yield Label("Package browser will go here")
