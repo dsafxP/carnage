@@ -111,6 +111,28 @@ class Overlay:
         cmd: str = f"eselect repository enable {self.name} && emerge --sync {self.name}"
         return run_privileged(["sh", "-c", cmd])
 
+    def disable(self) -> tuple[int, str, str]:
+        """
+        Disable this overlay using eselect.
+
+        Returns:
+            Tuple of (return_code, stdout, stderr)
+        """
+        from .privilege import run_privileged
+
+        return run_privileged(["eselect", "repository", "disable", self.name])
+
+    def remove(self) -> tuple[int, str, str]:
+        """
+        Remove this overlay using eselect.
+
+        Returns:
+            Tuple of (return_code, stdout, stderr)
+        """
+        from .privilege import run_privileged
+
+        return run_privileged(["eselect", "repository", "remove", self.name])
+
     def to_dict(self) -> dict:
         """Convert overlay to dictionary for serialization."""
         return {
