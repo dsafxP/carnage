@@ -53,10 +53,32 @@ class OverlaysTab(Widget):
 
             # Update UI back on main thread
             self.app.call_from_thread(self._populate_table, overlays)
+            
+            self.app.call_from_thread(self.check_remote_cache_notification)
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Failed to load overlays: {e}", severity="error")
         finally:
             self.app.call_from_thread(self._hide_loading)
+
+    def check_remote_cache_notification(self) -> None:
+        """Check if we should notify about clearing cache for remote overlays."""
+        from ...core.eix import has_remote_cache
+
+        # Check if remote cache is available and we have loaded overlays
+        if has_remote_cache() and self.overlays:
+            zero_package_overlays = []
+            for overlay in self.overlays:
+                if overlay.package_count == 0:
+                    zero_package_overlays.append(overlay.name)
+
+            # If we have overlays with 0 packages, suggest clearing cache
+            if zero_package_overlays and len(zero_package_overlays) > 5:  # Only notify if significant number
+                self.notify(
+                    f"Found {len(zero_package_overlays)} overlays with 0 packages. "
+                    "Remote cache is available - clear cache to count remote overlays?",
+                    severity="warning",
+                    timeout=10
+                )
 
     def _populate_table(self, overlays: list[Overlay]) -> None:
         """Populate the table with overlays (runs on main thread)."""
