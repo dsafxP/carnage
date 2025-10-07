@@ -1,5 +1,5 @@
 """Utilities for managing Gentoo overlays."""
-
+import concurrent.futures
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -8,10 +8,18 @@ import xml.etree.ElementTree as ET
 import urllib.request
 import urllib.error
 from xml.etree.ElementTree import Element
+from datetime import timedelta
+
+from .cache import CacheManager
+from .eix.overlay import get_package_count
 
 OVERLAY_SOURCES: list[str] = [
     "https://api.gentoo.org/overlays/repositories.xml"
 ]
+
+# Cache configuration
+CACHE_KEY = "overlays_data"
+CACHE_MAX_AGE = timedelta(hours=48)
 
 
 class OverlayQuality(Enum):
@@ -60,6 +68,7 @@ class Overlay:
     quality: OverlayQuality
     status: OverlayStatus
     installed: bool | None = None
+    package_count: int | None = None
 
     def __str__(self) -> str:
         return f"{self.name} ({self.status.value})"
@@ -151,7 +160,8 @@ class Overlay:
             'feeds': self.feeds,
             'quality': self.quality.value,
             'status': self.status.value,
-            'installed': self.installed
+            'installed': self.installed,
+            'package_count': self.package_count
         }
 
     @staticmethod
@@ -176,7 +186,8 @@ class Overlay:
             feeds=data['feeds'],
             quality=OverlayQuality(data['quality']),
             status=OverlayStatus(data['status']),
-            installed=data.get('installed')
+            installed=data.get('installed'),
+            package_count=data.get('package_count')
         )
 
 
@@ -290,7 +301,7 @@ def fetch(source_url: str | None = None) -> list[Overlay]:
     overlays: list[Overlay] = []
     for repo_elem in root.findall("repo"):
         overlay: Overlay | None = _parse_overlay(repo_elem)
-        
+
         if overlay is not None:
             overlays.append(overlay)
 
@@ -316,15 +327,46 @@ def get_installed() -> list[str]:
     ]
 
 
-def fetch_extra(source_url: str | None = None) -> list['Overlay']:
+def _populate_package_counts(overlays: list[Overlay]) -> None:
+    """Populate package counts for all overlays in parallel."""
+
+    def _get_count(overlay: Overlay) -> tuple[Overlay, int]:
+        """Get package count for a single overlay."""
+        try:
+            count: int = get_package_count(overlay.name)
+            return overlay, count
+        except:
+            return overlay, -1
+
+    # Use ThreadPoolExecutor for parallel execution
+    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
+        # Submit all tasks
+        future_to_overlay = {
+            executor.submit(_get_count, overlay): overlay
+            for overlay in overlays
+        }
+
+        # Process completed tasks as they finish
+        for future in concurrent.futures.as_completed(future_to_overlay):
+            try:
+                overlay: object
+                overlay, count = future.result()
+                overlay.package_count = count
+            except:
+                # If anything goes wrong with the future itself, set count to 0
+                overlay = future_to_overlay[future]
+                overlay.package_count = -1
+
+
+def fetch_extra(source_url: str | None = None) -> list[Overlay]:
     """
-    Fetch overlays and populate installation status.
+    Fetch overlays and populate installation status and package counts.
 
     Args:
         source_url: Optional specific URL to fetch from.
 
     Returns:
-        List of Overlay objects with 'installed' field populated.
+        List of Overlay objects with 'installed' and 'package_count' fields populated.
 
     Raises:
         urllib.error.URLError: If fetching fails.
@@ -336,4 +378,57 @@ def fetch_extra(source_url: str | None = None) -> list['Overlay']:
     for overlay in overlays:
         overlay.installed = overlay.name in installed_names
 
+    # Populate package counts (this may take a while)
+    _populate_package_counts(overlays)
+
     return overlays
+
+
+def get_or_cache(cache_manager: CacheManager | None = None,
+                source_url: str | None = None,
+                force_refresh: bool = False) -> list[Overlay]:
+    """
+    Get overlays from cache or fetch fresh data if cache is stale/missing.
+
+    Args:
+        cache_manager: CacheManager instance. If None, creates a new one.
+        source_url: Optional specific URL to fetch from.
+        force_refresh: If True, ignore cache and fetch fresh data.
+
+    Returns:
+        List of Overlay objects with all metadata populated.
+    """
+    if cache_manager is None:
+        cache_manager = CacheManager()
+
+    # Check cache first unless forced refresh
+    if not force_refresh and cache_manager.exists(CACHE_KEY):
+        if not cache_manager.is_stale(CACHE_KEY, CACHE_MAX_AGE):
+            cached_data = cache_manager.get(CACHE_KEY)
+            if cached_data:
+                return [Overlay.from_dict(data) for data in cached_data]
+
+    # Fetch fresh data
+    overlays: list[Overlay] = fetch_extra(source_url)
+
+    # Cache the results
+    cache_data = [overlay.to_dict() for overlay in overlays]
+    cache_manager.set(CACHE_KEY, cache_data)
+
+    return overlays
+
+
+def clear_cache(cache_manager: CacheManager | None = None) -> bool:
+    """
+    Clear the overlays cache.
+
+    Args:
+        cache_manager: CacheManager instance. If None, creates a new one.
+
+    Returns:
+        True if cache was cleared, False otherwise.
+    """
+    if cache_manager is None:
+        cache_manager = CacheManager()
+
+    return cache_manager.delete(CACHE_KEY)
