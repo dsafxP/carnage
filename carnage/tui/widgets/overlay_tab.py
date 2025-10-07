@@ -240,6 +240,8 @@ class OverlaysTab(Widget):
             if returncode == 0:
                 self.app.call_from_thread(self.notify, f"Successfully installed {self.selected_overlay.name}")
 
+                self._pending_selection = self.selected_overlay.name
+
                 # Update overlay status and refresh table
                 self.app.call_from_thread(self._update_overlay_installation_status, self.selected_overlay.name, True)
                 self.app.call_from_thread(self._populate_table, self.overlays)
@@ -266,6 +268,8 @@ class OverlaysTab(Widget):
 
             if returncode == 0:
                 self.app.call_from_thread(self.notify, f"Successfully removed {self.selected_overlay.name}")
+
+                self._pending_selection = self.selected_overlay.name
 
                 # Update overlay status and refresh table
                 self.app.call_from_thread(self._update_overlay_installation_status, self.selected_overlay.name, False)
