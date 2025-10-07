@@ -95,7 +95,7 @@ class OverlaysTab(Widget):
             table.add_row(
                 overlay.name,
                 package_count,
-                overlay.description or "No description",
+                (overlay.description.strip() if overlay.description else "No description"),
                 key=str(i)
             )
 
