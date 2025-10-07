@@ -9,7 +9,8 @@ def get_package_count(overlay: str) -> int:
     """
     Get the number of packages in a specific overlay.
 
-    Wraps: eix -RQ -# --in-overlay <overlay>
+    Tries: eix -RQ -# --in-overlay <overlay>
+    Fallback: eix -Q -# --in-overlay <overlay>
 
     Args:
         overlay: The overlay name to count packages from
@@ -21,9 +22,27 @@ def get_package_count(overlay: str) -> int:
     env: dict[str, str] = os.environ.copy()
     env["EIX_LIMIT"] = "0"
 
+    # Try with remote cache first (eix -RQ)
     try:
         result: CompletedProcess[str] = subprocess.run(
             ["eix", "-RQ", "-#", "--in-overlay", overlay],
+            capture_output=True,
+            text=True,
+            env=env
+        )
+
+        if result.returncode == 0:
+            # Each line represents one package
+            count = result.stdout.count('\n')
+            if count > 0:
+                return count
+    except (subprocess.SubprocessError, OSError):
+        pass
+
+    # Fallback to local cache only (eix -Q)
+    try:
+        result: CompletedProcess[str] = subprocess.run(
+            ["eix", "-Q", "-#", "--in-overlay", overlay],
             capture_output=True,
             text=True,
             env=env
