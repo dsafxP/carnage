@@ -353,7 +353,7 @@ def _populate_package_counts(overlays: list[Overlay]) -> None:
                 overlay, count = future.result()
                 overlay.package_count = count
             except:
-                # If anything goes wrong with the future itself, set count to 0
+                # If anything goes wrong with the future itself, set count to -1
                 overlay = future_to_overlay[future]
                 overlay.package_count = -1
 

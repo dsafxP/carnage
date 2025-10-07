@@ -33,7 +33,7 @@ def get_package_count(overlay: str) -> int:
 
         if result.returncode == 0:
             # Each line represents one package
-            count = result.stdout.count('\n')
+            count: int = result.stdout.count('\n')
             if count > 0:
                 return count
     except (subprocess.SubprocessError, OSError):
@@ -54,4 +54,4 @@ def get_package_count(overlay: str) -> int:
         else:
             return 0
     except (subprocess.SubprocessError, OSError):
-        return 0
+        return -2
