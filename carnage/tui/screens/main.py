@@ -7,6 +7,7 @@ from textual.screen import Screen
 from textual.widgets import Header, Footer, TabbedContent, TabPane, Input, Label
 
 from ...core.eix import is_found, has_cache
+from ..widgets.overlay_tab import OverlaysTab
 from ..widgets.news_tab import NewsTab
 from ..widgets.glsa_tab import GLSATab
 
@@ -43,7 +44,7 @@ class MainScreen(Screen):
                     yield Label("USE flags will go here")
 
                 with TabPane("Overlays", id="overlays"):
-                    yield Label("Overlays content will go here")
+                    yield OverlaysTab()
 
         yield Footer()
 
