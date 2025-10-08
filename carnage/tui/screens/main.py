@@ -100,6 +100,14 @@ class MainScreen(Screen):
 
         query: str = event.value
 
-        if active_tab_id in ("news", "glsas") and query:
+        if active_tab_id == "overlays":
+            # Apply search filter to overlays tab
+            overlays_pane: TabPane = tabbed_content.query_one("#overlays", TabPane)
+            overlays_tab: OverlaysTab = overlays_pane.query_one(OverlaysTab)
+            overlays_tab.apply_filter(query)
+        elif active_tab_id in ("news", "glsas") and query:
             # Switch to Browse tab and trigger search there
             tabbed_content.active = "browse"
+        elif active_tab_id == "browse" and query:
+            # Handle browse tab searching (you'll implement this later)
+            pass

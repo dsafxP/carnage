@@ -16,9 +16,11 @@ class OverlaysTab(Widget):
     def __init__(self):
         super().__init__()
         self.overlays: list[Overlay] = []
+        self.filtered_overlays: list[Overlay] = []
         self.selected_overlay: Overlay | None = None
         self.cache_manager = CacheManager()
         self._pending_selection: str | None = None
+        self._current_filter: str = ""
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
@@ -38,6 +40,63 @@ class OverlaysTab(Widget):
         """Load overlays when widget is mounted."""
         self.load_overlays()
 
+    def apply_filter(self, filter_text: str) -> None:
+        """Apply search filter to overlays and update the table."""
+        self._current_filter = filter_text.lower().strip()
+
+        if not self._current_filter:
+            # No filter, show all overlays
+            self.filtered_overlays = self.overlays.copy()
+        else:
+            # Filter overlays by name and description
+            self.filtered_overlays = [
+                overlay for overlay in self.overlays
+                if (self._current_filter in overlay.name.lower() or
+                    (overlay.description and self._current_filter in overlay.description.lower()))
+            ]
+
+        # Update the table with filtered results
+        self._populate_table()
+
+    def _populate_table(self) -> None:
+        """Populate the table with filtered overlays."""
+        table: DataTable = self.query_one("#overlays-table", DataTable)
+
+        # Clear current selection when filtering
+        self.selected_overlay = None
+        content_widget: Static = self.query_one("#overlays-content", Static)
+        content_widget.update("Select an overlay to view details")
+
+        table.clear(columns=True)
+        table.add_columns("Name", "Packages", "Description")
+
+        for i, overlay in enumerate(self.filtered_overlays):
+            # Package count is already populated from cache/fetch
+            package_count: str = str(overlay.package_count) if overlay.package_count is not None else "0"
+
+            table.add_row(
+                overlay.name,
+                package_count,
+                (overlay.description.strip() if overlay.description else "No description"),
+                key=str(i)
+            )
+
+        # Restore selection if there was a pending one and it exists in filtered results
+        if self._pending_selection is not None:
+            selected_name: str = self._pending_selection
+
+            for i, overlay in enumerate(self.filtered_overlays):
+                if overlay.name == selected_name:
+                    # Trigger the selection event to update the UI
+                    self.selected_overlay = overlay
+                    table.move_cursor(row=i)
+                    break
+
+            # Clear the pending selection
+            self._pending_selection = None
+
+        self.update_button_states()
+
     @work(exclusive=True, thread=True)
     async def load_overlays(self) -> None:
         """Load overlays from cache or fetch fresh data in a worker thread."""
@@ -51,9 +110,13 @@ class OverlaysTab(Widget):
             # Get overlays from cache or fetch fresh with package counts
             overlays: list[Overlay] = get_or_cache(self.cache_manager)
 
+            # Update both full list and filtered list
+            self.overlays = overlays
+            self.filtered_overlays = overlays.copy()
+
             # Update UI back on main thread
-            self.app.call_from_thread(self._populate_table, overlays)
-            
+            self.app.call_from_thread(self._populate_table)
+
             self.app.call_from_thread(self.check_remote_cache_notification)
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Failed to load overlays: {e}", severity="error")
@@ -79,42 +142,6 @@ class OverlaysTab(Widget):
                     severity="warning",
                     timeout=10
                 )
-
-    def _populate_table(self, overlays: list[Overlay]) -> None:
-        """Populate the table with overlays (runs on main thread)."""
-        self.overlays = overlays
-        table: DataTable = self.query_one("#overlays-table", DataTable)
-
-        table.clear(columns=True)
-        table.add_columns("Name", "Packages", "Description")
-
-        for i, overlay in enumerate(self.overlays):
-            # Package count is already populated from cache/fetch
-            package_count: str = str(overlay.package_count) if overlay.package_count is not None else "0"
-
-            table.add_row(
-                overlay.name,
-                package_count,
-                (overlay.description.strip() if overlay.description else "No description"),
-                key=str(i)
-            )
-
-        # Restore selection if there was a pending one
-        if self._pending_selection is not None:
-            selected_name: str = self._pending_selection
-
-            for i, overlay in enumerate(self.overlays):
-                if overlay.name == selected_name:
-                    # Trigger the selection event to update the UI
-
-                    self.selected_overlay = overlay
-                    table.move_cursor(row=i)
-                    break
-
-            # Clear the pending selection
-            self._pending_selection = None
-
-        self.update_button_states()
 
     def _hide_loading(self) -> None:
         """Hide loading indicator and show table."""
@@ -145,6 +172,12 @@ class OverlaysTab(Widget):
                 overlay.installed = installed
                 break
 
+        # Update filtered overlays if the overlay is in the current filter
+        for overlay in self.filtered_overlays:
+            if overlay.name == overlay_name:
+                overlay.installed = installed
+                break
+
         # Update cache
         cache_data = [overlay.to_dict() for overlay in self.overlays]
         self.cache_manager.set("overlays_data", cache_data)
@@ -154,10 +187,10 @@ class OverlaysTab(Widget):
         if event.row_key is None:
             return
 
-        # Find the selected overlay using the row index
+        # Find the selected overlay using the row index from filtered overlays
         row_index = int(event.row_key.value) #  type: ignore
-        if 0 <= row_index < len(self.overlays):
-            self.selected_overlay = self.overlays[row_index]
+        if 0 <= row_index < len(self.filtered_overlays):
+            self.selected_overlay = self.filtered_overlays[row_index]
         else:
             self.selected_overlay = None
 
@@ -178,8 +211,6 @@ class OverlaysTab(Widget):
         # Package count
         package_count: int | None = self.selected_overlay.package_count or 0
         details += f"Packages: {package_count}\n"
-
-        #details += f"Quality: {self.selected_overlay.quality.value.title()}\n" # Unused by 99% ?
 
         if self.selected_overlay.homepage:
             details += f"Homepage: {self.selected_overlay.homepage}\n"
@@ -234,7 +265,7 @@ class OverlaysTab(Widget):
 
         try:
             enable_btn.disabled = True # Disable button to prevent multiple clicks
-            
+
             returncode, stdout, stderr = self.selected_overlay.enable_and_sync()
 
             if returncode == 0:
@@ -244,7 +275,7 @@ class OverlaysTab(Widget):
 
                 # Update overlay status and refresh table
                 self.app.call_from_thread(self._update_overlay_installation_status, self.selected_overlay.name, True)
-                self.app.call_from_thread(self._populate_table, self.overlays)
+                self.app.call_from_thread(self._populate_table)
             else:
                 self.app.call_from_thread(self.notify, f"Failed to enable and sync: {stderr}", severity="error")
         except Exception as e:
@@ -273,7 +304,7 @@ class OverlaysTab(Widget):
 
                 # Update overlay status and refresh table
                 self.app.call_from_thread(self._update_overlay_installation_status, self.selected_overlay.name, False)
-                self.app.call_from_thread(self._populate_table, self.overlays)
+                self.app.call_from_thread(self._populate_table)
             else:
                 self.app.call_from_thread(self.notify, f"Failed to remove: {stderr}", severity="error")
         except Exception as e:
