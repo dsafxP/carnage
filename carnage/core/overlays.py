@@ -100,13 +100,13 @@ class Overlay:
 
     def sync(self) -> tuple[int, str, str]:
         """
-        Sync this overlay using emerge.
+        Sync this overlay using emaint.
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
         from .privilege import run_privileged
 
-        return run_privileged(["emerge", "--sync", self.name])
+        return run_privileged(["emaint", "sync", "-r", self.name])
 
     def enable_and_sync(self) -> tuple[int, str, str]:
         """
@@ -117,7 +117,7 @@ class Overlay:
         """
         from .privilege import run_privileged
 
-        cmd: str = f"eselect repository enable {self.name} && emerge --sync {self.name}"
+        cmd: str = f"eselect repository enable {self.name} && emaint sync -r {self.name}"
         return run_privileged(["sh", "-c", cmd])
 
     def disable(self) -> tuple[int, str, str]:
