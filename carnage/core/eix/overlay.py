@@ -5,52 +5,45 @@ import subprocess
 from subprocess import CompletedProcess
 
 
+_remote_cache_available: bool | None = None
+
+
 def get_package_count(overlay: str) -> int:
     """
     Get the number of packages in a specific overlay.
-
-    Tries: eix -RQ -# --in-overlay <overlay>
-    Fallback: eix -Q -# --in-overlay <overlay>
 
     Args:
         overlay: The overlay name to count packages from
 
     Returns:
-        Number of packages in the overlay, or 0 if error occurs
+        Number of packages in the overlay, or -1 if error occurs
     """
+    global _remote_cache_available
+
     # Set environment to disable limits
     env: dict[str, str] = os.environ.copy()
     env["EIX_LIMIT"] = "0"
 
-    # Try with remote cache first (eix -RQ)
+    # Check remote cache status once
+    if _remote_cache_available is None:
+        from .eix import has_remote_cache
+        _remote_cache_available = has_remote_cache()
+
+    # Build command based on remote cache availability
+    if _remote_cache_available:
+        cmd: list[str] = ["eix", "-RQ*", "--format", "1", "--only-in-overlay", overlay]
+    else:
+        cmd = ["eix", "-Q*", "--format", "1", "--only-in-overlay", overlay]
+
     try:
-        result: CompletedProcess[str] = subprocess.run(
-            ["eix", "-RQ", "-#", "--in-overlay", overlay],
+        result: CompletedProcess[bytes] = subprocess.run(
+            cmd,
             capture_output=True,
-            text=True,
             env=env
         )
 
         if result.returncode == 0:
-            # Each line represents one package
-            count: int = result.stdout.count('\n')
-            if count > 0:
-                return count
-    except (subprocess.SubprocessError, OSError):
-        pass
-
-    # Fallback to local cache only (eix -Q)
-    try:
-        result: CompletedProcess[str] = subprocess.run(
-            ["eix", "-Q", "-#", "--in-overlay", overlay],
-            capture_output=True,
-            text=True,
-            env=env
-        )
-
-        if result.returncode == 0:
-            # Each line represents one package
-            return result.stdout.count('\n')
+            return len(result.stdout)
         else:
             return 0
     except (subprocess.SubprocessError, OSError):

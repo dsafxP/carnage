@@ -1,5 +1,6 @@
 """Utilities for managing Gentoo overlays."""
 import concurrent.futures
+import os
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -338,8 +339,12 @@ def _populate_package_counts(overlays: list[Overlay]) -> None:
         except:
             return overlay, -1
 
+    # Calculate optimal worker count
+    cpu_count: int = os.cpu_count() or 1
+    max_workers: int = max(2, min(cpu_count // 2, 8))
+
     # Use ThreadPoolExecutor for parallel execution
-    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all tasks
         future_to_overlay = {
             executor.submit(_get_count, overlay): overlay
