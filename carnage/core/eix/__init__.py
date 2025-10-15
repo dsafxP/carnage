@@ -11,7 +11,7 @@ from .eix import (
 )
 
 # Package search
-from .search import Package, PackageVersion, PackageDatabase, search_packages
+from .search import Package, PackageVersion, search_packages
 
 __all__ = [
     # Eix operations
@@ -24,6 +24,5 @@ __all__ = [
     # Search
     "Package",
     "PackageVersion",
-    "PackageDatabase",
     "search_packages",
 ]

@@ -1,10 +1,9 @@
-"""Package search functionality using eix with in-memory database."""
+"""Package search functionality using direct eix queries."""
 
 import subprocess
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from subprocess import CompletedProcess
-from typing import Callable
 from xml.etree.ElementTree import Element
 
 
@@ -64,127 +63,6 @@ class Package:
             if v.installed:
                 return v
         return None
-
-
-class PackageDatabase:
-    """In-memory package database for fast searching."""
-
-    def __init__(self):
-        """Initialize empty package database."""
-        self.packages: list[Package] = []
-        self._by_name: dict[str, list[Package]] = {}
-        self._by_category: dict[str, list[Package]] = {}
-        self._loaded: bool = False
-
-    def load(self) -> None:
-        """Load all packages from eix into memory."""
-        if self._loaded:
-            return
-
-        self.packages = _fetch_all_packages()
-        self._build_indices()
-        self._loaded = True
-
-    def _build_indices(self) -> None:
-        """Build search indices for faster lookups."""
-        self._by_name.clear()
-        self._by_category.clear()
-
-        for pkg in self.packages:
-            # Index by package name
-            if pkg.name not in self._by_name:
-                self._by_name[pkg.name] = []
-            self._by_name[pkg.name].append(pkg)
-
-            # Index by category
-            if pkg.category not in self._by_category:
-                self._by_category[pkg.category] = []
-            self._by_category[pkg.category].append(pkg)
-
-    def search(
-            self,
-            query: str,
-            case_sensitive: bool = False,
-            search_description: bool = True
-    ) -> list[Package]:
-        """
-        Search for packages by name or description.
-
-        Args:
-            query: Search query string
-            case_sensitive: Whether to perform case-sensitive search
-            search_description: Whether to search in descriptions
-
-        Returns:
-            List of matching packages
-        """
-        if not self._loaded:
-            self.load()
-
-        if not case_sensitive:
-            query = query.lower()
-
-        results: list[Package] = []
-
-        for pkg in self.packages:
-            name: str = pkg.name if case_sensitive else pkg.name.lower()
-            full_name: str = pkg.full_name if case_sensitive else pkg.full_name.lower()
-
-            # Search in name
-            if query in name or query in full_name:
-                results.append(pkg)
-                continue
-
-            # Search in description
-            if search_description and pkg.description:
-                desc: str = pkg.description if case_sensitive else pkg.description.lower()
-                if query in desc:
-                    results.append(pkg)
-
-        return results
-
-    def filter(
-            self,
-            predicate: Callable[[Package], bool]
-    ) -> list[Package]:
-        """
-        Filter packages using a custom predicate function.
-
-        Args:
-            predicate: Function that returns True for packages to include
-
-        Returns:
-            List of packages matching the predicate
-        """
-        if not self._loaded:
-            self.load()
-
-        return [pkg for pkg in self.packages if predicate(pkg)]
-
-    def get_by_category(self, category: str) -> list[Package]:
-        """Get all packages in a specific category."""
-        if not self._loaded:
-            self.load()
-
-        return self._by_category.get(category, [])
-
-    def get_by_name(self, name: str) -> list[Package]:
-        """Get all packages with a specific name (may be in different categories)."""
-        if not self._loaded:
-            self.load()
-
-        return self._by_name.get(name, [])
-
-    def get_installed(self) -> list[Package]:
-        """Get all installed packages."""
-        return self.filter(lambda pkg: pkg.is_installed())
-
-    def categories(self) -> list[str]:
-        """Get list of all categories."""
-        if not self._loaded:
-            self.load()
-
-        return sorted(self._by_category.keys())
 
 
 def _parse_version(version_elem: ET.Element) -> PackageVersion:
@@ -281,14 +159,17 @@ def _parse_package(package_elem: ET.Element, category: str) -> Package:
     )
 
 
-def _fetch_all_packages() -> list[Package]:
+def _fetch_packages_by_query(query: str) -> list[Package]:
     """
-    Fetch all packages from eix.
+    Fetch packages from eix using a search query.
 
     Tries with remote cache first (-R flag), falls back to local only if it fails.
 
+    Args:
+        query: Search query string
+
     Returns:
-        List of all Package objects
+        List of matching Package objects
 
     Raises:
         subprocess.CalledProcessError: If eix command fails with both attempts
@@ -296,7 +177,7 @@ def _fetch_all_packages() -> list[Package]:
     """
     # Try with remote cache first
     result: CompletedProcess[str] = subprocess.run(
-        ["eix", "-RQ", "--xml"],
+        ["eix", "-RQ", "--xml", query],
         capture_output=True,
         text=True
     )
@@ -304,7 +185,7 @@ def _fetch_all_packages() -> list[Package]:
     # If remote cache fails (exit code 1), try without -R
     if result.returncode == 1:
         result = subprocess.run(
-            ["eix", "-Q", "--xml"],
+            ["eix", "-Q", "--xml", query],
             capture_output=True,
             text=True,
             check=True
@@ -313,7 +194,7 @@ def _fetch_all_packages() -> list[Package]:
         # Other error, raise it
         result.check_returncode()
 
-    root = ET.fromstring(result.stdout)
+    root: Element = ET.fromstring(result.stdout)
     packages: list[Package] = []
 
     for category_elem in root.findall("category"):
@@ -326,27 +207,58 @@ def _fetch_all_packages() -> list[Package]:
     return packages
 
 
-def search_packages(
-        query: str,
-        case_sensitive: bool = False,
-        search_description: bool = True
-) -> list[Package]:
+def search_packages(query: str) -> list[Package]:
     """
-    Search for packages without loading full database into memory.
-
-    This is a lightweight alternative for low-spec systems.
-    Note: Currently loads full database. Will be optimized later.
+    Search for packages using direct eix queries.
 
     Args:
         query: Search query string
-        case_sensitive: Whether to perform case-sensitive search
-        search_description: Whether to search in descriptions
 
     Returns:
         List of matching packages
     """
-    # For now, use the database
-    # TODO: Implement direct eix search without loading everything
-    db = PackageDatabase()
-    db.load()
-    return db.search(query, case_sensitive, search_description)
+    if not query.strip():
+        return []
+
+    try:
+        packages: list[Package] = _fetch_packages_by_query(query)
+        return packages
+    except (subprocess.CalledProcessError, ET.ParseError) as e:
+        # Return empty list on error rather than crashing
+        return []
+
+
+def get_package_by_atom(atom: str) -> Package | None:
+    """
+    Get a specific package by its full atom.
+
+    Args:
+        atom: Package atom (e.g., "app-editors/vim")
+
+    Returns:
+        Package object if found, None otherwise
+    """
+    try:
+        packages: list[Package] = _fetch_packages_by_query(atom)
+        # Look for exact match
+        for pkg in packages:
+            if pkg.full_name == atom:
+                return pkg
+        return None
+    except (subprocess.CalledProcessError, ET.ParseError):
+        return None
+
+
+def get_installed_packages() -> list[Package]:
+    """
+    Get all installed packages.
+
+    Returns:
+        List of installed Package objects
+    """
+    try:
+        # Use eix's installed filter
+        packages: list[Package] = _fetch_packages_by_query("--installed")
+        return packages
+    except (subprocess.CalledProcessError, ET.ParseError):
+        return []
