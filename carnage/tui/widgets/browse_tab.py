@@ -1,5 +1,5 @@
 """Browse tab widget for searching and managing Gentoo packages."""
-
+import textual.markup
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
@@ -170,7 +170,12 @@ class BrowseTab(Widget):
                 details += "[green]✓ Installed[/green]\n"
 
             details += f"Overlay: {repo}\n"
-            
+
+            # Show runtime dependencies
+            if version.rdepend:
+                details += f"Runtime: {textual.markup.escape(version.rdepend)}\n"
+
+            # Show USE flags
             if version.iuse:
                 details += f"USE flags: {' '.join(version.iuse)}\n"
 
