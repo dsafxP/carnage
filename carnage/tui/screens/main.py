@@ -1,4 +1,3 @@
-
 """Main screen with tabs for Carnage."""
 
 from textual.app import ComposeResult
@@ -10,6 +9,7 @@ from ...core.eix import is_found, has_cache
 from ..widgets.overlay_tab import OverlaysTab
 from ..widgets.news_tab import NewsTab
 from ..widgets.glsa_tab import GLSATab
+from ..widgets.browse_tab import BrowseTab
 
 class MainScreen(Screen):
     """Main screen with search bar and tabbed content."""
@@ -38,7 +38,7 @@ class MainScreen(Screen):
                     yield GLSATab()
 
                 with TabPane("Browse", id="browse", disabled=True):
-                    yield Label("Package browser will go here")
+                    yield BrowseTab()
 
                 with TabPane("USE", id="use", disabled=True):
                     yield Label("USE flags will go here")
@@ -102,12 +102,14 @@ class MainScreen(Screen):
 
         if active_tab_id == "overlays":
             # Apply search filter to overlays tab
-            overlays_pane: TabPane = tabbed_content.query_one("#overlays", TabPane)
-            overlays_tab: OverlaysTab = overlays_pane.query_one(OverlaysTab)
+            overlays_pane = tabbed_content.query_one("#overlays", TabPane)
+            overlays_tab = overlays_pane.query_one(OverlaysTab)
             overlays_tab.apply_filter(query)
+        elif active_tab_id == "browse":
+            # Apply search to browse tab
+            browse_pane = tabbed_content.query_one("#browse", TabPane)
+            browse_tab = browse_pane.query_one(BrowseTab)
+            browse_tab.search_packages(query)
         elif active_tab_id in ("news", "glsas") and query:
             # Switch to Browse tab and trigger search there
             tabbed_content.active = "browse"
-        elif active_tab_id == "browse" and query:
-            # Handle browse tab searching (you'll implement this later)
-            pass

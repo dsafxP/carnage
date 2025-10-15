@@ -293,3 +293,43 @@ LoadingIndicator {
     height: 100%;
     content-align: center middle;
 }
+
+/* Browse tab specific styles */
+#browse-table {
+    height: 20;
+    margin-bottom: 1;
+}
+
+#browse-detail {
+    height: 1fr;
+    border: solid $primary;
+    padding: 1;
+}
+
+#browse-content-scroll {
+    height: 1fr;
+    border: solid $primary;
+    margin-bottom: 1;
+}
+
+#browse-content {
+    padding: 1;
+}
+
+#browse-actions {
+    width: 100%;
+    height: auto;
+    align: center middle;
+    layout: horizontal;
+    margin-top: 1;
+}
+
+#browse-actions Button {
+    margin: 0 1;
+}
+
+#browse-loading {
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+}
