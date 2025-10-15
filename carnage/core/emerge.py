@@ -15,7 +15,7 @@ def emerge_install(package_atom: str) -> tuple[int, str, str]:
     Returns:
         Tuple of (return_code, stdout, stderr)
     """
-    return run_privileged(["emerge", "-q", "--color=n", package_atom])
+    return run_privileged(["emerge", "-q", "--nospinner", "--color=n", package_atom])
 
 
 def emerge_uninstall(package_atom: str) -> tuple[int, str, str]:
@@ -30,7 +30,7 @@ def emerge_uninstall(package_atom: str) -> tuple[int, str, str]:
     Returns:
         Tuple of (return_code, stdout, stderr)
     """
-    return run_privileged(["emerge", "-q", "--color=n", "--depclean", package_atom])
+    return run_privileged(["emerge",  "-q", "--nospinner","--color=n", "--depclean", package_atom])
 
 
 def emerge_sync() -> tuple[int, str, str]:
@@ -55,6 +55,6 @@ def emerge_update_world() -> tuple[int, str, str]:
         Tuple of (return_code, stdout, stderr)
     """
     return run_privileged([
-        "emerge", "-q", "--color=n",
+        "emerge", "-q", "--color=n", "--nospinner",
         "--update", "--deep", "--newuse", "@world"
     ])
