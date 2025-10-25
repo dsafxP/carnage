@@ -57,8 +57,8 @@ class BrowseTab(Widget):
         table: DataTable = self.query_one("#browse-table", DataTable)
 
         # Show loading indicator
-        self.app.call_from_thread(setattr, loading, "display", True)
-        self.app.call_from_thread(setattr, table, "display", False)
+        loading.display = True
+        table.display = False
 
         try:
             # Perform search using eix
