@@ -5,7 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "carnage"
 authors = [{name = "dsafxP", email = "ghostyn678+git@gmail.com"}]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
