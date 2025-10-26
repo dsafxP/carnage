@@ -328,16 +328,17 @@ def get_installed() -> list[str]:
     ]
 
 
+def _get_overlay_package_count(overlay: Overlay) -> tuple[Overlay, int]:
+    """Get package count for a single overlay."""
+    try:
+        count: int = get_package_count(overlay.name)
+        return overlay, count
+    except:
+        return overlay, -1
+
+
 def _populate_package_counts(overlays: list[Overlay]) -> None:
     """Populate package counts for all overlays in parallel."""
-
-    def _get_count(overlay: Overlay) -> tuple[Overlay, int]:
-        """Get package count for a single overlay."""
-        try:
-            count: int = get_package_count(overlay.name)
-            return overlay, count
-        except:
-            return overlay, -1
 
     # Calculate optimal worker count
     cpu_count: int = os.cpu_count() or 1
@@ -347,19 +348,18 @@ def _populate_package_counts(overlays: list[Overlay]) -> None:
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all tasks
         future_to_overlay = {
-            executor.submit(_get_count, overlay): overlay
+            executor.submit(_get_overlay_package_count, overlay): overlay
             for overlay in overlays
         }
 
         # Process completed tasks as they finish
         for future in concurrent.futures.as_completed(future_to_overlay):
             try:
-                overlay: object
                 overlay, count = future.result()
                 overlay.package_count = count
             except:
                 # If anything goes wrong with the future itself, set count to -1
-                overlay = future_to_overlay[future]
+                overlay: Overlay = future_to_overlay[future]
                 overlay.package_count = -1
 
 
