@@ -1,5 +1,6 @@
 """Utilities for managing Gentoo repository news."""
 
+from .portageq import get_gentoo_repo_path
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -130,9 +131,8 @@ def get_news() -> list[News]:
     Returns:
         List of News objects with full content loaded
     """
-    gentoo_repo_path = Path("/var/db/repos/gentoo")
 
-    news_dir: Path = gentoo_repo_path / "metadata" / "news"
+    news_dir: Path = get_gentoo_repo_path() / "metadata" / "news"
 
     # Get all news list (both read and unread)
     result: CompletedProcess[str] = subprocess.run(

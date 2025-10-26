@@ -10,6 +10,8 @@ from .cache import CacheManager
 from .eix.use import get_all_useflags
 from datetime import timedelta
 
+from .portageq import get_repos_path
+
 # Cache configuration
 CACHE_KEY_USEFLAGS = "useflags_data"
 CACHE_MAX_AGE = timedelta(hours=24)
@@ -49,7 +51,7 @@ class UseFlag:
 def _parse_useflag_descriptions() -> Dict[str, str]:
     """Parse USE flag descriptions from profile files."""
     descriptions: Dict[str, str] = {}
-    repos_path = Path("/var/db/repos")
+    repos_path: Path = get_repos_path()
 
     if not repos_path.exists():
         return descriptions

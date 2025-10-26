@@ -13,6 +13,7 @@ from lxml import etree
 
 from .cache import CacheManager
 from .eix.overlay import get_package_count
+from .portageq import get_repos_path
 
 OVERLAY_SOURCES: list[str] = [
     "https://api.gentoo.org/overlays/repositories.xml"
@@ -82,11 +83,11 @@ class Overlay:
         Check if this overlay is installed.
 
         Returns:
-            True if the overlay directory exists in /var/db/repos, False otherwise.
+            True if the overlay directory exists in the repository directory, False otherwise.
         """
         from pathlib import Path
 
-        overlay_path: Path = Path("/var/db/repos") / self.name
+        overlay_path: Path = get_repos_path() / self.name
         return overlay_path.exists() and overlay_path.is_dir()
 
     def enable(self) -> tuple[int, str, str]:

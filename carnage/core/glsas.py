@@ -1,5 +1,6 @@
 """Utilities for managing Gentoo Linux Security Advisories (GLSAs)."""
 
+from .portageq import get_gentoo_repo_path
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -311,8 +312,7 @@ def fetch_glsas() -> list[GLSA]:
     Returns:
         List of GLSA objects for all GLSAs affecting the system.
     """
-    gentoo_repo_path = Path("/var/db/repos/gentoo")
-    glsa_metadata_dir: Path = gentoo_repo_path / "metadata" / "glsa"
+    glsa_metadata_dir: Path = get_gentoo_repo_path() / "metadata" / "glsa"
 
     # Get affected GLSAs
     returncode, glsa_codes = get_affected_glsas()

@@ -23,7 +23,11 @@ from .glsas import GLSA, fetch_glsas, get_affected_glsas, fix_glsas
 # News management
 from .news import News, get_news, mark_news_read, mark_all_news_read, purge_read_news
 
+# USE
 from .use import UseFlag, get_or_cache_useflags
+
+# portageq
+from .portageq import get_repos_path, get_gentoo_repo_path
 
 __all__ = [
     # Cache
@@ -55,5 +59,8 @@ __all__ = [
     "purge_read_news",
     # USE
     "UseFlag",
-    "get_or_cache_useflags"
+    "get_or_cache_useflags",
+    # portageq
+    "get_repos_path",
+    "get_gentoo_repo_path"
 ]
