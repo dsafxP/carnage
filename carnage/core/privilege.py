@@ -5,6 +5,8 @@ import subprocess
 from enum import Enum
 from subprocess import CompletedProcess
 
+from .config import Configuration, get_config
+
 
 class PrivilegeBackend(Enum):
     """Available privilege escalation backends."""
@@ -12,6 +14,7 @@ class PrivilegeBackend(Enum):
     SUDO = "sudo"
     DOAS = "doas"
     NONE = "none"
+    AUTO = "auto"
 
 
 def detect_backend() -> PrivilegeBackend:
@@ -34,6 +37,28 @@ def detect_backend() -> PrivilegeBackend:
     return PrivilegeBackend.NONE
 
 
+def get_configured_backend() -> PrivilegeBackend:
+    """
+    Get privilege backend from configuration or auto-detect.
+
+    Returns:
+        Configured backend or auto-detected if set to 'auto'
+    """
+    config: Configuration = get_config()
+    backend_str: str = config.privilege_backend.lower()
+
+    print(backend_str)
+
+    try:
+        backend = PrivilegeBackend(backend_str)
+        if backend == PrivilegeBackend.AUTO:
+            return detect_backend()
+        return backend
+    except ValueError:
+        # Invalid backend in config, fall back to auto-detection
+        return detect_backend()
+
+
 def run_privileged(
         cmd: list[str],
         backend: PrivilegeBackend | None = None
@@ -43,25 +68,22 @@ def run_privileged(
 
     Args:
         cmd: Command and arguments to run.
-        backend: Specific backend to use. If None, auto-detect.
+        backend: Specific backend to use. If None, use configured backend.
 
     Returns:
         Tuple of (return_code, stdout, stderr)
     """
     if backend is None:
-        backend = detect_backend()
+        backend = get_configured_backend()
 
-    if backend == PrivilegeBackend.NONE:
-        # Run without escalation, will likely fail
-        full_cmd: list[str] = cmd
-    elif backend == PrivilegeBackend.PKEXEC:
+    full_cmd: list[str] = cmd
+
+    if backend == PrivilegeBackend.PKEXEC:
         full_cmd = ["pkexec"] + cmd
     elif backend == PrivilegeBackend.SUDO:
         full_cmd = ["sudo"] + cmd
     elif backend == PrivilegeBackend.DOAS:
         full_cmd = ["doas"] + cmd
-    else:
-        full_cmd = cmd
 
     result: CompletedProcess[str] = subprocess.run(
         full_cmd,
@@ -70,19 +92,3 @@ def run_privileged(
     )
 
     return result.returncode, result.stdout, result.stderr
-
-
-def get_backend_name(backend: PrivilegeBackend | None = None) -> str:
-    """
-    Get the name of the privilege escalation backend.
-
-    Args:
-        backend: Specific backend to check. If None, auto-detect.
-
-    Returns:
-        Name of the backend as a string.
-    """
-    if backend is None:
-        backend = detect_backend()
-
-    return backend.value
