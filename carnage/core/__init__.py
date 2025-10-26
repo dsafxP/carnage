@@ -29,6 +29,8 @@ from .use import UseFlag, get_or_cache_useflags
 # portageq
 from .portageq import get_repos_path, get_gentoo_repo_path
 
+from .config import get_config, Configuration
+
 __all__ = [
     # Cache
     "CacheManager",
@@ -62,5 +64,8 @@ __all__ = [
     "get_or_cache_useflags",
     # portageq
     "get_repos_path",
-    "get_gentoo_repo_path"
+    "get_gentoo_repo_path",
+    # Configuration
+    "get_config",
+    "Configuration"
 ]

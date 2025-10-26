@@ -5,22 +5,23 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "carnage"
 authors = [{name = "dsafxP", email = "ghostyn678+git@gmail.com"}]
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 dynamic = ["version", "description"]
 dependencies = [
-    "lxml >= 6.0.2",
-    "msgpack >= 1.1.2",
-    "textual >= 6.4.0",
+    "lxml>=6.0.2",
+    "msgpack>=1.1.2",
+    "textual>=6.4.0",
+    "tomlkit>=0.13.3",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pyrefly >= 0.38.2",
-    "msgpack-types >= 0.5.0",
-    "textual-dev >= 1.8.0",
+    "pyrefly>=0.38.2",
+    "msgpack-types>=0.5.0",
+    "textual-dev>=1.8.0",
 ]
 
 [project.urls]
