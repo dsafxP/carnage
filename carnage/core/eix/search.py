@@ -1,10 +1,11 @@
 """Package search functionality using direct eix queries."""
 
 import subprocess
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from subprocess import CompletedProcess
-from xml.etree.ElementTree import Element
+from typing import List
+from . import has_remote_cache
+from lxml import etree
 
 
 @dataclass
@@ -16,20 +17,20 @@ class PackageVersion:
     virtual: bool
     installed: bool
     src_uri: str | None
-    iuse: list[str]
-    iuse_default: list[str]
+    iuse: List[str]
+    iuse_default: List[str]
     required_use: str | None
     depend: str | None
     rdepend: str | None
     bdepend: str | None
     pdepend: str | None
     idepend: str | None
-    masks: list[str]
-    unmasks: list[str]
-    properties: list[str]
-    restricts: list[str]
-    use_enabled: list[str]
-    use_disabled: list[str]
+    masks: List[str]
+    unmasks: List[str]
+    properties: List[str]
+    restricts: List[str]
+    use_enabled: List[str]
+    use_disabled: List[str]
 
 
 @dataclass
@@ -39,8 +40,8 @@ class Package:
     name: str
     description: str | None
     homepage: str | None
-    licenses: list[str]
-    versions: list[PackageVersion] = field(default_factory=list)
+    licenses: List[str]
+    versions: List[PackageVersion] = field(default_factory=list)
 
     @property
     def full_name(self) -> str:
@@ -65,47 +66,44 @@ class Package:
         return None
 
 
-def _parse_version(version_elem: ET.Element) -> PackageVersion:
+def _parse_version(version_elem: etree._Element) -> PackageVersion:
     """Parse a version element from eix XML."""
-    iuse_elems: list[Element] = version_elem.findall("iuse")
-    iuse: list[str] = []
-    iuse_default: list[str] = []
+    # Parse IUSE flags more efficiently with XPath
+    iuse_elems = version_elem.xpath("iuse")
+    iuse: List[str] = []
+    iuse_default: List[str] = []
 
     for iuse_elem in iuse_elems:
-        flags: list[str] = iuse_elem.text.split() if iuse_elem.text else []
+        flags = iuse_elem.text.split() if iuse_elem.text else []
         for flag in flags:
             iuse.append(flag)
             if iuse_elem.get("default") == "1":
                 iuse_default.append(flag)
 
-    # Parse masks
-    masks: list[str] = [m.get("type", "") for m in version_elem.findall("mask")]
-    unmasks: list[str] = [u.get("type", "") for u in version_elem.findall("unmask")]
+    # Parse masks and unmasks
+    masks = version_elem.xpath("mask/@type")
+    unmasks = version_elem.xpath("unmask/@type")
 
     # Parse properties
-    properties: list[str] = [p.get("flag", "") for p in version_elem.findall("properties")]
+    properties = version_elem.xpath("properties/@flag")
 
     # Parse restricts
-    restricts: list[str] = [r.get("flag", "") for r in version_elem.findall("restrict")]
+    restricts = version_elem.xpath("restrict/@flag")
 
     # Parse use flags
-    use_elems: list[Element] = version_elem.findall("use")
-    use_enabled = []
-    use_disabled = []
+    use_enabled_elems = version_elem.xpath('use[@enabled="1"]')
+    use_disabled_elems = version_elem.xpath('use[@enabled="0"]')
 
-    for use_elem in use_elems:
-        if use_elem.get("enabled") == "1":
-            use_enabled = use_elem.text.split() if use_elem.text else []
-        elif use_elem.get("enabled") == "0":
-            use_disabled = use_elem.text.split() if use_elem.text else []
+    use_enabled = use_enabled_elems[0].text.split() if use_enabled_elems and use_enabled_elems[0].text else []
+    use_disabled = use_disabled_elems[0].text.split() if use_disabled_elems and use_disabled_elems[0].text else []
 
     # Get depend fields
-    depend_elem = version_elem.find("depend")
-    rdepend_elem = version_elem.find("rdepend")
-    bdepend_elem = version_elem.find("bdepend")
-    pdepend_elem = version_elem.find("pdepend")
-    idepend_elem = version_elem.find("idepend")
-    required_use_elem = version_elem.find("required_use")
+    depend_elem = version_elem.xpath("depend")[0] if version_elem.xpath("depend") else None
+    rdepend_elem = version_elem.xpath("rdepend")[0] if version_elem.xpath("rdepend") else None
+    bdepend_elem = version_elem.xpath("bdepend")[0] if version_elem.xpath("bdepend") else None
+    pdepend_elem = version_elem.xpath("pdepend")[0] if version_elem.xpath("pdepend") else None
+    idepend_elem = version_elem.xpath("idepend")[0] if version_elem.xpath("idepend") else None
+    required_use_elem = version_elem.xpath("required_use")[0] if version_elem.xpath("required_use") else None
 
     return PackageVersion(
         id=version_elem.get("id", ""),
@@ -131,23 +129,22 @@ def _parse_version(version_elem: ET.Element) -> PackageVersion:
     )
 
 
-def _parse_package(package_elem: ET.Element, category: str) -> Package:
+def _parse_package(package_elem: etree._Element, category: str) -> Package:
     """Parse a package element from eix XML."""
-    name: str = package_elem.get("name", "")
+    name = package_elem.get("name", "")
 
-    desc_elem = package_elem.find("description")
-    homepage_elem = package_elem.find("homepage")
-    licenses_elem = package_elem.find("licenses")
+    desc_elem = package_elem.xpath("description")[0] if package_elem.xpath("description") else None
+    homepage_elem = package_elem.xpath("homepage")[0] if package_elem.xpath("homepage") else None
+    licenses_elem = package_elem.xpath("licenses")[0] if package_elem.xpath("licenses") else None
 
     # Parse licenses
-    licenses: list[str] = []
+    licenses: List[str] = []
     if licenses_elem is not None and licenses_elem.text:
         licenses = licenses_elem.text.split()
 
     # Parse versions
-    versions: list[PackageVersion] = []
-    for version_elem in package_elem.findall("version"):
-        versions.append(_parse_version(version_elem))
+    version_elems = package_elem.xpath("version")
+    versions: list[PackageVersion] = [_parse_version(version_elem) for version_elem in version_elems]
 
     return Package(
         category=category,
@@ -159,11 +156,11 @@ def _parse_package(package_elem: ET.Element, category: str) -> Package:
     )
 
 
-def _fetch_packages_by_query(query: str) -> list[Package]:
+def _fetch_packages_by_query(query: str) -> List[Package]:
     """
     Fetch packages from eix using a search query.
 
-    Tries with remote cache first (-R flag), falls back to local only if it fails.
+    Uses remote cache if available, falls back to local only.
 
     Args:
         query: Search query string
@@ -172,42 +169,41 @@ def _fetch_packages_by_query(query: str) -> list[Package]:
         List of matching Package objects
 
     Raises:
-        subprocess.CalledProcessError: If eix command fails with both attempts
-        ET.ParseError: If XML parsing fails
+        subprocess.CalledProcessError: If eix command fails
+        etree.ParseError: If XML parsing fails
     """
-    # Try with remote cache first
+    # Build command based on remote cache availability
+    if has_remote_cache():
+        cmd: list[str] = ["eix", "-RQ", "--xml", query]
+    else:
+        cmd = ["eix", "-Q", "--xml", query]
+
     result: CompletedProcess[str] = subprocess.run(
-        ["eix", "-RQ", "--xml", query],
+        cmd,
         capture_output=True,
-        text=True
+        text=True,
+        check=True
     )
 
-    # If remote cache fails (exit code 1), try without -R
-    if result.returncode == 1:
-        result = subprocess.run(
-            ["eix", "-Q", "--xml", query],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-    elif result.returncode != 0:
-        # Other error, raise it
-        result.check_returncode()
+    parser = etree.XMLParser(recover=True, remove_comments=True)
+    root = etree.fromstring(result.stdout.encode('utf-8'), parser=parser)
 
-    root: Element = ET.fromstring(result.stdout)
-    packages: list[Package] = []
+    packages: List[Package] = []
 
-    for category_elem in root.findall("category"):
-        category_name: str = category_elem.get("name", "")
+    category_elems = root.xpath("//category")
+    for category_elem in category_elems:
+        category_name = category_elem.get("name", "")
 
-        for package_elem in category_elem.findall("package"):
+        # Get all packages in this category
+        package_elems = category_elem.xpath("package")
+        for package_elem in package_elems:
             pkg: Package = _parse_package(package_elem, category_name)
             packages.append(pkg)
 
     return packages
 
 
-def search_packages(query: str) -> list[Package]:
+def search_packages(query: str) -> List[Package]:
     """
     Search for packages using direct eix queries.
 
@@ -221,9 +217,9 @@ def search_packages(query: str) -> list[Package]:
         return []
 
     try:
-        packages: list[Package] = _fetch_packages_by_query(query)
+        packages: List[Package] = _fetch_packages_by_query(query)
         return packages
-    except (subprocess.CalledProcessError, ET.ParseError) as e:
+    except (subprocess.CalledProcessError, etree.ParseError):
         # Return empty list on error rather than crashing
         return []
 
@@ -239,17 +235,17 @@ def get_package_by_atom(atom: str) -> Package | None:
         Package object if found, None otherwise
     """
     try:
-        packages: list[Package] = _fetch_packages_by_query(atom)
+        packages: List[Package] = _fetch_packages_by_query(atom)
         # Look for exact match
         for pkg in packages:
             if pkg.full_name == atom:
                 return pkg
         return None
-    except (subprocess.CalledProcessError, ET.ParseError):
+    except (subprocess.CalledProcessError, etree.ParseError):
         return None
 
 
-def get_installed_packages() -> list[Package]:
+def get_installed_packages() -> List[Package]:
     """
     Get all installed packages.
 
@@ -258,7 +254,55 @@ def get_installed_packages() -> list[Package]:
     """
     try:
         # Use eix's installed filter
-        packages: list[Package] = _fetch_packages_by_query("--installed")
+        packages: List[Package] = _fetch_packages_by_query("--installed")
         return packages
-    except (subprocess.CalledProcessError, ET.ParseError):
+    except (subprocess.CalledProcessError, etree.ParseError):
+        return []
+
+
+def get_packages_with_useflag(useflag: str) -> List[Package]:
+    """
+    Get packages that have a specific USE flag.
+
+    Uses remote cache if available, falls back to local only.
+
+    Args:
+        useflag: USE flag name to search for
+
+    Returns:
+        List of Package objects that have this USE flag
+    """
+    from lxml import etree
+
+    # Build command based on remote cache availability
+    if has_remote_cache():
+        cmd: list[str] = ["eix", "-RUQ", "--xml", "--use", useflag]
+    else:
+        cmd = ["eix", "-UQ", "--xml", "--use", useflag]
+
+    result: CompletedProcess[str] = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        return []
+
+    try:
+        parser = etree.XMLParser(recover=True, remove_comments=True)
+        root = etree.fromstring(result.stdout.encode('utf-8'), parser=parser)
+        packages: List[Package] = []
+
+        category_elems = root.xpath("//category")
+        for category_elem in category_elems:
+            category_name: str = category_elem.get("name", "")
+
+            package_elems = category_elem.xpath("package")
+            for package_elem in package_elems:
+                pkg: Package = _parse_package(package_elem, category_name)
+                packages.append(pkg)
+
+        return packages
+    except etree.ParseError:
         return []

@@ -6,8 +6,8 @@ from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import DataTable, Static, LoadingIndicator
 
-from ...core.eix import Package
-from ...core.eix.use import get_packages_with_useflag, get_package_count_for_useflag
+from ...core.eix import Package, get_packages_with_useflag
+from ...core.eix.use import get_package_count_for_useflag
 from ...core.use import UseFlag, get_or_cache_useflags
 from ...core.cache import CacheManager
 

@@ -1,13 +1,11 @@
 """USE flag functionality using eix."""
 
-import subprocess
-import xml.etree.ElementTree as ET
 import os
+import subprocess
 from subprocess import CompletedProcess
-from xml.etree.ElementTree import Element
 from typing import List
+
 from . import has_remote_cache
-from .search import Package
 
 
 def get_all_useflags() -> List[str]:
@@ -106,47 +104,3 @@ def get_package_count_for_useflag(useflag: str) -> int:
             return 0
     except (subprocess.SubprocessError, OSError):
         return -1
-
-
-def get_packages_with_useflag(useflag: str) -> List[Package]:
-    """
-    Get packages that have a specific USE flag.
-
-    Tries with remote cache first (-R flag), falls back to local only.
-
-    Args:
-        useflag: USE flag name to search for
-
-    Returns:
-        List of Package objects that have this USE flag
-    """
-    # Build command based on remote cache availability
-    if has_remote_cache():
-        cmd: list[str] = ["eix", "-RUQ", "--xml", "--use", useflag]
-    else:
-        cmd = ["eix", "-UQ", "--xml", "--use", useflag]
-
-    result: CompletedProcess[str] = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True
-    )
-
-    if result.returncode != 0:
-        return []
-
-    try:
-        root: Element = ET.fromstring(result.stdout)
-        packages: List[Package] = []
-
-        for category_elem in root.findall("category"):
-            category_name: str = category_elem.get("name", "")
-
-            for package_elem in category_elem.findall("package"):
-                from .search import _parse_package
-                pkg: Package = _parse_package(package_elem, category_name)
-                packages.append(pkg)
-
-        return packages
-    except ET.ParseError:
-        return []
