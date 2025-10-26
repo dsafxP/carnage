@@ -4,12 +4,12 @@ import os
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Literal, Any
-import xml.etree.ElementTree as ET
+from typing import Literal
 import urllib.request
 import urllib.error
-from xml.etree.ElementTree import Element
 from datetime import timedelta
+
+from lxml import etree
 
 from .cache import CacheManager
 from .eix.overlay import get_package_count
@@ -93,7 +93,7 @@ class Overlay:
         """
         Enable this overlay using eselect.
         Returns:
-            Tuple of (return_code, stdout,< >stderr)
+            Tuple of (return_code, stdout, stderr)
         """
         from .privilege import run_privileged
 
@@ -192,32 +192,36 @@ class Overlay:
         )
 
 
-def _parse_owner(repo_elem: ET.Element) -> Owner | None:
+def _parse_owner(repo_elem: etree._Element) -> Owner | None:
     """Parse owner information from XML element."""
-    owner_elem: Element | None = repo_elem.find("owner")
-    if owner_elem is None:
+    owner_elems = repo_elem.xpath("owner")
+    if not owner_elems:
         return None
 
-    name_elem: Element | None = owner_elem.find("name")
-    email_elem: Element | None = owner_elem.find("email")
-    owner_type: str = owner_elem.get("type", "person")
+    owner_elem = owner_elems[0]
 
-    if name_elem is None or email_elem is None:
+    name = owner_elem.xpath("string(name)")
+    email = owner_elem.xpath("string(email)")
+    owner_type = owner_elem.get("type", "person")
+
+    if not name or not email:
         return None
 
     return Owner(
-        name=name_elem.text or "",
-        email=email_elem.text or "",
+        name=name,
+        email=email,
         owner_type=owner_type  # type: ignore
     )
 
 
-def _parse_sources(repo_elem: ET.Element) -> list[Source]:
+def _parse_sources(repo_elem: etree._Element) -> list[Source]:
     """Parse source repositories from XML element."""
-    sources: list[Any] = []
-    for source_elem in repo_elem.findall("source"):
-        source_type_str: str = source_elem.get("type", "git")
-        url: str = source_elem.text or ""
+    sources: list[Source] = []
+
+    source_elems = repo_elem.xpath("source")
+    for source_elem in source_elems:
+        source_type_str = source_elem.get("type", "git")
+        url = source_elem.text or ""
 
         if url:
             try:
@@ -230,33 +234,31 @@ def _parse_sources(repo_elem: ET.Element) -> list[Source]:
     return sources
 
 
-def _parse_feeds(repo_elem: ET.Element) -> list[str]:
+def _parse_feeds(repo_elem: etree._Element) -> list[str]:
     """Parse feed URLs from XML element."""
-    feeds: list[str] = []
-    for feed_elem in repo_elem.findall("feed"):
-        if feed_elem.text:
-            feeds.append(feed_elem.text)
-    return feeds
+    feeds = repo_elem.xpath("feed/text()")
+    return [feed for feed in feeds if feed]
 
 
-def _parse_overlay(repo_elem: ET.Element) -> Overlay | None:
+def _parse_overlay(repo_elem: etree._Element) -> Overlay | None:
     """Parse a single overlay from XML element."""
-    name_elem: Element | None = repo_elem.find("name")
-    desc_elem: Element | None = repo_elem.find("description[@lang='en']")
-    homepage_elem: Element | None = repo_elem.find("homepage")
-
-    if name_elem is None or name_elem.text is None:
+    name = repo_elem.xpath("string(name)")
+    if not name:
         return None
 
-    owner: Owner | None = _parse_owner(repo_elem)
+    # Get English description specifically
+    description = repo_elem.xpath("string(description[@lang='en'])")
+    homepage = repo_elem.xpath("string(homepage)")
+
+    owner = _parse_owner(repo_elem)
     if owner is None:
         return None
 
-    sources: list[Source] = _parse_sources(repo_elem)
-    feeds: list[str] = _parse_feeds(repo_elem)
+    sources = _parse_sources(repo_elem)
+    feeds = _parse_feeds(repo_elem)
 
-    quality_str: str = repo_elem.get("quality", "experimental")
-    status_str: str = repo_elem.get("status", "unofficial")
+    quality_str = repo_elem.get("quality", "experimental")
+    status_str = repo_elem.get("status", "unofficial")
 
     try:
         quality = OverlayQuality(quality_str)
@@ -266,9 +268,9 @@ def _parse_overlay(repo_elem: ET.Element) -> Overlay | None:
         return None
 
     return Overlay(
-        name=name_elem.text,
-        description=desc_elem.text if desc_elem is not None else "",
-        homepage=homepage_elem.text if homepage_elem is not None else "",
+        name=name,
+        description=description if description else None,
+        homepage=homepage if homepage else None,
         owner=owner,
         sources=sources,
         feeds=feeds,
@@ -290,19 +292,23 @@ def fetch(source_url: str | None = None) -> list[Overlay]:
 
     Raises:
         urllib.error.URLError: If fetching fails.
-        ET.ParseError: If XML parsing fails.
+        etree.ParseError: If XML parsing fails.
     """
     url: str = source_url or OVERLAY_SOURCES[0]
 
     with urllib.request.urlopen(url, timeout=30) as response:
         xml_data = response.read()
 
-    root: Element = ET.fromstring(xml_data)
+    # Use lxml parser with recovery
+    parser = etree.XMLParser(recover=True, remove_comments=True)
+    root = etree.fromstring(xml_data, parser=parser)
 
     overlays: list[Overlay] = []
-    for repo_elem in root.findall("repo"):
-        overlay: Overlay | None = _parse_overlay(repo_elem)
 
+    # Use XPath for efficient repo selection
+    repo_elems = root.xpath("//repo")
+    for repo_elem in repo_elems:
+        overlay = _parse_overlay(repo_elem)
         if overlay is not None:
             overlays.append(overlay)
 
@@ -375,7 +381,7 @@ def fetch_extra(source_url: str | None = None) -> list[Overlay]:
 
     Raises:
         urllib.error.URLError: If fetching fails.
-        xml.etree.ElementTree.ParseError: If XML parsing fails.
+        etree.ParseError: If XML parsing fails.
     """
     overlays: list[Overlay] = fetch(source_url)
     installed_names: set[str] = set(get_installed())
