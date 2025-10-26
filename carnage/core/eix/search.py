@@ -68,7 +68,7 @@ class Package:
 
 def _parse_version(version_elem: etree._Element) -> PackageVersion:
     """Parse a version element from eix XML."""
-    # Parse IUSE flags more efficiently with XPath
+    # Parse IUSE flags
     iuse_elems = version_elem.xpath("iuse")
     iuse: List[str] = []
     iuse_default: List[str] = []
