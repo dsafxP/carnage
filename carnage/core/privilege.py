@@ -11,7 +11,6 @@ class PrivilegeBackend(Enum):
     PKEXEC = "pkexec"
     SUDO = "sudo"
     DOAS = "doas"
-    RUN0 = "run0"
     NONE = "none"
 
 
@@ -26,7 +25,6 @@ def detect_backend() -> PrivilegeBackend:
         (PrivilegeBackend.PKEXEC, "pkexec"),
         (PrivilegeBackend.SUDO, "sudo"),
         (PrivilegeBackend.DOAS, "doas"),
-        (PrivilegeBackend.RUN0, "run0"),
     ]
 
     for backend, cmd in backends:
@@ -62,8 +60,6 @@ def run_privileged(
         full_cmd = ["sudo"] + cmd
     elif backend == PrivilegeBackend.DOAS:
         full_cmd = ["doas"] + cmd
-    elif backend == PrivilegeBackend.RUN0:
-        full_cmd = ["run0"] + cmd
     else:
         full_cmd = cmd
 
