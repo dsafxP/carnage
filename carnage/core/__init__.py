@@ -23,6 +23,8 @@ from .glsas import GLSA, fetch_glsas, get_affected_glsas, fix_glsas
 # News management
 from .news import News, get_news, mark_news_read, mark_all_news_read, purge_read_news
 
+from .use import UseFlag, get_or_cache_useflags
+
 __all__ = [
     # Cache
     "CacheManager",
@@ -50,5 +52,8 @@ __all__ = [
     "get_news",
     "mark_news_read",
     "mark_all_news_read",
-    "purge_read_news"
+    "purge_read_news",
+    # USE
+    "UseFlag",
+    "get_or_cache_useflags"
 ]

@@ -3,9 +3,7 @@
 import os
 import subprocess
 from subprocess import CompletedProcess
-
-
-_remote_cache_available: bool | None = None
+from . import has_remote_cache
 
 
 def get_package_count(overlay: str) -> int:
@@ -18,19 +16,12 @@ def get_package_count(overlay: str) -> int:
     Returns:
         Number of packages in the overlay, or -1 if error occurs
     """
-    global _remote_cache_available
-
     # Set environment to disable limits
     env: dict[str, str] = os.environ.copy()
     env["EIX_LIMIT"] = "0"
 
-    # Check remote cache status once
-    if _remote_cache_available is None:
-        from .eix import has_remote_cache
-        _remote_cache_available = has_remote_cache()
-
     # Build command based on remote cache availability
-    if _remote_cache_available:
+    if has_remote_cache():
         cmd: list[str] = ["eix", "-RQ*", "--format", "1", "--only-in-overlay", overlay]
     else:
         cmd = ["eix", "-Q*", "--format", "1", "--only-in-overlay", overlay]

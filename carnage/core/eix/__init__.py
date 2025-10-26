@@ -13,6 +13,9 @@ from .eix import (
 # Package search
 from .search import Package, PackageVersion, search_packages
 
+# USE flags
+from .use import get_all_useflags, get_packages_with_useflag
+
 __all__ = [
     # Eix operations
     "is_found",
