@@ -333,3 +333,30 @@ LoadingIndicator {
     height: 100%;
     content-align: center middle;
 }
+
+/* USE flags tab specific styles */
+#useflags-table {
+    height: 15;
+    margin-bottom: 1;
+}
+
+#useflags-detail {
+    height: 1fr;
+    border: solid $primary;
+    padding: 1;
+}
+
+#useflags-content-scroll {
+    height: 1fr;
+    border: solid $primary;
+}
+
+#useflags-content {
+    padding: 1;
+}
+
+#useflags-loading {
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+}

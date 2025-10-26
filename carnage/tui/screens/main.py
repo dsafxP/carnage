@@ -10,6 +10,7 @@ from ..widgets.overlay_tab import OverlaysTab
 from ..widgets.news_tab import NewsTab
 from ..widgets.glsa_tab import GLSATab
 from ..widgets.browse_tab import BrowseTab
+from ..widgets.use_tab import UseFlagsTab
 
 class MainScreen(Screen):
     """Main screen with search bar and tabbed content."""
@@ -41,7 +42,7 @@ class MainScreen(Screen):
                     yield BrowseTab()
 
                 with TabPane("USE", id="use", disabled=True):
-                    yield Label("USE flags will go here")
+                    yield UseFlagsTab()
 
                 with TabPane("Overlays", id="overlays"):
                     yield OverlaysTab()
@@ -102,14 +103,19 @@ class MainScreen(Screen):
 
         if active_tab_id == "overlays":
             # Apply search filter to overlays tab
-            overlays_pane = tabbed_content.query_one("#overlays", TabPane)
-            overlays_tab = overlays_pane.query_one(OverlaysTab)
+            overlays_pane: TabPane = tabbed_content.query_one("#overlays", TabPane)
+            overlays_tab: OverlaysTab = overlays_pane.query_one(OverlaysTab)
             overlays_tab.apply_filter(query)
         elif active_tab_id == "browse":
             # Apply search to browse tab
-            browse_pane = tabbed_content.query_one("#browse", TabPane)
-            browse_tab = browse_pane.query_one(BrowseTab)
+            browse_pane: TabPane = tabbed_content.query_one("#browse", TabPane)
+            browse_tab: BrowseTab = browse_pane.query_one(BrowseTab)
             browse_tab.search_packages(query)
+        elif active_tab_id == "use":
+            # Apply search to USE tab
+            use_pane: TabPane = tabbed_content.query_one("#use", TabPane)
+            use_tab: UseFlagsTab = use_pane.query_one(UseFlagsTab)
+            use_tab.search_useflags(query)
         elif active_tab_id in ("news", "glsas") and query:
             # Switch to Browse tab and trigger search there
             tabbed_content.active = "browse"
