@@ -12,7 +12,6 @@ from datetime import timedelta
 
 # Cache configuration
 CACHE_KEY_USEFLAGS = "useflags_data"
-CACHE_KEY_DESCRIPTIONS = "useflag_descriptions"
 CACHE_MAX_AGE = timedelta(hours=24)
 
 

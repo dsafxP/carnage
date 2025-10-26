@@ -7,7 +7,7 @@ def emerge_install(package_atom: str) -> tuple[int, str, str]:
     """
     Install a package using emerge.
 
-    Wraps: emerge -q --color=n <package_atom>
+    Wraps: emerge -q --nospinner --color=n <package_atom>
 
     Args:
         package_atom: Package atom to install (e.g., "app-editors/vim")
@@ -22,7 +22,7 @@ def emerge_uninstall(package_atom: str) -> tuple[int, str, str]:
     """
     Uninstall a package using emerge.
 
-    Wraps: emerge -q --color=n --depclean <package_atom>
+    Wraps: emerge -q --color=n --nospinner --depclean <package_atom>
 
     Args:
         package_atom: Package atom to uninstall (e.g., "app-editors/vim")
@@ -49,7 +49,7 @@ def emerge_update_world() -> tuple[int, str, str]:
     """
     Update @world (system upgrade).
 
-    Wraps: emerge -q --color=n --update --deep --newuse @world
+    Wraps: emerge -q --color=n --nospinner --update --deep --newuse @world
 
     Returns:
         Tuple of (return_code, stdout, stderr)
