@@ -1,11 +1,12 @@
 """Browse tab widget for searching and managing Gentoo packages."""
+
 import textual.markup
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import DataTable, Static, Button, LoadingIndicator
-
+from ...core.config import Configuration, get_config
 from ...core.emerge import emerge_install, emerge_uninstall
 from ...core.eix.search import search_packages, Package
 
@@ -41,8 +42,10 @@ class BrowseTab(Widget):
 
     def search_packages(self, query: str) -> None:
         """Search for packages using eix and update the table."""
+
+        config: Configuration = get_config()
         
-        if not query.strip() or len(query.strip()) < MIN_CHARS:
+        if not query.strip() or len(query.strip()) < config.browse_minimum_characters:
             # Clear table when search is empty or too short
             self._clear_table()
             return
