@@ -7,6 +7,8 @@ from typing import List
 from . import has_remote_cache
 from lxml import etree
 
+from ..config import Configuration, get_config
+
 
 @dataclass
 class PackageVersion:
@@ -172,11 +174,19 @@ def _fetch_packages_by_query(query: str) -> List[Package]:
         subprocess.CalledProcessError: If eix command fails
         etree.ParseError: If XML parsing fails
     """
-    # Build command based on remote cache availability
+    # Build base command based on remote cache availability
     if has_remote_cache():
-        cmd: list[str] = ["eix", "-RQ", "--xml", query]
+        cmd: list[str] = ["eix", "-RQ", "--xml"]
     else:
-        cmd = ["eix", "-Q", "--xml", query]
+        cmd = ["eix", "-Q", "--xml"]
+
+    config: Configuration = get_config()
+
+    # Append search flags from configuration
+    cmd.extend(config.search_flags)
+
+    # Append the search query
+    cmd.append(query)
 
     result: CompletedProcess[str] = subprocess.run(
         cmd,
