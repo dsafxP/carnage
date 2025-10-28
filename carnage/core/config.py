@@ -42,7 +42,8 @@ class Configuration:
             "overlays": {
                 "ignore_warnings": False,
                 "skip_package_counting": False,
-                "cache_max_age": 72
+                "cache_max_age": 72,
+                "overlay_source": "https://api.gentoo.org/overlays/repositories.xml"
             },
             "use": {
                 "minimum_characters": 3,
@@ -96,6 +97,10 @@ class Configuration:
         overlays_section.add(tomlkit.comment("Maximum age for overlay cache in hours"))
         overlays_section.add(tomlkit.comment("Overlay data will be refreshed after this time"))
         overlays_section.add("cache_max_age", 72)
+        overlays_section.add(tomlkit.nl())
+        overlays_section.add(tomlkit.comment("URL to fetch overlay metadata from"))
+        overlays_section.add(tomlkit.comment("Change this only if you need to use a different overlay list source"))
+        overlays_section.add("overlay_source", "https://api.gentoo.org/overlays/repositories.xml")
         doc.add("overlays", overlays_section)
         
         # Use section
@@ -205,6 +210,11 @@ class Configuration:
     def overlays_cache_max_age(self) -> int:
         """Get the cache max age for overlays in hours."""
         return self._get_nested_value(["overlays", "cache_max_age"], 72)
+
+    @property
+    def overlay_source(self) -> str:
+        """Get the overlay metadata source URL."""
+        return self._get_nested_value(["overlays", "overlay_source"], "https://api.gentoo.org/overlays/repositories.xml")
     
     @property
     def use_minimum_characters(self) -> int:

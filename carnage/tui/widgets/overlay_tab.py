@@ -121,6 +121,8 @@ class OverlaysTab(Widget):
             self.app.call_from_thread(self.check_remote_cache_notification)
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Failed to load overlays: {e}", severity="error")
+
+            self.update_button_states()
         finally:
             self.app.call_from_thread(self._hide_loading)
 

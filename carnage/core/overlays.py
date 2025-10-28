@@ -1,4 +1,5 @@
 """Utilities for managing Gentoo overlays."""
+
 import concurrent.futures
 import os
 from dataclasses import dataclass
@@ -11,13 +12,11 @@ from datetime import timedelta
 
 from lxml import etree
 
+from .config import get_config, Configuration
 from .cache import CacheManager
 from .eix.overlay import get_package_count
 from .portageq import get_repos_path
 
-OVERLAY_SOURCES: list[str] = [
-    "https://api.gentoo.org/overlays/repositories.xml"
-]
 
 # Cache configuration
 CACHE_KEY = "overlays_data"
@@ -286,7 +285,7 @@ def fetch(source_url: str | None = None) -> list[Overlay]:
 
     Args:
         source_url: Optional specific URL to fetch from.
-                   Defaults to first URL in OVERLAY_SOURCES.
+                    Defaults to configured URL.
 
     Returns:
         List of parsed Overlay objects.
@@ -295,7 +294,9 @@ def fetch(source_url: str | None = None) -> list[Overlay]:
         urllib.error.URLError: If fetching fails.
         etree.ParseError: If XML parsing fails.
     """
-    url: str = source_url or OVERLAY_SOURCES[0]
+    config: Configuration = get_config()
+
+    url: str = source_url or config.overlay_source
 
     with urllib.request.urlopen(url, timeout=30) as response:
         xml_data = response.read()
@@ -323,7 +324,7 @@ def get_installed() -> list[str]:
     Returns:
         List of directory names from /var/db/repos.
     """
-    repos_path = Path("/var/db/repos")
+    repos_path: Path = get_repos_path()
 
     if not repos_path.exists():
         return []
