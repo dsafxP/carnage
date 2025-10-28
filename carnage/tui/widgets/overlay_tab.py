@@ -6,9 +6,10 @@ from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import DataTable, Static, Button, LoadingIndicator
 
-from ...core.overlays import Overlay, get_or_cache
+from ...core.overlays import Overlay, get_or_cache, clear_cache
 from ...core.cache import CacheManager
-
+from ...core.eix import has_remote_cache
+from ...core.config import get_config, Configuration
 
 class OverlaysTab(Widget):
     """Widget for displaying and managing Gentoo overlays."""
@@ -125,10 +126,10 @@ class OverlaysTab(Widget):
 
     def check_remote_cache_notification(self) -> None:
         """Check if we should notify about clearing cache for remote overlays."""
-        from ...core.eix import has_remote_cache
+        config: Configuration = get_config()
 
         # Check if remote cache is available and we have loaded overlays
-        if has_remote_cache() and self.overlays:
+        if has_remote_cache() and self.overlays and not config.ignore_warnings:
             zero_package_overlays = []
             for overlay in self.overlays:
                 if overlay.package_count == 0:
@@ -157,7 +158,6 @@ class OverlaysTab(Widget):
         selected_name: str | None = self.selected_overlay.name if self.selected_overlay else None
 
         # Force refresh by clearing cache and reloading
-        from ...core.overlays import clear_cache
         clear_cache(self.cache_manager)
         self.load_overlays()
 
