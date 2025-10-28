@@ -17,11 +17,8 @@ from .cache import CacheManager
 from .eix.overlay import get_package_count
 from .portageq import get_repos_path
 
-
 # Cache configuration
 CACHE_KEY = "overlays_data"
-CACHE_MAX_AGE = timedelta(hours=48)
-
 
 class OverlayQuality(Enum):
     """Quality status of an overlay."""
@@ -414,9 +411,12 @@ def get_or_cache(cache_manager: CacheManager | None = None,
     if cache_manager is None:
         cache_manager = CacheManager()
 
+    config: Configuration = get_config()
+    max_age = timedelta(hours=config.overlays_cache_max_age)
+
     # Check cache first unless forced refresh
     if not force_refresh and cache_manager.exists(CACHE_KEY):
-        if not cache_manager.is_stale(CACHE_KEY, CACHE_MAX_AGE):
+        if not cache_manager.is_stale(CACHE_KEY, max_age):
             cached_data = cache_manager.get(CACHE_KEY)
             if cached_data:
                 return [Overlay.from_dict(data) for data in cached_data]
