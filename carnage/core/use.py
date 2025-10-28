@@ -6,6 +6,7 @@ from re import Match
 from typing import List, Dict
 import re
 
+from .config import get_config, Configuration
 from .cache import CacheManager
 from .eix.use import get_all_useflags
 from datetime import timedelta
@@ -14,7 +15,6 @@ from .portageq import get_repos_path
 
 # Cache configuration
 CACHE_KEY_USEFLAGS = "useflags_data"
-CACHE_MAX_AGE = timedelta(hours=24)
 
 
 @dataclass
@@ -114,9 +114,12 @@ def get_or_cache_useflags(cache_manager: CacheManager | None = None,
     if cache_manager is None:
         cache_manager = CacheManager()
 
+    config: Configuration = get_config()
+    max_age = timedelta(hours=config.use_cache_max_age)
+
     # Check cache first unless forced refresh
     if not force_refresh and cache_manager.exists(CACHE_KEY_USEFLAGS):
-        if not cache_manager.is_stale(CACHE_KEY_USEFLAGS, CACHE_MAX_AGE):
+        if not cache_manager.is_stale(CACHE_KEY_USEFLAGS, max_age):
             cached_data = cache_manager.get(CACHE_KEY_USEFLAGS)
             if cached_data:
                 return [UseFlag.from_dict(data) for data in cached_data]
