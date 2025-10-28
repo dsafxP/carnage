@@ -209,7 +209,6 @@ class UseFlagsTab(Widget):
             details += f"[dim]{useflag.description}[/dim]\n\n"
 
         details += f"Packages: {package_count}\n"
-        details += f"Source: {useflag.source}\n\n"
 
         # Show packages that use this flag
         if packages:

@@ -22,7 +22,6 @@ class UseFlag:
     """USE flag with description."""
     name: str
     description: str | None = None
-    source: str = "global"  # "global", "local", or package-specific
 
     def __str__(self) -> str:
         return self.name
@@ -34,8 +33,7 @@ class UseFlag:
         """Convert to dictionary for caching."""
         return {
             'name': self.name,
-            'description': self.description,
-            'source': self.source
+            'description': self.description
         }
 
     @classmethod
@@ -43,8 +41,7 @@ class UseFlag:
         """Create from dictionary after cache load."""
         return cls(
             name=data['name'],
-            description=data['description'],
-            source=data.get('source', 'global')
+            description=data['description']
         )
 
 
@@ -147,8 +144,7 @@ def get_or_cache_useflags(cache_manager: CacheManager | None = None,
 
         useflag = UseFlag(
             name=clean_name,
-            description=description,
-            source="global"
+            description=description
         )
         useflags.append(useflag)
 
@@ -174,11 +170,5 @@ def clear_useflags_cache(cache_manager: CacheManager | None = None) -> bool:
 
     # Clear main useflags cache
     cleared: bool = cache_manager.delete(CACHE_KEY_USEFLAGS)
-
-    # Also clear any package caches
-    cache_keys: list[str] = cache_manager.list_keys()
-    for key in cache_keys:
-        if key.startswith("useflag_packages_"):
-            cache_manager.delete(key)
 
     return cleared
