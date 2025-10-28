@@ -20,6 +20,9 @@ from .portageq import get_repos_path
 # Cache configuration
 CACHE_KEY = "overlays_data"
 
+# Special value to indicate package counting was skipped
+SKIPPED_PACKAGE_COUNT = -4
+
 class OverlayQuality(Enum):
     """Quality status of an overlay."""
     CORE = "core"
@@ -368,6 +371,12 @@ def _populate_package_counts(overlays: list[Overlay]) -> None:
                 overlay.package_count = -1
 
 
+def _populate_skipped_package_counts(overlays: list[Overlay]) -> None:
+    """Set package counts to SKIPPED_PACKAGE_COUNT for all overlays."""
+    for overlay in overlays:
+        overlay.package_count = SKIPPED_PACKAGE_COUNT
+
+
 def fetch_extra(source_url: str | None = None) -> list[Overlay]:
     """
     Fetch overlays and populate installation status and package counts.
@@ -388,8 +397,12 @@ def fetch_extra(source_url: str | None = None) -> list[Overlay]:
     for overlay in overlays:
         overlay.installed = overlay.name in installed_names
 
-    # Populate package counts (this may take a while)
-    _populate_package_counts(overlays)
+    # Populate package counts based on configuration
+    config: Configuration = get_config()
+    if config.skip_package_counting:
+        _populate_skipped_package_counts(overlays)
+    else:
+        _populate_package_counts(overlays)
 
     return overlays
 
@@ -419,7 +432,21 @@ def get_or_cache(cache_manager: CacheManager | None = None,
         if not cache_manager.is_stale(CACHE_KEY, max_age):
             cached_data = cache_manager.get(CACHE_KEY)
             if cached_data:
-                return [Overlay.from_dict(data) for data in cached_data]
+                cached_overlays: list[Overlay] = [Overlay.from_dict(data) for data in cached_data]
+                
+                # Check if we need to refresh package counts due to configuration change
+                if config.skip_package_counting:
+                    # If package counting is now skipped, but we have real counts, that's fine
+                    return cached_overlays
+                else:
+                    # If package counting is enabled, check if we have skipped counts
+                    has_skipped_counts: bool = any(
+                        overlay.package_count == SKIPPED_PACKAGE_COUNT 
+                        for overlay in cached_overlays
+                    )
+                    if not has_skipped_counts:
+                        return cached_overlays
+                    # If we have skipped counts but now want real counts, force refresh
 
     # Fetch fresh data
     overlays: list[Overlay] = fetch_extra(source_url)
