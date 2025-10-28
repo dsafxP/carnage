@@ -1,17 +1,16 @@
 """USE flags tab widget for browsing Gentoo USE flags."""
 
+
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import DataTable, Static, LoadingIndicator
-
+from ...core.config import Configuration, get_config
 from ...core.eix import Package, get_packages_with_useflag
 from ...core.eix.use import get_package_count_for_useflag
 from ...core.use import UseFlag, get_or_cache_useflags
 from ...core.cache import CacheManager
-
-MIN_CHARS = 3
 
 
 class UseFlagsTab(Widget):
@@ -44,8 +43,9 @@ class UseFlagsTab(Widget):
 
     def search_useflags(self, query: str) -> None:
         """Search for USE flags and update the table."""
+        config: Configuration = get_config()
 
-        if not query.strip() or len(query.strip()) < MIN_CHARS:
+        if not query.strip() or len(query.strip()) < config.use_minimum_characters:
             # Clear table when search is empty or too short
             self._clear_table()
             return
