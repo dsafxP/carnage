@@ -22,6 +22,7 @@ class OverlaysTab(Widget):
         self.cache_manager = CacheManager()
         self._pending_selection: str | None = None
         self._current_filter: str = ""
+        self.config = get_config()
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
@@ -69,18 +70,30 @@ class OverlaysTab(Widget):
         content_widget.update("Select an overlay to view details")
 
         table.clear(columns=True)
-        table.add_columns("Name", "Packages", "Description")
+
+        # Only show package count column if counting is enabled
+        if self.config.skip_package_counting:
+            table.add_columns("Name", "Description")
+        else:
+            table.add_columns("Name", "Packages", "Description")
 
         for i, overlay in enumerate(self.filtered_overlays):
-            # Package count is already populated from cache/fetch
-            package_count: str = str(overlay.package_count) if overlay.package_count is not None else "0"
-
-            table.add_row(
-                overlay.name,
-                package_count,
-                (overlay.description.strip() if overlay.description else "No description"),
-                key=str(i)
-            )
+            if self.config.skip_package_counting:
+                # Skip package count display
+                table.add_row(
+                    overlay.name,
+                    (overlay.description.strip() if overlay.description else "No description"),
+                    key=str(i)
+                )
+            else:
+                # Show package count
+                package_count: str = str(overlay.package_count) if overlay.package_count is not None else "0"
+                table.add_row(
+                    overlay.name,
+                    package_count,
+                    (overlay.description.strip() if overlay.description else "No description"),
+                    key=str(i)
+                )
 
         # Restore selection if there was a pending one and it exists in filtered results
         if self._pending_selection is not None:
@@ -128,10 +141,8 @@ class OverlaysTab(Widget):
 
     def check_remote_cache_notification(self) -> None:
         """Check if we should notify about clearing cache for remote overlays."""
-        config: Configuration = get_config()
-
         # Check if remote cache is available and we have loaded overlays
-        if has_remote_cache() and self.overlays and not config.ignore_warnings:
+        if has_remote_cache() and self.overlays and not self.config.ignore_warnings:
             zero_package_overlays = []
             for overlay in self.overlays:
                 if overlay.package_count == 0:
@@ -210,9 +221,10 @@ class OverlaysTab(Widget):
 
         details += f"Status: {self.selected_overlay.status.value.title()}\n"
 
-        # Package count
-        package_count: int | None = self.selected_overlay.package_count or 0
-        details += f"Packages: {package_count}\n"
+        # Only show package count if counting is enabled
+        if not self.config.skip_package_counting:
+            package_count: int | None = self.selected_overlay.package_count or 0
+            details += f"Packages: {package_count}\n"
 
         if self.selected_overlay.homepage:
             details += f"Homepage: {self.selected_overlay.homepage}\n"
