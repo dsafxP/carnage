@@ -1,11 +1,12 @@
 """Main screen with tabs for Carnage."""
 
+
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.screen import Screen
-from textual.widgets import (Footer, Header, Input, Label, TabbedContent,
-                             TabPane)
+from textual.widgets import Header, Input, TabbedContent, TabPane
 
+from ...core.config import Configuration, get_config
 from ...core.eix import has_cache, is_found
 from ..widgets.browse_tab import BrowseTab
 from ..widgets.glsa_tab import GLSATab
@@ -49,21 +50,23 @@ class MainScreen(Screen):
                 with TabPane("Overlays", id="overlays"):
                     yield OverlaysTab()
 
-        yield Footer()
-
     def on_mount(self) -> None:
         """Check eix availability when screen is mounted."""
         self.eix_available = is_found()
         self.eix_cache_available = has_cache() if self.eix_available else False
 
-        if self.eix_available and self.eix_cache_available:
-            # Enable/disable tabs based on eix availability
-            tabbed_content: TabbedContent = self.query_one(TabbedContent)
+        tabbed_content: TabbedContent = self.query_one(TabbedContent)
 
+        # Enable/disable tabs based on eix availability
+        if self.eix_available and self.eix_cache_available:
             # Enable Browse and USE tabs
             for tab in tabbed_content.query(TabPane):
                 if tab.id in ("browse", "use"):
                     tab.disabled = False
+
+        config: Configuration = get_config()
+
+        tabbed_content.active = config.initial_tab
 
     def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
         """Handle tab changes to update search bar."""

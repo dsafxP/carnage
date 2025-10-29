@@ -33,7 +33,8 @@ class Configuration:
         return {
             "global": {
                 "theme": "textual-dark",
-                "privilege_backend": "auto"
+                "privilege_backend": "auto",
+                "initial_tab": "news"
             },
             "browse": {
                 "search_flags": ["-f", "2"],
@@ -72,10 +73,14 @@ class Configuration:
         global_section.add(tomlkit.comment("Privilege escalation backend for administrative commands"))
         global_section.add(tomlkit.comment("Options: auto, pkexec, sudo, doas, none"))
         global_section.add("privilege_backend", "auto")
+        global_section.add(tomlkit.nl())
+        global_section.add(tomlkit.comment("Initial tab selected"))
+        global_section.add(tomlkit.comment("Options: news, glsas, browse, use, overlays"))
+        global_section.add("initial_tab", "news")
         doc.add("global", global_section)
         
         # Browse section
-        browse_section = tomlkit.table()
+        browse_section: Table = tomlkit.table()
         browse_section.add(tomlkit.comment("Default flags for package search with eix"))
         browse_section.add(tomlkit.comment("These are passed to eix commands"))
         browse_section.add("search_flags", tomlkit.array('["-f", "2"]'))
@@ -185,6 +190,11 @@ class Configuration:
     def privilege_backend(self) -> str:
         """Get the privilege escalation backend setting."""
         return self._get_nested_value(["global", "privilege_backend"], "auto")
+
+    @property
+    def initial_tab(self) -> str:
+        """Get the initial tab selected."""
+        return self._get_nested_value(["global", "initial_tab"], "news")
     
     @property
     def search_flags(self) -> List[str]:
