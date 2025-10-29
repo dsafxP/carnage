@@ -3,14 +3,16 @@
 from textual.app import ComposeResult
 from textual.containers import Container
 from textual.screen import Screen
-from textual.widgets import Header, Footer, TabbedContent, TabPane, Input, Label
+from textual.widgets import (Footer, Header, Input, Label, TabbedContent,
+                             TabPane)
 
-from ...core.eix import is_found, has_cache
-from ..widgets.overlay_tab import OverlaysTab
-from ..widgets.news_tab import NewsTab
-from ..widgets.glsa_tab import GLSATab
+from ...core.eix import has_cache, is_found
 from ..widgets.browse_tab import BrowseTab
+from ..widgets.glsa_tab import GLSATab
+from ..widgets.news_tab import NewsTab
+from ..widgets.overlay_tab import OverlaysTab
 from ..widgets.use_tab import UseFlagsTab
+
 
 class MainScreen(Screen):
     """Main screen with search bar and tabbed content."""

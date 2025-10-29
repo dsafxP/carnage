@@ -1,10 +1,11 @@
 """Utilities for managing Gentoo repository news."""
 
-from .portageq import get_gentoo_repo_path
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from subprocess import CompletedProcess
+
+from .portageq import get_gentoo_repo_path
 
 
 @dataclass

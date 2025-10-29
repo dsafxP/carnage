@@ -3,8 +3,8 @@
 from textual.app import App
 from textual.binding import Binding
 
+from ..core.config import Configuration, get_config
 from .screens.main import MainScreen
-from ..core.config import get_config, Configuration
 
 
 class CarnageApp(App):

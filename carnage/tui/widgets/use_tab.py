@@ -5,12 +5,13 @@ from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
-from textual.widgets import DataTable, Static, LoadingIndicator
+from textual.widgets import DataTable, LoadingIndicator, Static
+
+from ...core.cache import CacheManager
 from ...core.config import Configuration, get_config
 from ...core.eix import Package, get_packages_with_useflag
 from ...core.eix.use import get_package_count_for_useflag
 from ...core.use import UseFlag, get_or_cache_useflags
-from ...core.cache import CacheManager
 
 
 class UseFlagsTab(Widget):

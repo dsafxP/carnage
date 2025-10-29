@@ -3,7 +3,6 @@
 import subprocess
 from subprocess import CompletedProcess
 
-
 _remote_cache_available: bool | None = None
 
 def is_found() -> bool:

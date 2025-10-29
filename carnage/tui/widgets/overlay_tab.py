@@ -4,12 +4,13 @@ from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
-from textual.widgets import DataTable, Static, Button, LoadingIndicator
+from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
-from ...core.overlays import Overlay, get_or_cache, clear_cache
 from ...core.cache import CacheManager
+from ...core.config import Configuration, get_config
 from ...core.eix import has_remote_cache
-from ...core.config import get_config, Configuration
+from ...core.overlays import Overlay, clear_cache, get_or_cache
+
 
 class OverlaysTab(Widget):
     """Widget for displaying and managing Gentoo overlays."""

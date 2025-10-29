@@ -1,16 +1,15 @@
 """USE flag management with caching and description parsing."""
 
+import re
 from dataclasses import dataclass
+from datetime import timedelta
 from pathlib import Path
 from re import Match
-from typing import List, Dict
-import re
+from typing import Dict, List
 
-from .config import get_config, Configuration
 from .cache import CacheManager
+from .config import Configuration, get_config
 from .eix.use import get_all_useflags
-from datetime import timedelta
-
 from .portageq import get_repos_path
 
 # Cache configuration

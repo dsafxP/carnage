@@ -6,7 +6,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
-from textual.widgets import DataTable, Static, Button, LoadingIndicator
+from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
 from ...core.glsas import GLSA, fetch_glsas, fix_glsas
 

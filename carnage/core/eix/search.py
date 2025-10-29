@@ -4,10 +4,11 @@ import subprocess
 from dataclasses import dataclass, field
 from subprocess import CompletedProcess
 from typing import List
-from . import has_remote_cache
+
 from lxml import etree
 
 from ..config import Configuration, get_config
+from . import has_remote_cache
 
 
 @dataclass

@@ -2,18 +2,18 @@
 
 import concurrent.futures
 import os
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
+from datetime import timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Literal
-import urllib.request
-import urllib.error
-from datetime import timedelta
 
 from lxml import etree
 
-from .config import get_config, Configuration
 from .cache import CacheManager
+from .config import Configuration, get_config
 from .eix.overlay import get_package_count
 from .portageq import get_repos_path
 

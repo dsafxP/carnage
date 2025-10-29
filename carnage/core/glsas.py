@@ -1,12 +1,13 @@
 """Utilities for managing Gentoo Linux Security Advisories (GLSAs)."""
 
-from .portageq import get_gentoo_repo_path
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from subprocess import CompletedProcess
 
 from lxml import etree
+
+from .portageq import get_gentoo_repo_path
 
 
 @dataclass

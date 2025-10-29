@@ -5,10 +5,11 @@ from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
-from textual.widgets import DataTable, Static, Button, LoadingIndicator
+from textual.widgets import Button, DataTable, LoadingIndicator, Static
+
 from ...core.config import Configuration, get_config
+from ...core.eix.search import Package, search_packages
 from ...core.emerge import emerge_install, emerge_uninstall
-from ...core.eix.search import search_packages, Package
 
 MIN_CHARS = 3
 

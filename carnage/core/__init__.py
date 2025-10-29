@@ -2,35 +2,23 @@
 
 # Expose main classes and functions
 from .cache import CacheManager
-from .privilege import PrivilegeBackend, detect_backend, run_privileged
-
-# Overlay management
-from .overlays import (
-    Overlay,
-    OverlayQuality,
-    OverlayStatus,
-    Source,
-    SourceType,
-    Owner,
-    fetch as fetch_overlays,
-    fetch_extra as fetch_overlays_extra,
-    get_installed as get_installed_overlays,
-    clear_cache
-)
-
+from .config import Configuration, get_config
 # GLSA management
-from .glsas import GLSA, fetch_glsas, get_affected_glsas, fix_glsas
-
+from .glsas import GLSA, fetch_glsas, fix_glsas, get_affected_glsas
 # News management
-from .news import News, get_news, mark_news_read, mark_all_news_read, purge_read_news
-
+from .news import (News, get_news, mark_all_news_read, mark_news_read,
+                   purge_read_news)
+# Overlay management
+from .overlays import (Overlay, OverlayQuality, OverlayStatus, Owner, Source,
+                       SourceType, clear_cache)
+from .overlays import fetch as fetch_overlays
+from .overlays import fetch_extra as fetch_overlays_extra
+from .overlays import get_installed as get_installed_overlays
+# portageq
+from .portageq import get_gentoo_repo_path, get_repos_path
+from .privilege import PrivilegeBackend, detect_backend, run_privileged
 # USE
 from .use import UseFlag, get_or_cache_useflags
-
-# portageq
-from .portageq import get_repos_path, get_gentoo_repo_path
-
-from .config import get_config, Configuration
 
 __all__ = [
     # Cache
