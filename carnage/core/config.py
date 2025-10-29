@@ -7,6 +7,7 @@ import tomlkit
 from tomlkit import TOMLDocument
 from tomlkit.exceptions import TOMLKitError
 from tomlkit.items import Table
+from .args import config_path as arg_cfg_path
 
 
 class Configuration:
@@ -272,6 +273,6 @@ def get_config(config_path: Path | None = None) -> Configuration:
     global _config_instance
     
     if _config_instance is None:
-        _config_instance = Configuration(config_path)
+        _config_instance = Configuration(arg_cfg_path or config_path)
     
     return _config_instance
