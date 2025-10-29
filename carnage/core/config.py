@@ -42,7 +42,7 @@ class Configuration:
             },
             "overlays": {
                 "ignore_warnings": False,
-                "skip_package_counting": False,
+                "skip_package_counting": True,
                 "cache_max_age": 72,
                 "overlay_source": "https://api.gentoo.org/overlays/repositories.xml"
             },
@@ -97,7 +97,7 @@ class Configuration:
         overlays_section.add(tomlkit.nl())
         overlays_section.add(tomlkit.comment("Skip counting packages in overlays (faster but less informative)"))
         overlays_section.add(tomlkit.comment("When false, package counts will be fetched but may take longer"))
-        overlays_section.add("skip_package_counting", False)
+        overlays_section.add("skip_package_counting", True)
         overlays_section.add(tomlkit.nl())
         overlays_section.add(tomlkit.comment("Maximum age for overlay cache in hours"))
         overlays_section.add(tomlkit.comment("Overlay data will be refreshed after this time"))
@@ -214,7 +214,7 @@ class Configuration:
     @property
     def skip_package_counting(self) -> bool:
         """Get whether to skip package counting for overlays."""
-        return self._get_nested_value(["overlays", "skip_package_counting"], False)
+        return self._get_nested_value(["overlays", "skip_package_counting"], True)
     
     @property
     def overlays_cache_max_age(self) -> int:
