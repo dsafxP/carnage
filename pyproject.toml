@@ -19,9 +19,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pyrefly>=0.38.2",
+    "pyrefly>=0.39.2",
     "msgpack-types>=0.5.0",
     "textual-dev>=1.8.0",
+    "isort>=7.0.0"
 ]
 
 [project.urls]
