@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
 from re import Match
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from .cache import CacheManager
 from .config import Configuration, get_config
@@ -44,6 +44,82 @@ class UseFlag:
         )
 
 
+def _parse_flag_line(line: str) -> tuple[str | Any, ...] | None:
+    """Parse a single USE flag description line.
+
+    Returns:
+        Tuple of (flag, description) or None if line is invalid.
+    """
+    line = line.strip()
+    if not line or line.startswith('#'):
+        return None
+
+    # Format: "flag - Description"
+    match: Match[str] | None = re.match(r'^(\S+)\s+-\s+(.+)$', line)
+    if match:
+        return match.groups()
+    return None
+
+
+def _parse_local_flag_line(line: str) -> tuple[str | Any, ...] | None:
+    """Parse a local USE flag description line.
+
+    Handles both package-specific and global formats.
+
+    Returns:
+        Tuple of (flag, description) or None if line is invalid.
+    """
+    line = line.strip()
+    if not line or line.startswith('#'):
+        return None
+
+    # Format: "category/package:flag - Description" or "flag - Description"
+    if ':' in line:
+        match: Match[str] | None = re.match(r'^[^:]+:(\S+)\s+-\s+(.+)$', line)
+    else:
+        match = re.match(r'^(\S+)\s+-\s+(.+)$', line)
+
+    if match:
+        return match.groups()
+    return None
+
+
+def _parse_desc_file(file_path: Path, descriptions: Dict[str, str]) -> None:
+    """Parse a use.desc file and update descriptions dict."""
+    if not file_path.exists():
+        return
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            result = _parse_flag_line(line)
+            if result:
+                flag, desc = result
+                if flag not in descriptions:
+                    descriptions[flag] = desc
+
+
+def _parse_local_desc_file(file_path: Path, descriptions: Dict[str, str]) -> None:
+    """Parse a use.local.desc file and update descriptions dict."""
+    if not file_path.exists():
+        return
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            result = _parse_local_flag_line(line)
+            if result:
+                flag, desc = result
+                if flag not in descriptions:
+                    descriptions[flag] = desc
+
+
+def _parse_repo_useflags(repo_dir: Path, descriptions: Dict[str, str]) -> None:
+    """Parse USE flags from a single repository."""
+    profiles_dir: Path = repo_dir / "profiles"
+
+    _parse_desc_file(profiles_dir / "use.desc", descriptions)
+    _parse_local_desc_file(profiles_dir / "use.local.desc", descriptions)
+
+
 def _parse_useflag_descriptions() -> Dict[str, str]:
     """Parse USE flag descriptions from profile files."""
     descriptions: Dict[str, str] = {}
@@ -52,45 +128,10 @@ def _parse_useflag_descriptions() -> Dict[str, str]:
     if not repos_path.exists():
         return descriptions
 
-    # Look for use.desc and use.local.desc in all repositories
     for repo_dir in repos_path.iterdir():
         if not repo_dir.is_dir():
             continue
-
-        # Parse global use.desc
-        use_desc_path: Path = repo_dir / "profiles" / "use.desc"
-        if use_desc_path.exists():
-            with open(use_desc_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith('#'):
-                        # Format: "flag - Description"
-                        match: Match[str] | None = re.match(r'^(\S+)\s+-\s+(.+)$', line)
-                        if match:
-                            flag, desc = match.groups()
-                            if flag not in descriptions:  # First match wins
-                                descriptions[flag] = desc
-
-        # Parse local use.local.desc
-        use_local_path: Path = repo_dir / "profiles" / "use.local.desc"
-        if use_local_path.exists():
-            with open(use_local_path, 'r', encoding='utf-8') as f:
-                line: str
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith('#'):
-                        # Format: "category/package:flag - Description" or "flag - Description"
-                        if ':' in line:
-                            # Package-specific: "category/package:flag - Description"
-                            match = re.match(r'^[^:]+:(\S+)\s+-\s+(.+)$', line)
-                        else:
-                            # Global: "flag - Description"
-                            match = re.match(r'^(\S+)\s+-\s+(.+)$', line)
-
-                        if match:
-                            flag, desc = match.groups()
-                            if flag not in descriptions:  # First match wins
-                                descriptions[flag] = desc
+        _parse_repo_useflags(repo_dir, descriptions)
 
     return descriptions
 
