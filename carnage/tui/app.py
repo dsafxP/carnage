@@ -3,7 +3,7 @@
 from textual.app import App
 
 from ..core.config import Configuration, get_config
-from .screens.main import MainScreen
+from .screens.main_scrn import MainScreen
 
 
 class CarnageApp(App[None]):
