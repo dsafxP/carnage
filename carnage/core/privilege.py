@@ -2,73 +2,70 @@
 
 import shutil
 import subprocess
-from enum import Enum
 from subprocess import CompletedProcess
 
 from .config import Configuration, get_config
 
-
-class PrivilegeBackend(Enum):
-    """Available privilege escalation backends."""
-    PKEXEC = "pkexec"
-    SUDO = "sudo"
-    DOAS = "doas"
-    NONE = "none"
-    AUTO = "auto"
+# Available privilege escalation backends
+BACKENDS: dict[str, str] = {
+    "pkexec": "pkexec",
+    "sudo": "sudo",
+    "doas": "doas",
+}
 
 
-def detect_backend() -> PrivilegeBackend:
+def detect_backend() -> str | None:
     """
     Detect available privilege escalation backend.
 
     Returns:
-        The first available backend in order of preference.
+        The first available backend name, or None if none found.
     """
-    backends = [
-        (PrivilegeBackend.PKEXEC, "pkexec"),
-        (PrivilegeBackend.SUDO, "sudo"),
-        (PrivilegeBackend.DOAS, "doas"),
-    ]
-
-    for backend, cmd in backends:
+    for backend, cmd in BACKENDS.items():
         if shutil.which(cmd):
             return backend
+    return None
 
-    return PrivilegeBackend.NONE
 
-
-def get_configured_backend() -> PrivilegeBackend:
+def get_configured_backend() -> str | None:
     """
     Get privilege backend from configuration or auto-detect.
 
     Returns:
-        Configured backend or auto-detected if set to 'auto'
+        Configured backend name, auto-detected backend, or None
     """
     config: Configuration = get_config()
     backend_str: str = config.privilege_backend.lower()
 
     print(backend_str)
 
-    try:
-        backend = PrivilegeBackend(backend_str)
-        if backend == PrivilegeBackend.AUTO:
-            return detect_backend()
-        return backend
-    except ValueError:
-        # Invalid backend in config, fall back to auto-detection
+    # Handle auto-detection
+    if backend_str == "auto":
         return detect_backend()
+
+    # Handle 'none' explicitly
+    if backend_str == "none":
+        return None
+
+    # Validate configured backend
+    if backend_str in BACKENDS:
+        return backend_str
+
+    # Invalid backend in config, fall back to auto-detection
+    return detect_backend()
 
 
 def run_privileged(
         cmd: list[str],
-        backend: PrivilegeBackend | None = None
+        backend: str | None = None
 ) -> tuple[int, str, str]:
     """
     Run a command with privilege escalation.
 
     Args:
         cmd: Command and arguments to run.
-        backend: Specific backend to use. If None, use configured backend.
+        backend: Specific backend to use (e.g., 'sudo', 'pkexec').
+                 If None, use configured backend.
 
     Returns:
         Tuple of (return_code, stdout, stderr)
@@ -78,12 +75,9 @@ def run_privileged(
 
     full_cmd: list[str] = cmd
 
-    if backend == PrivilegeBackend.PKEXEC:
-        full_cmd = ["pkexec"] + cmd
-    elif backend == PrivilegeBackend.SUDO:
-        full_cmd = ["sudo"] + cmd
-    elif backend == PrivilegeBackend.DOAS:
-        full_cmd = ["doas"] + cmd
+    # Apply privilege escalation if backend is available
+    if backend and backend in BACKENDS:
+        full_cmd = [BACKENDS[backend]] + cmd
 
     result: CompletedProcess[str] = subprocess.run(
         full_cmd,

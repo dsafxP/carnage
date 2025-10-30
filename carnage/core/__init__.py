@@ -16,7 +16,7 @@ from .overlays import fetch_extra as fetch_overlays_extra
 from .overlays import get_installed as get_installed_overlays
 # portageq
 from .portageq import get_gentoo_repo_path, get_repos_path
-from .privilege import PrivilegeBackend, detect_backend, run_privileged
+from .privilege import detect_backend, run_privileged
 # USE
 from .use import UseFlag, get_or_cache_useflags
 
@@ -24,7 +24,6 @@ __all__ = [
     # Cache
     "CacheManager",
     # Privilege
-    "PrivilegeBackend",
     "detect_backend",
     "run_privileged",
     # Overlays
