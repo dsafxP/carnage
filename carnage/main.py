@@ -1,5 +1,5 @@
-from .tui.app import run
 from .core.args import *
+from .tui.app import run
 
 
 def main()-> None:

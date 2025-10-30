@@ -16,6 +16,7 @@ from .cache import CacheManager
 from .config import Configuration, get_config
 from .eix.overlay import get_package_count
 from .portageq import get_repos_path
+from .privilege import run_privileged
 
 # Cache configuration
 CACHE_KEY = "overlays_data"
@@ -95,8 +96,6 @@ class Overlay:
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
-        from .privilege import run_privileged
-
         return run_privileged(["eselect", "repository", "enable", self.name])
 
     def sync(self) -> tuple[int, str, str]:
@@ -105,8 +104,6 @@ class Overlay:
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
-        from .privilege import run_privileged
-
         return run_privileged(["emaint", "sync", "-r", self.name])
 
     def enable_and_sync(self) -> tuple[int, str, str]:
@@ -116,8 +113,6 @@ class Overlay:
             Tuple of (return_code, stdout, stderr) from the combined operation.
             If enable fails, sync is not attempted.
         """
-        from .privilege import run_privileged
-
         cmd: str = f"eselect repository enable {self.name} && emaint sync -r {self.name}"
         return run_privileged(["sh", "-c", cmd])
 
@@ -128,8 +123,6 @@ class Overlay:
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
-        from .privilege import run_privileged
-
         return run_privileged(["eselect", "repository", "disable", self.name])
 
     def remove(self) -> tuple[int, str, str]:
@@ -139,8 +132,6 @@ class Overlay:
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
-        from .privilege import run_privileged
-
         return run_privileged(["eselect", "repository", "remove", self.name])
 
     def to_dict(self) -> dict:
@@ -220,16 +211,12 @@ def _parse_sources(repo_elem: etree._Element) -> list[Source]:
 
     source_elems = repo_elem.xpath("source")
     for source_elem in source_elems:
-        source_type_str = source_elem.get("type", "git")
+        source_type_str = source_elem.get("type")
         url = source_elem.text or ""
 
         if url:
-            try:
-                source_type = SourceType(source_type_str)
-                sources.append(Source(source_type=source_type, url=url))
-            except ValueError:
-                # Unknown source type, skip
-                continue
+            source_type = SourceType(source_type_str)
+            sources.append(Source(source_type=source_type, url=url))
 
     return sources
 
@@ -301,13 +288,11 @@ def fetch(source_url: str | None = None) -> list[Overlay]:
     with urllib.request.urlopen(url, timeout=30) as response:
         xml_data = response.read()
 
-    # Use lxml parser with recovery
     parser = etree.XMLParser(recover=True, remove_comments=True)
     root = etree.fromstring(xml_data, parser=parser)
 
     overlays: list[Overlay] = []
 
-    # Use XPath for efficient repo selection
     repo_elems = root.xpath("//repo")
     for repo_elem in repo_elems:
         overlay = _parse_overlay(repo_elem)

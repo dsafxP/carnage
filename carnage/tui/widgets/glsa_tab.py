@@ -239,13 +239,15 @@ class GLSATab(Widget):
         if event.button.id == "fix-glsa-btn":
             self.action_fix_glsas()
 
+
+_symbols: dict[str, str] = {
+    "lt": "<",
+    "le": "<=",
+    "eq": "=",
+    "ge": "≥",
+    "gt": ">"
+}
+
 def _get_range_symbol(range_str: str) -> str:
     """Convert range operator to symbol."""
-    symbols: dict[str, str] = {
-        "lt": "<",
-        "le": "<=",
-        "eq": "=",
-        "ge": "≥",
-        "gt": ">"
-    }
-    return symbols.get(range_str, range_str)
+    return _symbols.get(range_str, range_str)
