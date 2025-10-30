@@ -8,9 +8,9 @@ from .screens.main import MainScreen
 
 
 class CarnageApp(App):
-    """A TUI front-end for Gentoo package management."""
+    """TUI front-end for Portage and eix"""
 
-    TITLE = "Carnage"
+    TITLE = "carnage"
     CSS_PATH = "styles.tcss"
 
     BINDINGS = [
