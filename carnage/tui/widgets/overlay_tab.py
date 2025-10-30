@@ -7,7 +7,7 @@ from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
 from ...core.cache import CacheManager
-from ...core.config import Configuration, get_config
+from ...core.config import get_config
 from ...core.eix import has_remote_cache
 from ...core.overlays import Overlay, clear_cache, get_or_cache
 

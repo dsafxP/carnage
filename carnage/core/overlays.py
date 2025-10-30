@@ -233,8 +233,8 @@ def _parse_overlay(repo_elem: etree._Element) -> Overlay | None:
     if not name:
         return None
 
-    # Get English description specifically
-    description = repo_elem.xpath("string(description[@lang='en'])")
+    # Get description
+    description = repo_elem.xpath("string(description)")
     homepage = repo_elem.xpath("string(homepage)")
 
     owner = _parse_owner(repo_elem)
@@ -307,7 +307,7 @@ def get_installed() -> list[str]:
     Get list of installed overlay names.
 
     Returns:
-        List of directory names from /var/db/repos.
+        List of directory names from repository directory.
     """
     repos_path: Path = get_repos_path()
 
