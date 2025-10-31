@@ -1,5 +1,6 @@
 """Basic interactions with eix for package management."""
 
+import shutil
 import subprocess
 from subprocess import CompletedProcess
 
@@ -12,12 +13,7 @@ def is_found() -> bool:
     Returns:
         True if eix is found, False otherwise
     """
-    result: CompletedProcess[str] = subprocess.run(
-        ["eix", "-V"],
-        capture_output=True,
-        text=True
-    )
-    return result.returncode == 0
+    return shutil.which("eix") is not None
 
 
 def has_cache() -> bool:

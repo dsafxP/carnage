@@ -8,7 +8,7 @@ from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
 from ...core.cache import CacheManager
 from ...core.config import get_config
-from ...core.eix import has_remote_cache
+from ...core.eix import has_remote_cache, is_found
 from ...core.overlays import Overlay, clear_cache, get_or_cache
 
 
@@ -23,7 +23,8 @@ class OverlaysTab(Widget):
         self.cache_manager = CacheManager()
         self._pending_selection: str | None = None
         self._current_filter: str = ""
-        self.config = get_config()
+        self._config = get_config()
+        self.should_skip_pkg_count = self._config.skip_package_counting or not is_found()
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
@@ -73,13 +74,13 @@ class OverlaysTab(Widget):
         table.clear(columns=True)
 
         # Only show package count column if counting is enabled
-        if self.config.skip_package_counting:
+        if self.should_skip_pkg_count:
             table.add_columns("Name", "Description")
         else:
             table.add_columns("Name", "Packages", "Description")
 
         for i, overlay in enumerate(self.filtered_overlays):
-            if self.config.skip_package_counting:
+            if self.should_skip_pkg_count:
                 # Skip package count display
                 table.add_row(
                     overlay.name,
@@ -142,8 +143,11 @@ class OverlaysTab(Widget):
 
     def check_remote_cache_notification(self) -> None:
         """Check if we should notify about clearing cache for remote overlays."""
+        eix_available: bool = is_found()
+        eix_cache_available: bool = has_remote_cache() if eix_available else False
+
         # Check if remote cache is available and we have loaded overlays
-        if has_remote_cache() and self.overlays and not self.config.ignore_warnings:
+        if eix_cache_available and self.overlays and not self._config.ignore_warnings:
             zero_package_overlays = []
             for overlay in self.overlays:
                 if overlay.package_count == 0:
@@ -223,7 +227,7 @@ class OverlaysTab(Widget):
         details += f"Status: {self.selected_overlay.status.value.title()}\n"
 
         # Only show package count if counting is enabled
-        if not self.config.skip_package_counting:
+        if not self.should_skip_pkg_count:
             package_count: int | None = self.selected_overlay.package_count or 0
             details += f"Packages: {package_count}\n"
 

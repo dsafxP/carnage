@@ -14,7 +14,7 @@ from lxml import etree
 
 from .cache import CacheManager
 from .config import Configuration, get_config
-from .eix.overlay import get_package_count
+from .eix.overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
 from .portageq import get_repos_path
 from .privilege import run_privileged
 
@@ -429,9 +429,15 @@ def get_or_cache(cache_manager: CacheManager | None = None,
                         overlay.package_count == SKIPPED_PACKAGE_COUNT 
                         for overlay in cached_overlays
                     )
-                    if not has_skipped_counts:
+
+                    has_non_cached: bool = any(
+                        overlay.package_count == NO_CACHE_PACKAGE_COUNT
+                        for overlay in cached_overlays
+                    )
+
+                    if not has_skipped_counts and not has_non_cached:
                         return cached_overlays
-                    # If we have skipped counts but now want real counts, force refresh
+                    # If we have skipped counts or -3 but now want real counts, force refresh
 
     # Fetch fresh data
     overlays: list[Overlay] = fetch_extra(source_url)

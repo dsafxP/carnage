@@ -66,7 +66,11 @@ class MainScreen(Screen):
 
         config: Configuration = get_config()
 
-        tabbed_content.active = config.initial_tab
+        tabbed_content.active = (
+            config.initial_tab
+            if (self.eix_available and self.eix_cache_available or config.initial_tab not in ("browse", "use"))
+            else "news"
+        )
 
     def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
         """Handle tab changes to update search bar."""

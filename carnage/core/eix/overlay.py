@@ -4,8 +4,9 @@ import os
 import subprocess
 from subprocess import CompletedProcess
 
-from . import has_remote_cache
+from . import has_cache, has_remote_cache
 
+NO_CACHE_PACKAGE_COUNT = -3
 
 def get_package_count(overlay: str) -> int:
     """
@@ -24,8 +25,10 @@ def get_package_count(overlay: str) -> int:
     # Build command based on remote cache availability
     if has_remote_cache():
         cmd: list[str] = ["eix", "-RQ*", "--format", "1", "--only-in-overlay", overlay]
-    else:
+    elif has_cache():
         cmd = ["eix", "-Q*", "--format", "1", "--only-in-overlay", overlay]
+    else:
+        return NO_CACHE_PACKAGE_COUNT # No cache available
 
     try:
         result: CompletedProcess[bytes] = subprocess.run(
