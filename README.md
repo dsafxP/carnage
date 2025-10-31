@@ -27,12 +27,10 @@ A default configuration file is automatically generated at: `~/.config/carnage.t
 > [!TIP]
 > Since **eix** is used for several operations internally, having a remote cache is important to have all options available. Optimizing `eix` in any of the recommended ways will accelerate carnage at the same time. You can read about optimizing `eix` in the [Gentoo Wiki article on eix](https://wiki.gentoo.org/wiki/Eix).
 
-<!--
-# Installation
+## Installation
 
 carnage is available through the [GURU](https://wiki.gentoo.org/wiki/Project:GURU) overlay:
 
 ```bash
 emerge --ask app-portage/carnage
 ```
--->
