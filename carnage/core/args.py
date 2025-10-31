@@ -2,15 +2,10 @@ import argparse
 from pathlib import Path
 from typing import *
 
-try:
-    from .. import __version__
-except ImportError:
-    # Fallback if not installed as package
-    __version__ = "dev"
+import carnage
 
-__all__: list[str] = [
-    "config_path",
-]
+APP_NAME="carnage"
+APP_DESC="TUI front-end for Portage and eix"
 
 class __ArgsInit:
     def __init__(self):
@@ -19,8 +14,8 @@ class __ArgsInit:
     @staticmethod
     def _parse_args() -> argparse.Namespace:
         parser = argparse.ArgumentParser(
-            prog="carnage",
-            description="TUI front-end for Portage and eix",
+            prog=APP_NAME,
+            description=APP_DESC,
             formatter_class=argparse.RawDescriptionHelpFormatter
         )
 
@@ -28,7 +23,7 @@ class __ArgsInit:
         parser.add_argument(
             "-V", "--version",
             action="version",
-            version=f"%(prog)s {__version__}",
+            version=f"%(prog)s {carnage.__version__}",
             help="Show version information and exit"
         )
 

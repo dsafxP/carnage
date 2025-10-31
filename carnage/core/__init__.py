@@ -1,6 +1,8 @@
 """Core functionality for Carnage."""
 
 # Expose main classes and functions
+# args
+from .args import APP_DESC, APP_NAME, config_path
 from .cache import CacheManager
 from .config import Configuration, get_config
 # GLSA management
@@ -55,5 +57,9 @@ __all__ = [
     "get_gentoo_repo_path",
     # Configuration
     "get_config",
-    "Configuration"
+    "Configuration",
+    # args
+    "config_path",
+    "APP_NAME",
+    "APP_DESC"
 ]
