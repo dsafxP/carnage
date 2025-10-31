@@ -6,6 +6,8 @@
 
 **carnage** is a text-based user interface (TUI) front-end for **Portage** and [**eix**](https://wiki.gentoo.org/wiki/Eix).
 
+---
+
 <img src="./.github/carnage_alacritty_textual-light.webp" alt="Preview" width="700">
 
 </div>
