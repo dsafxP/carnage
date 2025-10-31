@@ -8,7 +8,7 @@ from tomlkit import TOMLDocument
 from tomlkit.exceptions import TOMLKitError
 from tomlkit.items import Table
 
-from .args import config_path as arg_cfg_path
+from carnage.core.args import config_path as arg_cfg_path
 
 
 class Configuration:

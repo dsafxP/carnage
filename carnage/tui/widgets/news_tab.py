@@ -8,8 +8,8 @@ from textual.coordinate import Coordinate
 from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
-from ...core import (News, get_news, mark_all_news_read, mark_news_read,
-                     purge_read_news)
+from carnage.core import (News, get_news, mark_all_news_read, mark_news_read,
+                          purge_read_news)
 
 
 class NewsTab(Widget):

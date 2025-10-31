@@ -8,7 +8,7 @@ from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
-from ...core.glsas import GLSA, fetch_glsas, fix_glsas
+from carnage.core.glsas import GLSA, fetch_glsas, fix_glsas
 
 
 class GLSATab(Widget):

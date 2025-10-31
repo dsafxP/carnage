@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from subprocess import CompletedProcess
 
-from .portageq import get_gentoo_repo_path
+from carnage.core.portageq import get_gentoo_repo_path
 
 
 @dataclass

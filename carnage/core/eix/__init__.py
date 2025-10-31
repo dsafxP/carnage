@@ -1,15 +1,17 @@
 """Eix package management functionality."""
 
 # Basic eix operations
-from .eix import (eix_remote_update, eix_update, has_cache,
-                  has_protobuf_support, has_remote_cache, is_found)
+from carnage.core.eix.eix import (eix_remote_update, eix_update, has_cache,
+                                  has_protobuf_support, has_remote_cache,
+                                  is_found)
 # Overlay
-from .overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
+from carnage.core.eix.overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
 # Package search
-from .search import (Package, PackageVersion, get_packages_with_useflag,
-                     search_packages)
+from carnage.core.eix.search import (Package, PackageVersion,
+                                     get_packages_with_useflag,
+                                     search_packages)
 # USE flags
-from .use import get_all_useflags
+from carnage.core.eix.use import get_all_useflags
 
 __all__: list[str] = [
     # Eix operations

@@ -12,11 +12,11 @@ from typing import Literal
 
 from lxml import etree
 
-from .cache import CacheManager
-from .config import Configuration, get_config
-from .eix.overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
-from .portageq import get_repos_path
-from .privilege import run_privileged
+from carnage.core.cache import CacheManager
+from carnage.core.config import Configuration, get_config
+from carnage.core.eix.overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
+from carnage.core.portageq import get_repos_path
+from carnage.core.privilege import run_privileged
 
 # Cache configuration
 CACHE_KEY = "overlays_data"

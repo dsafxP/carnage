@@ -7,8 +7,8 @@ from typing import List
 
 from lxml import etree
 
-from ..config import Configuration, get_config
-from . import has_remote_cache
+from carnage.core.config import Configuration, get_config
+from carnage.core.eix import has_remote_cache
 
 
 @dataclass

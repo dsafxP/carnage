@@ -7,11 +7,11 @@ from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import DataTable, LoadingIndicator, Static
 
-from ...core.cache import CacheManager
-from ...core.config import Configuration, get_config
-from ...core.eix import Package, get_packages_with_useflag
-from ...core.eix.use import get_package_count_for_useflag
-from ...core.use import UseFlag, get_or_cache_useflags
+from carnage.core.cache import CacheManager
+from carnage.core.config import Configuration, get_config
+from carnage.core.eix import Package, get_packages_with_useflag
+from carnage.core.eix.use import get_package_count_for_useflag
+from carnage.core.use import UseFlag, get_or_cache_useflags
 
 
 class UseFlagsTab(Widget):

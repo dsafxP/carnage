@@ -6,10 +6,10 @@ from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
-from ...core.cache import CacheManager
-from ...core.config import get_config
-from ...core.eix import has_remote_cache, is_found
-from ...core.overlays import Overlay, clear_cache, get_or_cache
+from carnage.core.cache import CacheManager
+from carnage.core.config import get_config
+from carnage.core.eix import has_remote_cache, is_found
+from carnage.core.overlays import Overlay, clear_cache, get_or_cache
 
 
 class OverlaysTab(Widget):

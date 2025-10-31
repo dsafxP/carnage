@@ -1,6 +1,6 @@
 """Utilities for managing packages with emerge."""
 
-from .privilege import run_privileged
+from carnage.core.privilege import run_privileged
 
 
 def emerge_install(package_atom: str) -> tuple[int, str, str]:

@@ -7,9 +7,9 @@ from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
-from ...core.config import Configuration, get_config
-from ...core.eix.search import Package, search_packages
-from ...core.emerge import emerge_install, emerge_uninstall
+from carnage.core.config import Configuration, get_config
+from carnage.core.eix.search import Package, search_packages
+from carnage.core.emerge import emerge_install, emerge_uninstall
 
 MIN_CHARS = 3
 

@@ -4,7 +4,7 @@ import shutil
 import subprocess
 from subprocess import CompletedProcess
 
-from .config import Configuration, get_config
+from carnage.core.config import Configuration, get_config
 
 # Available privilege escalation backends
 BACKENDS: dict[str, str] = {

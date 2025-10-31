@@ -2,4 +2,4 @@
 
 __version__ = "1.0"
 
-from .main import main
+from carnage.main import main

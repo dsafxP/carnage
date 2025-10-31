@@ -7,7 +7,7 @@ from subprocess import CompletedProcess
 
 from lxml import etree
 
-from .portageq import get_gentoo_repo_path
+from carnage.core.portageq import get_gentoo_repo_path
 
 
 @dataclass

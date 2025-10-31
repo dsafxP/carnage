@@ -1,4 +1,4 @@
-from .tui.app import run
+from carnage.tui.app import run
 
 
 def main() -> None:

@@ -2,25 +2,25 @@
 
 # Expose main classes and functions
 # args
-from .args import APP_DESC, APP_NAME, config_path
-from .cache import CacheManager
-from .config import Configuration, get_config
+from carnage.core.args import APP_DESC, APP_NAME, config_path
+from carnage.core.cache import CacheManager
+from carnage.core.config import Configuration, get_config
 # GLSA management
-from .glsas import GLSA, fetch_glsas, fix_glsas, get_affected_glsas
+from carnage.core.glsas import GLSA, fetch_glsas, fix_glsas, get_affected_glsas
 # News management
-from .news import (News, get_news, mark_all_news_read, mark_news_read,
-                   purge_read_news)
+from carnage.core.news import (News, get_news, mark_all_news_read,
+                               mark_news_read, purge_read_news)
 # Overlay management
-from .overlays import (Overlay, OverlayQuality, OverlayStatus, Owner, Source,
-                       SourceType, clear_cache)
-from .overlays import fetch as fetch_overlays
-from .overlays import fetch_extra as fetch_overlays_extra
-from .overlays import get_installed as get_installed_overlays
+from carnage.core.overlays import (Overlay, OverlayQuality, OverlayStatus,
+                                   Owner, Source, SourceType, clear_cache)
+from carnage.core.overlays import fetch as fetch_overlays
+from carnage.core.overlays import fetch_extra as fetch_overlays_extra
+from carnage.core.overlays import get_installed as get_installed_overlays
 # portageq
-from .portageq import get_gentoo_repo_path, get_repos_path
-from .privilege import detect_backend, run_privileged
+from carnage.core.portageq import get_gentoo_repo_path, get_repos_path
+from carnage.core.privilege import detect_backend, run_privileged
 # USE
-from .use import UseFlag, get_or_cache_useflags
+from carnage.core.use import UseFlag, get_or_cache_useflags
 
 __all__ = [
     # Cache

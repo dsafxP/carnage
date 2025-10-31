@@ -2,8 +2,8 @@
 
 from textual.app import App
 
-from ..core.config import Configuration, get_config
-from .screens.main_scrn import MainScreen
+from carnage.core.config import Configuration, get_config
+from carnage.tui.screens.main_scrn import MainScreen
 
 
 class CarnageApp(App[None]):
