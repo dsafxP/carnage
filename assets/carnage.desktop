@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=carnage
+GenericName=Package Manager Frontend
+Comment=TUI front-end for Portage and eix
+Exec=carnage
+Icon=carnage
+Terminal=true
+Categories=System;PackageManager;
+Keywords=portage;eix;gentoo;package;emerge;tui;
