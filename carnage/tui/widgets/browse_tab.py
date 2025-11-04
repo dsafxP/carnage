@@ -1,9 +1,11 @@
 """Browse tab widget for searching and managing Gentoo packages."""
+import asyncio
 
 import textual.markup
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
+from textual.timer import Timer
 from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
@@ -21,6 +23,8 @@ class BrowseTab(Widget):
         self.packages: list[Package] = []
         self.selected_package: Package | None = None
         self._current_search: str = ""
+        self._cancel_search: bool = False
+        self._search_timer: Timer | None = None
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
@@ -43,20 +47,31 @@ class BrowseTab(Widget):
 
     def search_packages(self, query: str) -> None:
         """Search for packages using eix and update the table."""
-
         config: Configuration = get_config()
-        
+
         if not query.strip() or len(query.strip()) < config.browse_minimum_characters:
             # Clear table when search is empty or too short
             self._clear_table()
             return
 
         self._current_search = query
-        self._perform_search(query)
+
+        # Cancel any pending search timer
+        if self._search_timer:
+            self._search_timer.stop()
+
+        # Schedule search after a short delay (debouncing)
+        self._search_timer = self.set_timer(0.3, lambda: self._perform_search(query))
 
     @work(exclusive=True, thread=True)
     async def _perform_search(self, query: str) -> None:
         """Perform package search in a worker thread."""
+        # Cancel previous search
+        self._cancel_search = True
+
+        # Small delay to ensure cancellation is processed
+        await asyncio.sleep(0.1)
+
         loading: LoadingIndicator = self.query_one("#browse-loading", LoadingIndicator)
         table: DataTable = self.query_one("#browse-table", DataTable)
 
@@ -64,16 +79,28 @@ class BrowseTab(Widget):
         loading.display = True
         table.display = False
 
+        # Reset cancellation flag for this search
+        self._cancel_search = False
+
+        packages: list[Package] = []
+
         try:
             # Perform search using eix
-            packages: list[Package] = search_packages(query)
+            packages = search_packages(query)
 
-            # Update UI with results on main thread
-            self.app.call_from_thread(self._populate_table, packages)
+            # Only update if this search hasn't been cancelled
+            if not self._cancel_search and self._current_search == query:
+                # Update UI with results on main thread
+                self.app.call_from_thread(self._populate_table, packages)
         except Exception as e:
-            self.app.call_from_thread(self.notify, f"Search failed: {e}", severity="error")
+            if not self._cancel_search:
+                self.app.call_from_thread(self.notify, f"Search failed: {e}", severity="error")
         finally:
-            self.app.call_from_thread(self._hide_loading)
+            if not self._cancel_search:
+                self.app.call_from_thread(self._hide_loading)
+            # Explicit cleanup
+            if 'packages' in locals():
+                del packages
 
     def _clear_table(self) -> None:
         """Clear the package table."""
