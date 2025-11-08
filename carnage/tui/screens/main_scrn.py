@@ -1,13 +1,13 @@
 """Main screen with tabs for Carnage."""
-
-
+from textual import work
 from textual.app import ComposeResult
-from textual.containers import Container
+from textual.containers import Container, Horizontal
 from textual.screen import Screen
-from textual.widgets import Header, Input, TabbedContent, TabPane
+from textual.widgets import Header, Input, TabbedContent, TabPane, Button
 
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix import has_cache, is_found
+from carnage.core.emerge import emerge_sync
 from carnage.tui.widgets.browse_tab import BrowseTab
 from carnage.tui.widgets.glsa_tab import GLSATab
 from carnage.tui.widgets.news_tab import NewsTab
@@ -28,10 +28,12 @@ class MainScreen(Screen):
         yield Header()
 
         with Container(id="main-container"):
-            # Search bar at the top
-            yield Input(
-                id="search-input"
-            )
+            # Horizontal container for search bar and sync button
+            with Horizontal(id="search-container"):
+                yield Input(
+                    id="search-input"
+                )
+                yield Button("Sync", id="sync-btn", variant="warning", flat=True)
 
             # Tabbed content
             with TabbedContent(initial="news"):
@@ -128,3 +130,58 @@ class MainScreen(Screen):
         elif active_tab_id in ("news", "glsas") and query:
             # Switch to Browse tab and trigger search there
             tabbed_content.active = "browse"
+
+    @work(exclusive=True, thread=True)
+    async def action_sync(self) -> None:
+        """Sync the portage tree using emerge."""
+        # Get the sync button
+        sync_btn: Button = self.query_one("#sync-btn", Button)
+
+        try:
+            # Disable button to prevent multiple clicks
+            sync_btn.disabled = True
+            sync_btn.label = "Syncing..."
+
+            # Run the sync operation
+            returncode, stdout, stderr = emerge_sync()
+
+            if returncode == 0:
+                self.app.call_from_thread(
+                    self.notify,
+                    "Portage tree synced successfully!"
+                )
+
+                tabbed_content: TabbedContent = self.query_one(TabbedContent)
+
+                # Refresh news
+                news_pane: TabPane = tabbed_content.query_one("#news", TabPane)
+                news_tab: NewsTab = news_pane.query_one(NewsTab)
+
+                news_tab.load_news()
+
+                # Refresh GLSAs
+                glsas_pane: TabPane = tabbed_content.query_one("#glsas", TabPane)
+                glsas_tab: GLSATab = glsas_pane.query_one(GLSATab)
+
+                glsas_tab.load_glsas()
+            else:
+                self.app.call_from_thread(
+                    self.notify,
+                    f"Sync failed: {stderr}",
+                    severity="error"
+                )
+        except Exception as e:
+            self.app.call_from_thread(
+                self.notify,
+                f"Error during sync: {e}",
+                severity="error"
+            )
+        finally:
+            # Re-enable the button
+            sync_btn.disabled = False
+            sync_btn.label = "Sync"
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button presses."""
+        if event.button.id == "sync-btn":
+            self.action_sync()
