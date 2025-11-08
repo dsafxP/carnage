@@ -9,6 +9,7 @@ from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
 from carnage.core.glsas import GLSA, fetch_glsas, fix_glsas
+from carnage.tui.widgets.table import NavigableDataTable
 
 
 class GLSATab(Widget):
@@ -27,7 +28,7 @@ class GLSATab(Widget):
         """Create child widgets."""
         with Vertical():
             yield LoadingIndicator(id="glsa-loading")
-            yield DataTable(id="glsa-table", cursor_type="row")
+            yield NavigableDataTable(id="glsa-table", cursor_type="row")
 
             with Vertical(id="glsa-detail"):
                 with VerticalScroll(id="glsa-content-scroll"):

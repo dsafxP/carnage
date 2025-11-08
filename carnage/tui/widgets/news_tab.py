@@ -10,6 +10,7 @@ from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
 from carnage.core import (News, get_news, mark_all_news_read, mark_news_read,
                           purge_read_news)
+from carnage.tui.widgets.table import NavigableDataTable
 
 
 class NewsTab(Widget):
@@ -30,7 +31,7 @@ class NewsTab(Widget):
         """Create child widgets."""
         with Vertical():
             yield LoadingIndicator(id="news-loading")
-            yield DataTable(id="news-table", cursor_type="row")
+            yield NavigableDataTable(id="news-table", cursor_type="row")
 
             with Vertical(id="news-detail"):
                 with VerticalScroll(id="news-content-scroll"):

@@ -10,6 +10,7 @@ from carnage.core.cache import CacheManager
 from carnage.core.config import get_config
 from carnage.core.eix import has_remote_cache, is_found
 from carnage.core.overlays import Overlay, clear_cache, get_or_cache
+from carnage.tui.widgets.table import NavigableDataTable
 
 
 class OverlaysTab(Widget):
@@ -30,7 +31,7 @@ class OverlaysTab(Widget):
         """Create child widgets."""
         with Vertical():
             yield LoadingIndicator(id="overlays-loading")
-            yield DataTable(id="overlays-table", cursor_type="row")
+            yield NavigableDataTable(id="overlays-table", cursor_type="row")
 
             with Vertical(id="overlays-detail"):
                 with VerticalScroll(id="overlays-content-scroll"):

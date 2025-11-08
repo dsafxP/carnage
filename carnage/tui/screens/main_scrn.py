@@ -3,7 +3,7 @@ from textual import work
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
 from textual.screen import Screen
-from textual.widgets import Header, Input, TabbedContent, TabPane, Button
+from textual.widgets import Button, Header, Input, TabbedContent, TabPane
 
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix import has_cache, is_found

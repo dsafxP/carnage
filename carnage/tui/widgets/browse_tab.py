@@ -12,6 +12,7 @@ from textual.widgets import Button, DataTable, LoadingIndicator, Static
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.search import Package, search_packages
 from carnage.core.emerge import emerge_install, emerge_uninstall
+from carnage.tui.widgets.table import NavigableDataTable
 
 MIN_CHARS = 3
 
@@ -30,7 +31,7 @@ class BrowseTab(Widget):
         """Create child widgets."""
         with Vertical():
             yield LoadingIndicator(id="browse-loading")
-            yield DataTable(id="browse-table", cursor_type="row")
+            yield NavigableDataTable(id="browse-table", cursor_type="row")
 
             with Vertical(id="browse-detail"):
                 with VerticalScroll(id="browse-content-scroll"):
