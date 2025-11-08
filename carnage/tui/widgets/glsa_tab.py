@@ -42,7 +42,7 @@ class GLSATab(Widget):
 
     @work(exclusive=True, thread=True)
     async def load_glsas(self) -> None:
-        """Load GLSAs from the system in a worker thread."""
+        """Load GLSAs from the system."""
         loading: LoadingIndicator = self.query_one("#glsa-loading", LoadingIndicator)
         table: DataTable = self.query_one("#glsa-table", DataTable)
 
@@ -50,10 +50,8 @@ class GLSATab(Widget):
         table.display = False
 
         try:
-            # This runs in a thread, so it won't block the UI
             glsa_items: list[GLSA] = fetch_glsas()
 
-            # Update UI back on main thread
             self.app.call_from_thread(self._populate_table, glsa_items)
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Failed to load GLSAs: {e}", severity="error")
