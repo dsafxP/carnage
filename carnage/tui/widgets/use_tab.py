@@ -12,6 +12,7 @@ from carnage.core.config import Configuration, get_config
 from carnage.core.eix import Package, fetch_packages_by_query
 from carnage.core.eix.use import get_package_count_for_useflag
 from carnage.core.use import UseFlag, get_or_cache_useflags
+from carnage.tui.widgets.table import NavigableDataTable
 
 
 class UseFlagsTab(Widget):
@@ -30,7 +31,7 @@ class UseFlagsTab(Widget):
         """Create child widgets."""
         with Vertical():
             yield LoadingIndicator(id="useflags-loading")
-            yield DataTable(id="useflags-table", cursor_type="row")
+            yield NavigableDataTable(id="useflags-table", cursor_type="row")
 
             with VerticalScroll(id="useflags-content-scroll"):
                 yield Static("Select a USE flag to view details", id="useflags-content")
