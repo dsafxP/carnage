@@ -8,7 +8,7 @@
 
 ---
 
-<img src="./.github/carnage_alacritty_textual-light.webp" alt="Preview" width="700">
+<img src="./.github/screenshots/01.svg" alt="Preview" width="700">
 
 </div>
 
