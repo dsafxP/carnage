@@ -32,10 +32,9 @@ class UseFlagsTab(Widget):
             yield LoadingIndicator(id="useflags-loading")
             yield DataTable(id="useflags-table", cursor_type="row")
 
-            with Vertical(id="useflags-detail"):
-                with VerticalScroll(id="useflags-content-scroll"):
-                    yield Static("Select a USE flag to view details", id="useflags-content")
-                    yield LoadingIndicator(id="useflags-detail-loading")
+            with VerticalScroll(id="useflags-content-scroll"):
+                yield Static("Select a USE flag to view details", id="useflags-content")
+                yield LoadingIndicator(id="useflags-detail-loading")
 
     def on_mount(self) -> None:
         """Initialize the USE flags tab."""
