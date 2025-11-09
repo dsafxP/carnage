@@ -1,5 +1,6 @@
 """Main Carnage TUI application."""
 
+from pathlib import Path
 from textual.app import App
 
 from carnage.core.config import Configuration, get_config
@@ -11,24 +12,21 @@ class CarnageApp(App[None]):
 
     TITLE = "carnage"
 
-    if get_config().compact_mode:
-        CSS_PATH = "compact.tcss"
-    else:
-        CSS_PATH = "styles.tcss"
+    def __init__(self) -> None:
+        """Initialize the application with configuration."""
+        self.config: Configuration = get_config()
+        css_path: Path = Path("styles") / ("compact.tcss" if self.config.compact_mode else "styles.tcss")
+
+        super().__init__(css_path=css_path)
 
     def on_mount(self) -> None:
         """Initialize the application."""
         self.push_screen(MainScreen())
+        self.theme = self.config.theme
 
-        config: Configuration = get_config()
-
-        self.theme = config.theme
-
-    @staticmethod
-    def watch_theme(theme: str) -> None:
-        config: Configuration = get_config()
-
-        config.theme = theme
+    def watch_theme(self, theme: str) -> None:
+        """Watch for theme changes."""
+        self.config.theme = theme
 
 
 def run() -> None:
