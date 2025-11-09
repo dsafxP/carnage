@@ -9,7 +9,7 @@ from textual.widgets import DataTable, LoadingIndicator, Static
 
 from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
-from carnage.core.eix import Package, get_packages_with_useflag
+from carnage.core.eix import Package, fetch_packages_by_query
 from carnage.core.eix.use import get_package_count_for_useflag
 from carnage.core.use import UseFlag, get_or_cache_useflags
 
@@ -184,7 +184,7 @@ class UseFlagsTab(Widget):
         try:
             # Get package count and packages for this USE flag
             package_count: int = get_package_count_for_useflag(useflag.name)
-            packages: list[Package] = get_packages_with_useflag(useflag.name)
+            packages: list[Package] = fetch_packages_by_query(["--use", useflag.name], False)
 
             # Format details on main thread
             self.app.call_from_thread(self._display_useflag_details, useflag, package_count, packages)

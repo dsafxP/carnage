@@ -195,7 +195,7 @@ def _parse_package(package_elem: etree._Element, category: str) -> Package:
     )
 
 
-def _fetch_packages_by_query(query: List[str]) -> List[Package]:
+def fetch_packages_by_query(query: List[str], append_cfg: bool = True) -> List[Package]:
     """
     Fetch packages from eix using search query arguments.
 
@@ -203,6 +203,7 @@ def _fetch_packages_by_query(query: List[str]) -> List[Package]:
 
     Args:
         query: List of search query arguments
+        append_cfg: Append arguments from configuration
 
     Returns:
         List of matching Package objects
@@ -217,10 +218,11 @@ def _fetch_packages_by_query(query: List[str]) -> List[Package]:
     else:
         cmd = ["eix", "-Q", "--xml"]
 
-    config: Configuration = get_config()
+    if append_cfg:
+        config: Configuration = get_config()
 
-    # Append search flags from configuration
-    cmd.extend(config.search_flags)
+        # Append search flags from configuration
+        cmd.extend(config.search_flags)
 
     # Append the search query arguments
     cmd.extend(query)
@@ -264,7 +266,7 @@ def search_packages(query: str) -> List[Package]:
         return []
 
     try:
-        packages: List[Package] = _fetch_packages_by_query([query])
+        packages: List[Package] = fetch_packages_by_query([query])
         return packages
     except (subprocess.CalledProcessError, etree.ParseError):
         # Return empty list on error rather than crashing
@@ -282,7 +284,7 @@ def get_package_by_atom(atom: str) -> Package | None:
         Package object if found, None otherwise
     """
     try:
-        packages: List[Package] = _fetch_packages_by_query([atom])
+        packages: List[Package] = fetch_packages_by_query([atom])
         # Look for exact match
         for pkg in packages:
             if pkg.full_name == atom:
@@ -290,20 +292,3 @@ def get_package_by_atom(atom: str) -> Package | None:
         return None
     except (subprocess.CalledProcessError, etree.ParseError):
         return None
-
-
-def get_packages_with_useflag(useflag: str) -> List[Package]:
-    """
-    Get packages that have a specific USE flag.
-
-    Args:
-        useflag: USE flag name to search for
-
-    Returns:
-        List of Package objects that have this USE flag
-    """
-    try:
-        packages: List[Package] = _fetch_packages_by_query(["--use", useflag])
-        return packages
-    except (subprocess.CalledProcessError, etree.ParseError):
-        return []

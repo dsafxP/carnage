@@ -37,7 +37,7 @@ __all__ = [
     "Owner",
     "fetch_overlays",
     "fetch_overlays_extra",
-    "get_installed_overlays"
+    "get_installed_overlays",
     # GLSAs
     "GLSA",
     "fetch_glsas",

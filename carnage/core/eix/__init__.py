@@ -8,8 +8,8 @@ from carnage.core.eix.eix import (eix_remote_update, eix_update, has_cache,
 from carnage.core.eix.overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
 # Package search
 from carnage.core.eix.search import (Package, PackageVersion,
-                                     get_packages_with_useflag,
-                                     search_packages)
+                                     fetch_packages_by_query,
+                                     get_package_by_atom, search_packages)
 # USE flags
 from carnage.core.eix.use import get_all_useflags
 
@@ -24,8 +24,9 @@ __all__: list[str] = [
     # Search
     "Package",
     "PackageVersion",
+    "fetch_packages_by_query",
+    "get_package_by_atom",
     "search_packages",
-    "get_packages_with_useflag",
     # USE
     "get_all_useflags",
     # Overlay
