@@ -1,5 +1,6 @@
 """Main screen with tabs for Carnage."""
 from asyncio.timeouts import timeout
+
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal

@@ -194,7 +194,7 @@ class BrowseTab(Widget):
 
             # Update button states on main thread
             self.app.call_from_thread(self._update_buttons_with_world_status, package, in_world_file)
-        except Exception as e:
+        except:
             # On error, just keep buttons hidden
             self.app.call_from_thread(self._update_buttons_with_world_status, package, False)
 
