@@ -11,10 +11,10 @@ from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.search import Package, search_packages
-from carnage.core.emerge import emerge_install, emerge_uninstall
+from carnage.core.emerge import (emerge_deselect, emerge_install,
+                                 emerge_noreplace, emerge_uninstall)
 from carnage.tui.widgets.table import NavigableDataTable
 
-MIN_CHARS = 3
 
 class BrowseTab(Widget):
     """Widget for browsing and managing Gentoo packages."""
@@ -40,6 +40,8 @@ class BrowseTab(Widget):
                 with Vertical(id="browse-actions"):
                     yield Button("Emerge", id="emerge-btn", variant="primary")
                     yield Button("Depclean", id="depclean-btn", variant="error")
+                    yield Button("Deselect", id="deselect-btn", variant="warning")
+                    yield Button("Noreplace", id="noreplace-btn", variant="success")
 
     def on_mount(self) -> None:
         """Initialize the browse tab."""
@@ -168,13 +170,66 @@ class BrowseTab(Widget):
         if self.selected_package is None:
             return
 
-        # Display package details
+        # Display package details immediately
         content_widget: Static = self.query_one("#browse-content", Static)
         details: str = self._format_package_details(self.selected_package)
         content_widget.update(details)
 
-        # Update button states
+        # Update button states initially (hide deselect/noreplace until we know world file status)
         self.update_button_states()
+
+        # Load world file status in background
+        self._load_world_file_status(self.selected_package)
+
+    def _load_world_file_status(self, package: Package) -> None:
+        """Load world file status in a worker thread."""
+        self._load_world_file_status_worker(package)
+
+    @work(exclusive=True, thread=True)
+    async def _load_world_file_status_worker(self, package: Package) -> None:
+        """Worker thread to check world file status."""
+        try:
+            # Check if package is in world file
+            in_world_file: bool = package.is_in_world_file()
+
+            # Update button states on main thread
+            self.app.call_from_thread(self._update_buttons_with_world_status, package, in_world_file)
+        except Exception as e:
+            # On error, just keep buttons hidden
+            self.app.call_from_thread(self._update_buttons_with_world_status, package, False)
+
+    def _update_buttons_with_world_status(self, package: Package, in_world_file: bool) -> None:
+        """Update buttons with world file status on main thread."""
+        # Only update if this is still the selected package
+        if self.selected_package != package:
+            return
+
+        # Update the package's world file status (we'll store it for future use)
+        # For now, we just update the button states
+        emerge_btn: Button = self.query_one("#emerge-btn", Button)
+        depclean_btn: Button = self.query_one("#depclean-btn", Button)
+        deselect_btn: Button = self.query_one("#deselect-btn", Button)
+        noreplace_btn: Button = self.query_one("#noreplace-btn", Button)
+
+        is_installed: bool = package.is_installed()
+
+        # Show emerge/depclean based on installation status
+        if is_installed:
+            emerge_btn.display = False
+            depclean_btn.display = True
+
+            # Show deselect/noreplace based on world file status
+            if in_world_file:
+                deselect_btn.display = True
+                noreplace_btn.display = False
+            else:
+                deselect_btn.display = False
+                noreplace_btn.display = True
+        else:
+            emerge_btn.display = True
+            depclean_btn.display = False
+            deselect_btn.display = False
+            noreplace_btn.display = False
 
     @staticmethod
     def _format_package_details(package: Package) -> str:
@@ -219,18 +274,32 @@ class BrowseTab(Widget):
         """Update button enabled/disabled states."""
         emerge_btn: Button = self.query_one("#emerge-btn", Button)
         depclean_btn: Button = self.query_one("#depclean-btn", Button)
+        deselect_btn: Button = self.query_one("#deselect-btn", Button)
+        noreplace_btn: Button = self.query_one("#noreplace-btn", Button)
 
-        # Show appropriate button based on installation status
+        # Show appropriate buttons based on installation and world file status
         if self.selected_package:
-            if self.selected_package.is_installed():
+            is_installed: bool = self.selected_package.is_installed()
+
+            # Show emerge/depclean based on installation status
+            if is_installed:
                 emerge_btn.display = False
                 depclean_btn.display = True
+
+                # Initially hide deselect/noreplace until world file status is loaded
+                deselect_btn.display = False
+                noreplace_btn.display = False
             else:
                 emerge_btn.display = True
                 depclean_btn.display = False
+                deselect_btn.display = False
+                noreplace_btn.display = False
         else:
+            # No package selected, hide all action buttons
             emerge_btn.display = False
             depclean_btn.display = False
+            deselect_btn.display = False
+            noreplace_btn.display = False
 
     @work(exclusive=True, thread=True)
     async def action_emerge(self) -> None:
@@ -292,6 +361,64 @@ class BrowseTab(Widget):
 
         depclean_btn.disabled = False
 
+    @work(exclusive=True, thread=True)
+    async def action_deselect(self) -> None:
+        """Remove package from world file."""
+        if self.selected_package is None:
+            return
+
+        deselect_btn: Button = self.query_one("#deselect-btn", Button)
+        package_atom: str = self.selected_package.full_name
+
+        self.app.call_from_thread(self.notify, f"Removing {package_atom} from world file...",
+                                  severity="warning", timeout=10)
+
+        try:
+            deselect_btn.disabled = True
+
+            returncode, stdout, stderr = emerge_deselect(package_atom)
+
+            if returncode == 0:
+                self.app.call_from_thread(self.notify, f"Successfully removed {package_atom} from world file")
+                # Refresh world file status
+                if self.selected_package:
+                    self._load_world_file_status(self.selected_package)
+            else:
+                self.app.call_from_thread(self.notify, f"Failed to remove from world file: {stderr}", severity="error")
+        except Exception as e:
+            self.app.call_from_thread(self.notify, f"Error removing from world file: {e}", severity="error")
+
+        deselect_btn.disabled = False
+
+    @work(exclusive=True, thread=True)
+    async def action_noreplace(self) -> None:
+        """Add package to world file."""
+        if self.selected_package is None:
+            return
+
+        noreplace_btn: Button = self.query_one("#noreplace-btn", Button)
+        package_atom: str = self.selected_package.full_name
+
+        self.app.call_from_thread(self.notify, f"Adding {package_atom} to world file...",
+                                  severity="warning", timeout=10)
+
+        try:
+            noreplace_btn.disabled = True
+
+            returncode, stdout, stderr = emerge_noreplace(package_atom)
+
+            if returncode == 0:
+                self.app.call_from_thread(self.notify, f"Successfully added {package_atom} to world file")
+                # Refresh world file status
+                if self.selected_package:
+                    self._load_world_file_status(self.selected_package)
+            else:
+                self.app.call_from_thread(self.notify, f"Failed to add to world file: {stderr}", severity="error")
+        except Exception as e:
+            self.app.call_from_thread(self.notify, f"Error adding to world file: {e}", severity="error")
+
+        noreplace_btn.disabled = False
+
     def _refresh_search(self) -> None:
         """Refresh the current search to update installation status."""
         if self._current_search:
@@ -303,3 +430,7 @@ class BrowseTab(Widget):
             self.action_emerge()
         elif event.button.id == "depclean-btn":
             self.action_depclean()
+        elif event.button.id == "deselect-btn":
+            self.action_deselect()
+        elif event.button.id == "noreplace-btn":
+            self.action_noreplace()
