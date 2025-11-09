@@ -68,6 +68,42 @@ class Package:
                 return v
         return None
 
+    def is_in_world_file(self) -> bool:
+        """
+        Check if package is in world file.
+
+        Returns:
+            True if package is in world file, False otherwise
+        """
+        try:
+            result: CompletedProcess[str] = subprocess.run(
+                ["eix", "--selected-file", "-0Qq", self.full_name],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            return result.returncode == 0
+        except (subprocess.SubprocessError, FileNotFoundError):
+            return False
+
+    def is_installed_dependency(self) -> bool:
+        """
+        Check if package is an installed dependency.
+
+        Returns:
+            True if package is an installed dependency, False otherwise
+        """
+        try:
+            result: CompletedProcess[str] = subprocess.run(
+                ["eix", "--installed-deps", "-0Qq", self.full_name],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            return result.returncode == 0
+        except (subprocess.SubprocessError, FileNotFoundError):
+            return False
+
 
 def _parse_version(version_elem: etree._Element) -> PackageVersion:
     """Parse a version element from eix XML."""
@@ -159,14 +195,14 @@ def _parse_package(package_elem: etree._Element, category: str) -> Package:
     )
 
 
-def _fetch_packages_by_query(query: str) -> List[Package]:
+def _fetch_packages_by_query(query: List[str]) -> List[Package]:
     """
-    Fetch packages from eix using a search query.
+    Fetch packages from eix using search query arguments.
 
     Uses remote cache if available, falls back to local only.
 
     Args:
-        query: Search query string
+        query: List of search query arguments
 
     Returns:
         List of matching Package objects
@@ -186,8 +222,8 @@ def _fetch_packages_by_query(query: str) -> List[Package]:
     # Append search flags from configuration
     cmd.extend(config.search_flags)
 
-    # Append the search query
-    cmd.append(query)
+    # Append the search query arguments
+    cmd.extend(query)
 
     result: CompletedProcess[str] = subprocess.run(
         cmd,
@@ -228,7 +264,7 @@ def search_packages(query: str) -> List[Package]:
         return []
 
     try:
-        packages: List[Package] = _fetch_packages_by_query(query)
+        packages: List[Package] = _fetch_packages_by_query([query])
         return packages
     except (subprocess.CalledProcessError, etree.ParseError):
         # Return empty list on error rather than crashing
@@ -246,7 +282,7 @@ def get_package_by_atom(atom: str) -> Package | None:
         Package object if found, None otherwise
     """
     try:
-        packages: List[Package] = _fetch_packages_by_query(atom)
+        packages: List[Package] = _fetch_packages_by_query([atom])
         # Look for exact match
         for pkg in packages:
             if pkg.full_name == atom:
@@ -256,26 +292,9 @@ def get_package_by_atom(atom: str) -> Package | None:
         return None
 
 
-def get_installed_packages() -> List[Package]:
-    """
-    Get all installed packages.
-
-    Returns:
-        List of installed Package objects
-    """
-    try:
-        # Use eix's installed filter
-        packages: List[Package] = _fetch_packages_by_query("--installed")
-        return packages
-    except (subprocess.CalledProcessError, etree.ParseError):
-        return []
-
-
 def get_packages_with_useflag(useflag: str) -> List[Package]:
     """
     Get packages that have a specific USE flag.
-
-    Uses remote cache if available, falls back to local only.
 
     Args:
         useflag: USE flag name to search for
@@ -283,37 +302,8 @@ def get_packages_with_useflag(useflag: str) -> List[Package]:
     Returns:
         List of Package objects that have this USE flag
     """
-    from lxml import etree
-
-    # Build command based on remote cache availability
-    if has_remote_cache():
-        cmd: list[str] = ["eix", "-RUQ", "--xml", "--use", useflag]
-    else:
-        cmd = ["eix", "-UQ", "--xml", "--use", useflag]
-
-    result: CompletedProcess[str] = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True
-    )
-
-    if result.returncode != 0:
-        return []
-
     try:
-        parser = etree.XMLParser(recover=True, remove_comments=True)
-        root = etree.fromstring(result.stdout.encode('utf-8'), parser=parser)
-        packages: List[Package] = []
-
-        category_elems = root.xpath("//category")
-        for category_elem in category_elems:
-            category_name: str = category_elem.get("name", "")
-
-            package_elems = category_elem.xpath("package")
-            for package_elem in package_elems:
-                pkg: Package = _parse_package(package_elem, category_name)
-                packages.append(pkg)
-
+        packages: List[Package] = _fetch_packages_by_query(["--use", useflag])
         return packages
-    except etree.ParseError:
+    except (subprocess.CalledProcessError, etree.ParseError):
         return []
