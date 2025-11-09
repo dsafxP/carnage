@@ -19,10 +19,10 @@ class Configuration:
         Initialize configuration.
         
         Args:
-            config_path: Path to config file. Defaults to ~/.config/carnage.toml
+            config_path: Path to config file. Defaults to ~/.config/carnage/carnage.toml
         """
         if config_path is None:
-            config_path = Path.home() / ".config" / "carnage.toml"
+            config_path = Path.home() / ".config" / "carnage" / "carnage.toml"
         
         self.config_path = config_path
         self._config: Dict[str, Any] = {}
@@ -36,14 +36,15 @@ class Configuration:
             "global": {
                 "theme": "textual-dark",
                 "privilege_backend": "auto",
-                "initial_tab": "news"
+                "initial_tab": "news",
+                "compact_mode": False,
+                "ignore_warnings": False
             },
             "browse": {
                 "search_flags": ["-f", "2"],
                 "minimum_characters": 3
             },
             "overlays": {
-                "ignore_warnings": False,
                 "skip_package_counting": True,
                 "cache_max_age": 72,
                 "overlay_source": "https://api.gentoo.org/overlays/repositories.xml"
@@ -53,19 +54,19 @@ class Configuration:
                 "cache_max_age": 96
             }
         }
-    
+
     def _create_default_config(self) -> None:
         """Create default configuration file with comments."""
         # Ensure config directory exists
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Create TOML document with comments
         doc: TOMLDocument = tomlkit.document()
-        
+
         # Add header comment
         doc.add(tomlkit.comment("Carnage configuration file"))
         doc.add(tomlkit.nl())
-        
+
         # Global section
         global_section: Table = tomlkit.table()
         global_section.add(tomlkit.comment("User interface theme"))
@@ -79,8 +80,14 @@ class Configuration:
         global_section.add(tomlkit.comment("Initial tab selected"))
         global_section.add(tomlkit.comment("Options: news, glsas, browse, use, overlays"))
         global_section.add("initial_tab", "news")
+        global_section.add(tomlkit.nl())
+        global_section.add(tomlkit.comment("Compact mode reduces visual noise and increases content density"))
+        global_section.add("compact_mode", False)
+        global_section.add(tomlkit.nl())
+        global_section.add(tomlkit.comment("Ignore all warnings"))
+        global_section.add("ignore_warnings", False)
         doc.add("global", global_section)
-        
+
         # Browse section
         browse_section: Table = tomlkit.table()
         browse_section.add(tomlkit.comment("Default flags for package search with eix"))
@@ -91,12 +98,9 @@ class Configuration:
         browse_section.add(tomlkit.comment("Lower values may hinder performance"))
         browse_section.add("minimum_characters", 3)
         doc.add("browse", browse_section)
-        
+
         # Overlays section
         overlays_section: Table = tomlkit.table()
-        overlays_section.add(tomlkit.comment("Ignore warnings within overlays"))
-        overlays_section.add("ignore_warnings", False)
-        overlays_section.add(tomlkit.nl())
         overlays_section.add(tomlkit.comment("Skip counting packages in overlays (faster but less informative)"))
         overlays_section.add(tomlkit.comment("When false, package counts will be fetched but may take longer"))
         overlays_section.add("skip_package_counting", True)
@@ -109,7 +113,7 @@ class Configuration:
         overlays_section.add(tomlkit.comment("Change this only if you need to use a different overlay list source"))
         overlays_section.add("overlay_source", "https://api.gentoo.org/overlays/repositories.xml")
         doc.add("overlays", overlays_section)
-        
+
         # Use section
         use_section: Table = tomlkit.table()
         use_section.add(tomlkit.comment("Minimum characters required before starting USE flag search"))
@@ -120,17 +124,17 @@ class Configuration:
         use_section.add(tomlkit.comment("USE flag data will be refreshed after this time"))
         use_section.add("cache_max_age", 96)
         doc.add("use", use_section)
-        
+
         # Write to file
         with open(self.config_path, "w", encoding="utf-8") as f:
             f.write(tomlkit.dumps(doc))
 
-    
+
     def _load_config(self) -> None:
         """Load configuration from file or create default."""
         if not self.config_path.exists():
             self._create_default_config()
-        
+
         try:
             with open(self.config_path, "r", encoding="utf-8") as f:
                 self._toml_doc = tomlkit.parse(f.read())
@@ -139,7 +143,7 @@ class Configuration:
         except (TOMLKitError, OSError, ImportError):
             # Fall back to defaults if config is corrupted
             self._config = self._get_default_config()
-    
+
     def _save_config(self) -> None:
         """Save current configuration to file preserving comments."""
         if self._toml_doc is None:
@@ -148,11 +152,11 @@ class Configuration:
 
         # Ensure config directory exists
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Write back to file
         with open(self.config_path, "w", encoding="utf-8") as f:
             f.write(tomlkit.dumps(self._toml_doc))
-    
+
     def _get_nested_value(self, keys: List[str], default: Any = None) -> Any:
         """Get a nested value from the configuration."""
         current = self._config
@@ -162,7 +166,7 @@ class Configuration:
             else:
                 return default
         return current
-    
+
     def _set_nested_value(self, keys: List[str], value: Any) -> None:
         """Set a nested value in the configuration."""
         current = self._config
@@ -171,13 +175,13 @@ class Configuration:
                 current[key] = {}
             current = current[key]
         current[keys[-1]] = value
-    
+
     # Global settings
     @property
     def theme(self) -> str:
         """Get the theme setting."""
         return self._get_nested_value(["global", "theme"], "textual-dark")
-    
+
     @theme.setter
     def theme(self, value: str) -> None:
         """Set the theme setting."""
@@ -187,7 +191,7 @@ class Configuration:
             self._toml_doc["global"]["theme"] = self.theme # type: ignore
 
         self._save_config()
-    
+
     @property
     def privilege_backend(self) -> str:
         """Get the privilege escalation backend setting."""
@@ -197,27 +201,32 @@ class Configuration:
     def initial_tab(self) -> str:
         """Get the initial tab selected."""
         return self._get_nested_value(["global", "initial_tab"], "news")
-    
+
+    @property
+    def compact_mode(self) -> bool:
+        """Get the compact mode setting."""
+        return self._get_nested_value(["global", "compact_mode"], False)
+
+    @property
+    def ignore_warnings(self) -> bool:
+        """Get whether to ignore warnings system-wide."""
+        return self._get_nested_value(["global", "ignore_warnings"], False)
+
     @property
     def search_flags(self) -> List[str]:
         """Get the search flags for package browsing."""
         return self._get_nested_value(["browse", "search_flags"], ["-f", "2"])
-    
+
     @property
     def browse_minimum_characters(self) -> int:
         """Get the minimum characters for browse search."""
         return self._get_nested_value(["browse", "minimum_characters"], 3)
-    
-    @property
-    def ignore_warnings(self) -> bool:
-        """Get whether to ignore overlay warnings."""
-        return self._get_nested_value(["overlays", "ignore_warnings"], False)
-    
+
     @property
     def skip_package_counting(self) -> bool:
         """Get whether to skip package counting for overlays."""
         return self._get_nested_value(["overlays", "skip_package_counting"], True)
-    
+
     @property
     def overlays_cache_max_age(self) -> int:
         """Get the cache max age for overlays in hours."""
@@ -227,29 +236,29 @@ class Configuration:
     def overlay_source(self) -> str:
         """Get the overlay metadata source URL."""
         return self._get_nested_value(["overlays", "overlay_source"], "https://api.gentoo.org/overlays/repositories.xml")
-    
+
     @property
     def use_minimum_characters(self) -> int:
         """Get the minimum characters for USE flag search."""
         return self._get_nested_value(["use", "minimum_characters"], 3)
-    
+
     @property
     def use_cache_max_age(self) -> int:
         """Get the cache max age for USE flags in hours."""
         return self._get_nested_value(["use", "cache_max_age"], 96)
-    
+
     def reload(self) -> None:
         """Reload configuration from file."""
         self._load_config()
-    
+
     def get(self, key: str, default: Any = None) -> Any:
         """
         Get a configuration value by dot notation.
-        
+
         Args:
             key: Dot notation key (e.g., "global.theme")
             default: Default value if key not found
-            
+
         Returns:
             Configuration value or default
         """
@@ -264,16 +273,16 @@ _config_instance: Configuration | None = None
 def get_config(config_path: Path | None = None) -> Configuration:
     """
     Get the global configuration instance.
-    
+
     Args:
         config_path: Optional path to config file
-        
+
     Returns:
         Configuration instance
     """
     global _config_instance
-    
+
     if _config_instance is None:
         _config_instance = Configuration(arg_cfg_path or config_path)
-    
+
     return _config_instance

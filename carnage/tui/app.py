@@ -10,7 +10,11 @@ class CarnageApp(App[None]):
     """TUI front-end for Portage and eix"""
 
     TITLE = "carnage"
-    CSS_PATH = "styles.tcss"
+
+    if get_config().compact_mode:
+        CSS_PATH = "compact.tcss"
+    else:
+        CSS_PATH = "styles.tcss"
 
     def on_mount(self) -> None:
         """Initialize the application."""

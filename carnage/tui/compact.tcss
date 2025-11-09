@@ -1,0 +1,386 @@
+/* Carnage TUI Styles (Compact) */
+
+Screen {
+    background: $background;
+}
+
+#main-container {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+}
+
+/* Horizontal container for search and sync button */
+#search-container {
+    width: 100%;
+    height: auto;
+    margin-bottom: 0;
+    align: left middle;
+}
+
+/* Search input styling */
+#search-input {
+    width: 1fr;
+    border: none;
+    background: $surface;
+}
+
+#search-input:focus {
+    background: $boost;
+}
+
+#search-input:disabled {
+    opacity: 0.5;
+}
+
+/* Sync button styling */
+#sync-btn {
+    width: auto;
+    min-width: 15;
+    margin-left: 1;
+}
+
+/* Tabbed content */
+TabbedContent {
+    width: 100%;
+    height: 1fr;
+}
+
+Tabs {
+    width: 100%;
+    background: $surface;
+}
+
+Tab {
+    padding: 0 1;
+    background: $surface;
+    color: $text-muted;
+}
+
+Tab:hover {
+    background: $boost;
+    color: $text;
+}
+
+Tab.-active {
+    background: $primary;
+    color: $text;
+    text-style: bold;
+}
+
+ContentSwitcher {
+    width: 100%;
+    height: 1fr;
+    background: $panel;
+    border: none;
+    padding: 0;
+}
+
+TabPane {
+    width: 100%;
+    height: 1fr;
+}
+
+/* Header and Footer */
+Header {
+    background: $primary;
+    color: $text;
+}
+
+Footer {
+    background: $surface;
+}
+
+/* General widget styling */
+Label {
+    width: 100%;
+    height: auto;
+    content-align: center middle;
+    padding: 0;
+}
+
+DataTable {
+    width: 100%;
+    height: 1fr;
+}
+
+DataTable > .datatable--header {
+    background: $primary;
+    color: $text;
+    text-style: bold;
+}
+
+DataTable > .datatable--cursor {
+    background: $accent;
+}
+
+DataTable:focus > .datatable--cursor {
+    background: $accent;
+}
+
+ListView {
+    width: 100%;
+    height: 1fr;
+    border: none;
+}
+
+ListItem {
+    padding: 0;
+}
+
+ListItem:hover {
+    background: $boost;
+}
+
+ListItem.-selected {
+    background: $accent;
+}
+
+/* Buttons */
+Button {
+    width: auto;
+    min-width: 12;
+    margin: 0 1;
+}
+
+Button.-primary {
+    background: $primary;
+    color: $text;
+}
+
+Button:hover {
+    background: $accent;
+}
+
+Button:disabled {
+    opacity: 0.5;
+}
+
+/* Containers */
+Vertical {
+    width: 100%;
+    height: auto;
+}
+
+Horizontal {
+    width: 100%;
+    height: auto;
+}
+
+Container {
+    width: 100%;
+    height: auto;
+}
+
+/* Scrollbars */
+ScrollableContainer {
+    scrollbar-gutter: stable;
+}
+
+/* Text areas and input */
+TextArea {
+    width: 100%;
+    height: 1fr;
+    border: none;
+    background: $surface;
+}
+
+TextArea:focus {
+    background: $boost;
+}
+
+/* Loading indicator */
+LoadingIndicator {
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+}
+
+/* News tab */
+#news-table {
+    height: 35%;
+    min-height: 4;
+    margin-bottom: 0;
+}
+
+#news-detail {
+    height: 1fr;
+    border: none;
+    padding: 0;
+}
+
+#news-content-scroll {
+    height: 1fr;
+    border: none;
+    margin-bottom: 0;
+}
+
+#news-content {
+    padding: 0 1;
+}
+
+#news-actions {
+    width: 100%;
+    height: auto;
+    align: center middle;
+    layout: horizontal;
+    margin-top: 0;
+}
+
+#news-actions Button {
+    margin: 0 1;
+}
+
+/* GLSAs tab */
+#glsa-table {
+    height: 35%;
+    min-height: 4;
+    margin-bottom: 0;
+}
+
+#glsa-detail {
+    height: 1fr;
+    border: none;
+    padding: 0;
+}
+
+#glsa-content-scroll {
+    height: 1fr;
+    border: none;
+    margin-bottom: 0;
+}
+
+#glsa-content {
+    padding: 0 1;
+}
+
+#glsa-actions {
+    width: 100%;
+    height: auto;
+    align: center middle;
+    layout: horizontal;
+    margin-top: 0;
+}
+
+#glsa-actions Button {
+    margin: 0 1;
+}
+
+#glsa-loading {
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+}
+
+/* Overlays tab - compact layout */
+#overlays-table {
+    height: 45%;
+    min-height: 5;
+    max-height: 30;
+    margin-bottom: 0;
+}
+
+#overlays-detail {
+    height: 1fr;
+    border: none;
+    padding: 0;
+}
+
+#overlays-content-scroll {
+    height: 1fr;
+    border: none;
+    margin-bottom: 0;
+}
+
+#overlays-content {
+    padding: 0 1;
+}
+
+#overlays-actions {
+    width: 100%;
+    height: auto;
+    align: center middle;
+    layout: horizontal;
+    margin-top: 0;
+}
+
+#overlays-actions Button {
+    margin: 0 1;
+}
+
+#overlays-loading {
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+}
+
+/* Browse tab */
+#browse-table {
+    height: 45%;
+    min-height: 5;
+    max-height: 30;
+    margin-bottom: 0;
+}
+
+#browse-detail {
+    height: 1fr;
+    border: none;
+    padding: 0;
+}
+
+#browse-content-scroll {
+    height: 1fr;
+    border: none;
+    margin-bottom: 0;
+}
+
+#browse-content {
+    padding: 0 1;
+}
+
+#browse-actions {
+    width: 100%;
+    height: auto;
+    align: center middle;
+    layout: horizontal;
+    margin-top: 0;
+}
+
+#browse-actions Button {
+    margin: 0 1;
+}
+
+#browse-loading {
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+}
+
+/* USE flags tab */
+#useflags-table {
+    height: 40%;
+    min-height: 4;
+    max-height: 25;
+    margin-bottom: 0;
+}
+
+#useflags-detail {
+    height: 1fr;
+    border: none;
+    padding: 0;
+}
+
+#useflags-content-scroll {
+    height: 1fr;
+    border: none;
+}
+
+#useflags-content {
+    padding: 0 1;
+}
+
+#useflags-loading {
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+}
