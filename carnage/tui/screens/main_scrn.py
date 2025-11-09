@@ -1,4 +1,5 @@
 """Main screen with tabs for Carnage."""
+from asyncio.timeouts import timeout
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal
@@ -148,7 +149,8 @@ class MainScreen(Screen):
             if returncode == 0:
                 self.app.call_from_thread(
                     self.notify,
-                    "Portage tree synced successfully!"
+                    "Portage tree synced successfully!",
+                    timeout=30
                 )
 
                 tabbed_content: TabbedContent = self.query_one(TabbedContent)
@@ -168,13 +170,15 @@ class MainScreen(Screen):
                 self.app.call_from_thread(
                     self.notify,
                     f"Sync failed: {stderr}",
-                    severity="error"
+                    severity="error",
+                    timeout=30
                 )
         except Exception as e:
             self.app.call_from_thread(
                 self.notify,
                 f"Error during sync: {e}",
-                severity="error"
+                severity="error",
+                timeout=30
             )
         finally:
             # Re-enable the button
