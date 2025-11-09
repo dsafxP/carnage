@@ -16,12 +16,6 @@ from carnage.tui.widgets.table import NavigableDataTable
 class NewsTab(Widget):
     """Widget for displaying and managing Gentoo news."""
 
-    BINDINGS = [
-        Binding("r", "mark_read", "Mark as Read"),
-        Binding("a", "mark_all_read", "Mark all Read"),
-        Binding("p", "purge", "Purge Read"),
-    ]
-
     def __init__(self):
         super().__init__()
         self.news_items: list[News] = []
