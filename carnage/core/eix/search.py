@@ -266,7 +266,16 @@ def search_packages(query: str) -> List[Package]:
         return []
 
     try:
-        packages: List[Package] = fetch_packages_by_query([query])
+        # Split the query into individual arguments to handle flags properly
+        query_args: list[str] = query.split()
+
+        # Check if any arguments are flags (start with - or --)
+        has_flags: bool = any(arg.startswith('-') for arg in query_args)
+
+        # Only append config if no flags are present in the query
+        append_cfg: bool = not has_flags
+
+        packages: List[Package] = fetch_packages_by_query(query_args, append_cfg=append_cfg)
         return packages
     except (subprocess.CalledProcessError, etree.ParseError):
         # Return empty list on error rather than crashing
