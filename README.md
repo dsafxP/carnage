@@ -22,7 +22,7 @@ Its goal is to centralize common Gentoo package management tasks in a unified, e
 
 carnage integrates multiple Portage tools (including `eix`) and adds a backend for extended functionality and caching beyond what the command line provides.
 
-A default configuration file is automatically generated at: `~/.config/carnage.toml`
+A default configuration file is automatically generated at: `~/.config/carnage/carnage.toml`
 
 > [!TIP]
 > Since **eix** is used for several operations internally, having a remote cache is important to have all options available. Optimizing `eix` in any of the recommended ways will accelerate carnage at the same time. You can read about optimizing `eix` in the [Gentoo Wiki article on eix](https://wiki.gentoo.org/wiki/Eix).
