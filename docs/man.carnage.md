@@ -15,6 +15,8 @@ It is dedicated to providing an intuitive browsing and inspection environment ra
 
 Internally, **carnage** integrates with Portage and eix, adding a backend for extended functionality and caching beyond what the command line provides.
 
+Since eix is used for several operations internally, having a remote cache is important to have all options available. Optimizing eix will accelerate carnage at the same time.
+
 # OPTIONS
 | Option | Description |
 |---------|-------------|
