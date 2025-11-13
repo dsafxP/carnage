@@ -1,6 +1,7 @@
 """Main Carnage TUI application."""
 
 from pathlib import Path
+
 from textual.app import App
 
 from carnage.core.config import Configuration, get_config

@@ -11,7 +11,7 @@ from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix import Package, fetch_packages_by_query
 from carnage.core.eix.use import get_package_count_for_useflag
-from carnage.core.use import UseFlag, get_or_cache_useflags
+from carnage.core.portage.use import UseFlag, get_or_cache_useflags
 from carnage.tui.widgets.table import NavigableDataTable
 
 

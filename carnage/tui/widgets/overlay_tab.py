@@ -9,7 +9,7 @@ from textual.widgets import Button, DataTable, LoadingIndicator, Static
 from carnage.core.cache import CacheManager
 from carnage.core.config import get_config
 from carnage.core.eix import has_remote_cache, is_found
-from carnage.core.overlays import Overlay, clear_cache, get_or_cache
+from carnage.core.portage.overlays import Overlay, clear_cache, get_or_cache
 from carnage.tui.widgets.table import NavigableDataTable
 
 

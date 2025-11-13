@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.use import get_all_useflags
-from carnage.core.portageq import get_repos_path
+from carnage.core.portage.portageq import get_repos_path
 
 # Cache configuration
 CACHE_KEY_USEFLAGS = "useflags_data"

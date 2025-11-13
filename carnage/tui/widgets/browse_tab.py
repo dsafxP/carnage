@@ -11,8 +11,8 @@ from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.search import Package, search_packages
-from carnage.core.emerge import (emerge_deselect, emerge_install,
-                                 emerge_noreplace, emerge_uninstall)
+from carnage.core.portage.emerge import (emerge_deselect, emerge_install,
+                                         emerge_noreplace, emerge_uninstall)
 from carnage.tui.widgets.table import NavigableDataTable
 
 

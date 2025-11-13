@@ -15,7 +15,7 @@ from lxml import etree
 from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
-from carnage.core.portageq import get_repos_path
+from carnage.core.portage.portageq import get_repos_path
 from carnage.core.privilege import run_privileged
 
 # Cache configuration

@@ -3,12 +3,11 @@
 
 from textual import work
 from textual.app import ComposeResult
-from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
-from carnage.core.glsas import GLSA, fetch_glsas, fix_glsas
+from carnage.core.portage.glsas import GLSA, fetch_glsas, fix_glsas
 from carnage.tui.widgets.table import NavigableDataTable
 
 

@@ -7,7 +7,7 @@ from subprocess import CompletedProcess
 
 from lxml import etree
 
-from carnage.core.portageq import get_gentoo_repo_path
+from carnage.core.portage.portageq import get_gentoo_repo_path
 
 
 @dataclass
@@ -96,7 +96,7 @@ def fix_glsas() -> tuple[int, str, str]:
     Returns:
         Tuple of (return_code, stdout, stderr)
     """
-    from .privilege import run_privileged
+    from carnage.core import run_privileged
 
     # First get the list of affected GLSAs
     returncode, glsa_list = get_affected_glsas()
