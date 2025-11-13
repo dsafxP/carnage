@@ -41,6 +41,7 @@ class SourceType(Enum):
     GIT = "git"
     MERCURIAL = "mercurial"
     RSYNC = "rsync"
+    CVS = "cvs"
 
 
 @dataclass
