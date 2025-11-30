@@ -7,7 +7,7 @@ def emerge_install(package_atom: str) -> tuple[int, str, str]:
     """
     Install a package using emerge.
 
-    Wraps: emerge -q --nospinner --color=n <package_atom>
+    Wraps: emerge -q --nospinner <package_atom>
 
     Args:
         package_atom: Package atom to install (e.g., "app-editors/vim")
@@ -15,14 +15,14 @@ def emerge_install(package_atom: str) -> tuple[int, str, str]:
     Returns:
         Tuple of (return_code, stdout, stderr)
     """
-    return run_privileged(["emerge", "-q", "--nospinner", "--color=n", package_atom])
+    return run_privileged(["emerge", "-q", "--nospinner", package_atom])
 
 
 def emerge_uninstall(package_atom: str) -> tuple[int, str, str]:
     """
     Uninstall a package using emerge.
 
-    Wraps: emerge -q --color=n --nospinner --depclean <package_atom>
+    Wraps: emerge -q --nospinner --depclean <package_atom>
 
     Args:
         package_atom: Package atom to uninstall (e.g., "app-editors/vim")
@@ -30,19 +30,19 @@ def emerge_uninstall(package_atom: str) -> tuple[int, str, str]:
     Returns:
         Tuple of (return_code, stdout, stderr)
     """
-    return run_privileged(["emerge",  "-q", "--nospinner","--color=n", "--depclean", package_atom])
+    return run_privileged(["emerge", "-q", "--nospinner", "--depclean", package_atom])
 
 
 def emerge_sync() -> tuple[int, str, str]:
     """
     Sync portage tree using emerge.
 
-    Wraps: emerge --sync --quiet
+    Wraps: emerge --sync
 
     Returns:
         Tuple of (return_code, stdout, stderr)
     """
-    return run_privileged(["emerge", "--sync", "--quiet"])
+    return run_privileged(["emerge", "--sync"])
 
 
 def emerge_deselect(package_atom: str) -> tuple[int, str, str]:

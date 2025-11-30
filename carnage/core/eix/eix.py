@@ -110,4 +110,4 @@ def eix_remote_update() -> tuple[int, str, str]:
     else:
         # Cache doesn't exist, needs root to create
         from ..privilege import run_privileged
-        return run_privileged(["eix-remote", "update"])
+        return run_privileged(["eix-remote", "update"], None, False)

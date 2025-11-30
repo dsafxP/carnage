@@ -57,7 +57,8 @@ def get_configured_backend() -> str | None:
 
 def run_privileged(
         cmd: list[str],
-        backend: str | None = None
+        backend: str | None = None,
+        use_terminal: bool | None = None
 ) -> tuple[int, str, str]:
     """
     Run a command with privilege escalation.
@@ -66,6 +67,8 @@ def run_privileged(
         cmd: Command and arguments to run.
         backend: Specific backend to use (e.g., 'sudo', 'pkexec').
                  If None, use configured backend.
+        use_terminal: Whether to run the command in a terminal.
+                      If None, defaults to True if terminal is configured.
 
     Returns:
         Tuple of (return_code, stdout, stderr)
@@ -73,11 +76,22 @@ def run_privileged(
     if backend is None:
         backend = get_configured_backend()
 
+    config: Configuration = get_config()
+    terminal_cmd: list[str] = config.terminal
+
+    # Determine if we should use terminal
+    if use_terminal is None:
+        use_terminal = bool(terminal_cmd)  # Use terminal if configured
+
     full_cmd: list[str] = cmd
 
     # Apply privilege escalation if backend is available
     if backend and backend in BACKENDS:
         full_cmd = [BACKENDS[backend]] + cmd
+
+    # Apply terminal if requested and configured
+    if use_terminal and terminal_cmd:
+        full_cmd = terminal_cmd + full_cmd
 
     result: CompletedProcess[str] = subprocess.run(
         full_cmd,
