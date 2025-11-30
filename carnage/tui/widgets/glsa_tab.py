@@ -192,12 +192,13 @@ class GLSATab(Widget):
         self.update_button_states()
 
     def update_button_states(self) -> None:
-        """Update button enabled/disabled states."""
+        """Update button visibility states."""
         fix_btn: Button = self.query_one("#fix-glsa-btn", Button)
 
         # Enable "Apply fixes" only if there are GLSAs affecting the system
         has_glsas: bool = len(self.glsa_items) > 0
         fix_btn.disabled = not has_glsas
+        fix_btn.display = has_glsas
 
     @work(exclusive=True, thread=True)
     async def action_fix_glsas(self) -> None:
@@ -221,11 +222,9 @@ class GLSATab(Widget):
                 self.app.call_from_thread(self._reload_glsas)
             else:
                 self.app.call_from_thread(self.notify, f"Failed to apply fixes: {stderr}", severity="error")
-
-                fix_btn.disabled = False
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Error applying fixes: {e}", severity="error")
-
+        finally:
             fix_btn.disabled = False
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -234,7 +233,7 @@ class GLSATab(Widget):
             self.action_fix_glsas()
 
 
-_symbols: dict[str, str] = {
+__symbols: dict[str, str] = {
     "lt": "<",
     "le": "<=",
     "eq": "=",
@@ -244,4 +243,4 @@ _symbols: dict[str, str] = {
 
 def _get_range_symbol(range_str: str) -> str:
     """Convert range operator to symbol."""
-    return _symbols.get(range_str, range_str)
+    return __symbols.get(range_str, range_str)
