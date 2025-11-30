@@ -2,6 +2,7 @@
 
 from textual import work
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Static
@@ -15,6 +16,11 @@ from carnage.tui.widgets.table import NavigableDataTable
 
 class OverlaysTab(Widget):
     """Widget for displaying and managing Gentoo overlays."""
+
+    BINDINGS = [
+        Binding("r", "remove", "Remove", show=True),
+        Binding("s", "enable_sync", "Enable & sync", show=True)
+    ]
 
     def __init__(self):
         super().__init__()
@@ -256,7 +262,7 @@ class OverlaysTab(Widget):
         self.update_button_states()
 
     def update_button_states(self) -> None:
-        """Update button enabled/disabled states."""
+        """Update button visibility states."""
         enable_btn: Button = self.query_one("#enable-sync-btn", Button)
         remove_btn: Button = self.query_one("#remove-btn", Button)
 
@@ -272,19 +278,26 @@ class OverlaysTab(Widget):
             enable_btn.display = False
             remove_btn.display = False
 
+        # Sync button states
+        enable_btn.disabled = not enable_btn.display
+        remove_btn.disabled = not remove_btn.display
+
     @work(exclusive=True, thread=True)
     async def action_enable_sync(self) -> None:
         """Enable and sync the selected overlay."""
         if self.selected_overlay is None or self.selected_overlay.installed:
             return
 
+        enable_btn: Button = self.query_one("#enable-sync-btn", Button)
+
+        if enable_btn.disabled:
+            return
+
         self.app.call_from_thread(self.notify, "Enabling and syncing... (don't close until finished!)", severity="warning",
                                   timeout=15)
 
-        enable_btn: Button = self.query_one("#enable-sync-btn", Button)
-
         try:
-            enable_btn.disabled = True # Disable button to prevent multiple clicks
+            enable_btn.disabled = True
 
             returncode, stdout, stderr = self.selected_overlay.enable_and_sync()
 
@@ -300,8 +313,8 @@ class OverlaysTab(Widget):
                 self.app.call_from_thread(self.notify, f"Failed to enable and sync: {stderr}", severity="error")
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Error enabling and syncing: {e}", severity="error")
-
-        enable_btn.disabled = False # Enable always, otherwise stays disabled?
+        finally:
+            enable_btn.disabled = False
 
     @work(exclusive=True, thread=True)
     async def action_remove(self) -> None:
@@ -309,8 +322,10 @@ class OverlaysTab(Widget):
         if self.selected_overlay is None or not self.selected_overlay.installed:
             return
 
-        # Disable button to prevent multiple clicks
         remove_btn: Button = self.query_one("#remove-btn", Button)
+
+        if remove_btn.disabled:
+            return
 
         try:
             remove_btn.disabled = True
@@ -329,8 +344,8 @@ class OverlaysTab(Widget):
                 self.app.call_from_thread(self.notify, f"Failed to remove: {stderr}", severity="error")
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Error removing: {e}", severity="error")
-
-        remove_btn.disabled = False # Enable always, otherwise stays disabled?
+        finally:
+            remove_btn.disabled = False
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
