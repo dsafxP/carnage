@@ -40,6 +40,7 @@ The file uses the [TOML](https://toml.io/) format and contains the following sec
 | initial_tab | string | Tab selected when starting Carnage. **Options:** news, glsas, browse, use, overlays. | "news" |
 | compact_mode | bool | Reduce visual spacing for higher density. | false |
 | ignore_warnings | bool | Suppress warnings. | false |
+| terminal | array | Terminal to execute actions with. Useful to check output. Leave empty to execute as a subprocess. | [] |
 
 ## [browse]
 
