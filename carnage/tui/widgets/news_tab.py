@@ -16,6 +16,12 @@ from carnage.tui.widgets.table import NavigableDataTable
 class NewsTab(Widget):
     """Widget for displaying and managing Gentoo news."""
 
+    BINDINGS = [
+        Binding("r", "mark_read", "Mark Read", show=True),
+        Binding("a", "mark_all_read", "Mark All Read", show=True),
+        Binding("p", "purge", "Purge Read", show=True),
+    ]
+
     def __init__(self):
         super().__init__()
         self.news_items: list[News] = []
@@ -156,24 +162,26 @@ class NewsTab(Widget):
         self.update_button_states()
 
     def update_button_states(self) -> None:
-        """Update button enabled/disabled states."""
+        """Update button visibility and enabled states."""
         mark_read_btn: Button = self.query_one("#mark-read-btn", Button)
         mark_all_btn: Button = self.query_one("#mark-all-read-btn", Button)
         purge_btn: Button = self.query_one("#purge-btn", Button)
 
-        # Enable "Mark all as Read" only if there are unread items
+        # Enable "Mark all as Read" only if there are unread items and no action in progress
         has_unread: bool = any(not n.read for n in self.news_items)
         mark_all_btn.disabled = not has_unread
+        mark_all_btn.display = has_unread
 
-        # Enable "Mark as Read" only if a news item is selected and unread
-        if has_unread and self.selected_news and not self.selected_news.read:
-            mark_read_btn.disabled = False
-        else:
-            mark_read_btn.disabled = True
+        # Enable "Mark as Read" only if a news item is selected, unread, and no action in progress
+        can_mark_single: bool = (self.selected_news is not None and
+                               not self.selected_news.read)
+        mark_read_btn.disabled = not can_mark_single
+        mark_read_btn.display = can_mark_single
 
-        # Enable "Purge Read" only if there are read items
+        # Enable "Purge Read" only if there are read items and no action in progress
         has_read: bool = any(n.read for n in self.news_items)
         purge_btn.disabled = not has_read
+        purge_btn.display = has_read
 
     @work(exclusive=True, thread=True)
     async def action_mark_read(self) -> None:
@@ -181,9 +189,16 @@ class NewsTab(Widget):
         if self.selected_news is None or self.selected_news.read:
             return
 
+        mark_read_btn: Button = self.query_one("#mark-read-btn", Button)
+
+        if mark_read_btn.disabled:
+            return
+
         news_index: int = self.selected_news.index
 
         try:
+            mark_read_btn.disabled = True
+
             returncode, _, stderr = mark_news_read(news_index)
 
             if returncode == 0:
@@ -200,6 +215,8 @@ class NewsTab(Widget):
                 self.app.call_from_thread(self.notify, f"Failed to mark as read: {stderr}", severity="error")
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Error marking as read: {e}", severity="error")
+        finally:
+            mark_read_btn.disabled = False
 
     @work(exclusive=True, thread=True)
     async def action_mark_all_read(self) -> None:
@@ -207,7 +224,14 @@ class NewsTab(Widget):
         if not self.news_items:
             return
 
+        mark_all_btn: Button = self.query_one("#mark-all-read-btn", Button)
+
+        if mark_all_btn.disabled:
+            return
+
         try:
+            mark_all_btn.disabled = True
+
             returncode, _, stderr = mark_all_news_read()
 
             if returncode == 0:
@@ -220,6 +244,8 @@ class NewsTab(Widget):
                 self.app.call_from_thread(self.notify, f"Failed to mark all as read: {stderr}", severity="error")
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Error marking all as read: {e}", severity="error")
+        finally:
+            mark_all_btn.disabled = False
 
     @work(exclusive=True, thread=True)
     async def action_purge(self) -> None:
@@ -227,7 +253,14 @@ class NewsTab(Widget):
         if not self.news_items:
             return
 
+        purge_btn: Button = self.query_one("#purge-btn", Button)
+
+        if purge_btn.disabled:
+            return
+
         try:
+            purge_btn.disabled = True
+
             returncode, _, stderr = purge_read_news()
 
             if returncode == 0:
@@ -238,6 +271,8 @@ class NewsTab(Widget):
                 self.app.call_from_thread(self.notify, f"Failed to purge: {stderr}", severity="error")
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Error purging: {e}", severity="error")
+        finally:
+            purge_btn.disabled = False
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
