@@ -1,5 +1,7 @@
 """Configuration management for Carnage using TOML."""
 
+import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -13,22 +15,22 @@ from carnage.core.args import config_path as arg_cfg_path
 
 class Configuration:
     """Manages Carnage configuration with TOML files."""
-    
+
     def __init__(self, config_path: Path | None = None):
         """
         Initialize configuration.
-        
+
         Args:
             config_path: Path to config file. Defaults to ~/.config/carnage/carnage.toml
         """
         if config_path is None:
             config_path = Path.home() / ".config" / "carnage" / "carnage.toml"
-        
+
         self.config_path = config_path
         self._config: Dict[str, Any] = {}
         self._toml_doc: TOMLDocument | None = None
         self._load_config()
-    
+
     @staticmethod
     def _get_default_config() -> Dict[str, Any]:
         """Get the default configuration."""
@@ -38,7 +40,8 @@ class Configuration:
                 "privilege_backend": "auto",
                 "initial_tab": "news",
                 "compact_mode": False,
-                "ignore_warnings": False
+                "ignore_warnings": False,
+                "terminal": [],
             },
             "browse": {
                 "search_flags": ["-f", "2"],
@@ -55,6 +58,54 @@ class Configuration:
             }
         }
 
+    def _backup_config(self) -> None:
+        """Backup current config file with .old prefix and timestamp."""
+        if not self.config_path.exists():
+            return
+
+        timestamp: str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path: Path = self.config_path.parent / f"{self.config_path.name}.{timestamp}.old"
+
+        shutil.copy2(self.config_path, backup_path)
+
+    def _migrate_config(self) -> None:
+        """
+        Migrate configuration by backing up old and creating new default.
+        """
+        # Backup existing config
+        self._backup_config()
+
+        # Create fresh default configuration
+        self._create_default_config()
+
+        # Reload the new configuration
+        self._load_config()
+
+    def _validate_config_structure(self) -> bool:
+        """
+        Validate that all expected sections and options are present.
+
+        Returns:
+            True if config is valid, False if migration is needed
+        """
+        default_config = self._get_default_config()
+
+        # Check if all main sections exist
+        for section in default_config.keys():
+            if section not in self._config:
+                return False
+
+        # Check if all expected options exist in each section
+        for section, options in default_config.items():
+            if section not in self._config:
+                return False
+
+            for option in options.keys():
+                if option not in self._config[section]:
+                    return False
+
+        return True
+
     def _create_default_config(self) -> None:
         """Create default configuration file with comments."""
         # Ensure config directory exists
@@ -65,6 +116,7 @@ class Configuration:
 
         # Add header comment
         doc.add(tomlkit.comment("Carnage configuration file"))
+        doc.add(tomlkit.comment("This file was automatically generated"))
         doc.add(tomlkit.nl())
 
         # Global section
@@ -86,6 +138,10 @@ class Configuration:
         global_section.add(tomlkit.nl())
         global_section.add(tomlkit.comment("Ignore all warnings"))
         global_section.add("ignore_warnings", False)
+        global_section.add(tomlkit.nl())
+        global_section.add(tomlkit.comment("Terminal to execute actions with. Leave empty to execute as a subprocess"))
+        global_section.add(tomlkit.comment('Example: ["xterm", "-e"]'))
+        global_section.add("terminal", tomlkit.array())
         doc.add("global", global_section)
 
         # Browse section
@@ -129,20 +185,28 @@ class Configuration:
         with open(self.config_path, "w", encoding="utf-8") as f:
             f.write(tomlkit.dumps(doc))
 
-
     def _load_config(self) -> None:
         """Load configuration from file or create default."""
+        # Ensure config directory exists
+        self.config_path.parent.mkdir(parents=True, exist_ok=True)
+
         if not self.config_path.exists():
             self._create_default_config()
+            return
 
         try:
             with open(self.config_path, "r", encoding="utf-8") as f:
                 self._toml_doc = tomlkit.parse(f.read())
                 # Convert to plain dict for easy access
                 self._config = self._toml_doc.unwrap()
+
+            # Validate configuration structure
+            if not self._validate_config_structure():
+                self._migrate_config()
+
         except (TOMLKitError, OSError, ImportError):
-            # Fall back to defaults if config is corrupted
-            self._config = self._get_default_config()
+            # Migrate if config is corrupted or unreadable
+            self._migrate_config()
 
     def _save_config(self) -> None:
         """Save current configuration to file preserving comments."""
@@ -211,6 +275,11 @@ class Configuration:
     def ignore_warnings(self) -> bool:
         """Get whether to ignore warnings system-wide."""
         return self._get_nested_value(["global", "ignore_warnings"], False)
+
+    @property
+    def terminal(self) -> List[str]:
+        """Get terminal."""
+        return self._get_nested_value(["global", "terminal"], [])
 
     @property
     def search_flags(self) -> List[str]:
