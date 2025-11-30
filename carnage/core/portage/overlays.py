@@ -97,7 +97,7 @@ class Overlay:
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
-        return run_privileged(["eselect", "repository", "enable", self.name])
+        return run_privileged(["eselect", "repository", "enable", self.name], None, False)
 
     def sync(self) -> tuple[int, str, str]:
         """
@@ -105,7 +105,7 @@ class Overlay:
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
-        return run_privileged(["emaint", "sync", "-r", self.name])
+        return run_privileged(["emaint", "sync", "-r", self.name], None, False)
 
     def enable_and_sync(self) -> tuple[int, str, str]:
         """
@@ -115,7 +115,7 @@ class Overlay:
             If enable fails, sync is not attempted.
         """
         cmd: str = f"eselect repository enable {self.name} && emaint sync -r {self.name}"
-        return run_privileged(["sh", "-c", cmd])
+        return run_privileged(["sh", "-c", cmd], None, False)
 
     def disable(self) -> tuple[int, str, str]:
         """
@@ -124,7 +124,7 @@ class Overlay:
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
-        return run_privileged(["eselect", "repository", "disable", self.name])
+        return run_privileged(["eselect", "repository", "disable", self.name], None, False)
 
     def remove(self) -> tuple[int, str, str]:
         """
@@ -133,7 +133,7 @@ class Overlay:
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
-        return run_privileged(["eselect", "repository", "remove", self.name])
+        return run_privileged(["eselect", "repository", "remove", self.name], None, False)
 
     def to_dict(self) -> dict:
         """Convert overlay to dictionary for serialization."""
