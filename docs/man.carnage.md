@@ -67,5 +67,32 @@ For example, searching for \-\-installed will display all installed packages, ig
 | minimum_characters | int | Minimum characters before USE flag search starts. | 3 |
 | cache_max\_age | int | Maximum USE flag cache age (hours). | 96 |
 
+# BINDINGS
+Bindings are available for each button available in a tab.
+
+## News
+
+| Key | Description |
+|-----|-------------|
+| r | Mark selected news as read. |
+| a | Mark all news as read. |
+| p | Purge all read news. |
+
+## Browse
+
+| Key | Description |
+|-----|-------------|
+| e | Emerge (install) selected package. |
+| c | Depclean (uninstall) selected package. |
+| w | Deselect (remove from @world set) selected package. |
+| n | Don't replace (add to @world set) selected package. |
+
+## Overlays
+
+| Key | Description |
+|-----|-------------|
+| r | Remove selected overlay. |
+| s | Enable and then sync selected overlay. |
+
 # SEE ALSO
 **emerge**(1), **eix**(1), **portage**(5)
