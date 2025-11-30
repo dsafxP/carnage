@@ -4,6 +4,7 @@ import asyncio
 import textual.markup
 from textual import work
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
 from textual.timer import Timer
 from textual.widget import Widget
@@ -18,6 +19,13 @@ from carnage.tui.widgets.table import NavigableDataTable
 
 class BrowseTab(Widget):
     """Widget for browsing and managing Gentoo packages."""
+
+    BINDINGS = [
+        Binding("e", "emerge", "Emerge", show=True),
+        Binding("c", "depclean", "Depclean", show=True),
+        Binding("w", "deselect", "Deselect", show=True),
+        Binding("n", "noreplace", "Noreplace", show=True),
+    ]
 
     def __init__(self):
         super().__init__()
@@ -231,6 +239,12 @@ class BrowseTab(Widget):
             deselect_btn.display = False
             noreplace_btn.display = False
 
+        # Sync disabled status
+        emerge_btn.disabled = not emerge_btn.display
+        depclean_btn.disabled = not depclean_btn.display
+        deselect_btn.disabled = not deselect_btn.display
+        noreplace_btn.disabled = not noreplace_btn.display
+
     @staticmethod
     def _format_package_details(package: Package) -> str:
         """Format detailed package information for display."""
@@ -271,7 +285,7 @@ class BrowseTab(Widget):
         return details
 
     def update_button_states(self) -> None:
-        """Update button enabled/disabled states."""
+        """Update button visibility states."""
         emerge_btn: Button = self.query_one("#emerge-btn", Button)
         depclean_btn: Button = self.query_one("#depclean-btn", Button)
         deselect_btn: Button = self.query_one("#deselect-btn", Button)
@@ -301,6 +315,12 @@ class BrowseTab(Widget):
             deselect_btn.display = False
             noreplace_btn.display = False
 
+        # Sync disabled status
+        emerge_btn.disabled = not emerge_btn.display
+        depclean_btn.disabled = not depclean_btn.display
+        deselect_btn.disabled = not deselect_btn.display
+        noreplace_btn.disabled = not noreplace_btn.display
+
     @work(exclusive=True, thread=True)
     async def action_emerge(self) -> None:
         """Install the selected package."""
@@ -308,6 +328,10 @@ class BrowseTab(Widget):
             return
 
         emerge_btn: Button = self.query_one("#emerge-btn", Button)
+
+        if emerge_btn.disabled:
+            return
+
         package_atom: str = self.selected_package.full_name
 
         self.app.call_from_thread(self.notify, f"Installing {package_atom}... (don't close until finished!)",
@@ -328,8 +352,8 @@ class BrowseTab(Widget):
                 self.app.call_from_thread(self.notify, f"Failed to install: {stderr}", severity="error")
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Error installing: {e}", severity="error")
-
-        emerge_btn.disabled = False
+        finally:
+            emerge_btn.disabled = False
 
     @work(exclusive=True, thread=True)
     async def action_depclean(self) -> None:
@@ -338,6 +362,10 @@ class BrowseTab(Widget):
             return
 
         depclean_btn: Button = self.query_one("#depclean-btn", Button)
+
+        if depclean_btn.disabled:
+            return
+
         package_atom: str = self.selected_package.full_name
 
         self.app.call_from_thread(self.notify, f"Removing {package_atom}... (don't close until finished!)",
@@ -358,8 +386,8 @@ class BrowseTab(Widget):
                 self.app.call_from_thread(self.notify, f"Failed to remove: {stderr}", severity="error")
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Error removing: {e}", severity="error")
-
-        depclean_btn.disabled = False
+        finally:
+            depclean_btn.disabled = False
 
     @work(exclusive=True, thread=True)
     async def action_deselect(self) -> None:
@@ -368,6 +396,10 @@ class BrowseTab(Widget):
             return
 
         deselect_btn: Button = self.query_one("#deselect-btn", Button)
+
+        if deselect_btn.disabled:
+            return
+
         package_atom: str = self.selected_package.full_name
 
         self.app.call_from_thread(self.notify, f"Removing {package_atom} from world file...",
@@ -387,8 +419,8 @@ class BrowseTab(Widget):
                 self.app.call_from_thread(self.notify, f"Failed to remove from world file: {stderr}", severity="error")
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Error removing from world file: {e}", severity="error")
-
-        deselect_btn.disabled = False
+        finally:
+            deselect_btn.disabled = False
 
     @work(exclusive=True, thread=True)
     async def action_noreplace(self) -> None:
@@ -397,6 +429,10 @@ class BrowseTab(Widget):
             return
 
         noreplace_btn: Button = self.query_one("#noreplace-btn", Button)
+
+        if noreplace_btn.disabled:
+            return
+
         package_atom: str = self.selected_package.full_name
 
         self.app.call_from_thread(self.notify, f"Adding {package_atom} to world file...",
@@ -416,8 +452,8 @@ class BrowseTab(Widget):
                 self.app.call_from_thread(self.notify, f"Failed to add to world file: {stderr}", severity="error")
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Error adding to world file: {e}", severity="error")
-
-        noreplace_btn.disabled = False
+        finally:
+            noreplace_btn.disabled = False
 
     def _refresh_search(self) -> None:
         """Refresh the current search to update installation status."""
