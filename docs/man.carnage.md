@@ -29,6 +29,8 @@ Since eix is used for several operations internally, having a remote cache is im
 # CONFIGURATION
 A default configuration file is automatically generated at: ~/.config/carnage/carnage.toml
 
+It is automatically reset to default when a key is missing or is unparseable.
+
 The file uses the [TOML](https://toml.io/) format and contains the following sections and options:
 
 ## [global]
