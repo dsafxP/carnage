@@ -299,15 +299,17 @@ class OverlaysTab(Widget):
         try:
             enable_btn.disabled = True
 
-            returncode, stdout, stderr = self.selected_overlay.enable_and_sync()
+            overlay: Overlay = self.selected_overlay
+
+            returncode, stdout, stderr = overlay.enable_and_sync()
 
             if returncode == 0:
-                self.app.call_from_thread(self.notify, f"Successfully installed {self.selected_overlay.name}")
+                self.app.call_from_thread(self.notify, f"Successfully installed {overlay.name}")
 
-                self._pending_selection = self.selected_overlay.name
+                self._pending_selection = overlay.name
 
                 # Update overlay status and refresh table
-                self.app.call_from_thread(self._update_overlay_installation_status, self.selected_overlay.name, True)
+                self.app.call_from_thread(self._update_overlay_installation_status, overlay.name, True)
                 self.app.call_from_thread(self._populate_table)
             else:
                 self.app.call_from_thread(self.notify, f"Failed to enable and sync: {stderr}", severity="error")
@@ -330,15 +332,17 @@ class OverlaysTab(Widget):
         try:
             remove_btn.disabled = True
 
-            returncode, stdout, stderr = self.selected_overlay.remove()
+            overlay: Overlay = self.selected_overlay
+
+            returncode, stdout, stderr = overlay.remove()
 
             if returncode == 0:
-                self.app.call_from_thread(self.notify, f"Successfully removed {self.selected_overlay.name}")
+                self.app.call_from_thread(self.notify, f"Successfully removed {overlay.name}")
 
-                self._pending_selection = self.selected_overlay.name
+                self._pending_selection = overlay.name
 
                 # Update overlay status and refresh table
-                self.app.call_from_thread(self._update_overlay_installation_status, self.selected_overlay.name, False)
+                self.app.call_from_thread(self._update_overlay_installation_status, overlay.name, False)
                 self.app.call_from_thread(self._populate_table)
             else:
                 self.app.call_from_thread(self.notify, f"Failed to remove: {stderr}", severity="error")
