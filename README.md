@@ -8,7 +8,7 @@ Text-based user interface (TUI) front-end for **Portage** and [**eix**](https://
 
 [![GitHub License](https://img.shields.io/github/license/dsafxP/carnage)](LICENSE) [![GitHub Release](https://img.shields.io/github/v/release/dsafxP/carnage)](https://github.com/dsafxP/carnage/releases) ![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2FdsafxP%2Fcarnage%2Fmain%2Fpyproject.toml)
 
-<img src="./.github/screenshots/01.svg" alt="Preview" width="700" align="right">
+<img src="./.github/screenshots/01.svg" alt="Preview" width="550" align="right">
 
 </div>
 
