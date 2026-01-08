@@ -200,7 +200,7 @@ requires-dist = [
     { name = "msgpack", specifier = ">=1.1.2" },
     { name = "msgpack-types", marker = "extra == 'dev'", specifier = ">=0.5.0" },
     { name = "pyrefly", marker = "extra == 'dev'", specifier = ">=0.47.0" },
-    { name = "textual", specifier = ">=7.0.0" },
+    { name = "textual", specifier = ">=7.0.1" },
     { name = "textual-dev", marker = "extra == 'dev'", specifier = ">=1.8.0" },
     { name = "tomlkit", specifier = ">=0.13.3" },
 ]
@@ -1012,7 +1012,7 @@ wheels = [
 
 [[package]]
 name = "textual"
-version = "7.0.0"
+version = "7.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "markdown-it-py", extra = ["linkify"] },
@@ -1022,9 +1022,9 @@ dependencies = [
     { name = "rich" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d4/9c/ebc9ca1f95366bef4c0e8360f4a77400d47a79aeecc08747de1990ef8bdc/textual-7.0.0.tar.gz", hash = "sha256:617638a2be74fb7507aff3ea6ec9374148be02e5a7bb1d02396d1d557b66c0a9", size = 1582005, upload-time = "2026-01-03T11:48:10.909Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/db/ab/d94bc20d701061f21c7d0669db8d5609d835298369bd71aff99b388bfeac/textual-7.0.1.tar.gz", hash = "sha256:d61db446d22913c0fa6ca2a110c895732b40408e12b0eab1022b5d766924e1ed", size = 1582186, upload-time = "2026-01-07T13:07:23.682Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/63/f8/a1ef9034b2a7f334f91b2f673f2ec03020a2529bb30a9437a6beb855beee/textual-7.0.0-py3-none-any.whl", hash = "sha256:190de0f65e5f4bc820fae46f32f591e509621d76688b36400ce01fa63dc6b623", size = 715156, upload-time = "2026-01-03T11:48:09.067Z" },
+    { url = "https://files.pythonhosted.org/packages/84/38/47fab2a5fad163ca4851f7a20eb2442491cc63bf2756ec4ef161bc1461dd/textual-7.0.1-py3-none-any.whl", hash = "sha256:f9b7d16fa9b640bfff2a2008bf31e3f2d4429dc85e07a9583be033840ed15174", size = 715268, upload-time = "2026-01-07T13:07:22.006Z" },
 ]
 
 [[package]]
