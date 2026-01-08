@@ -1,0 +1,335 @@
+.\" -*- mode: troff; coding: utf-8 -*-
+.TH "CARNAGE" "1" "" "" "User Commands"
+.SH NAME
+.LP
+carnage - TUI front-end for Portage and eix
+.SH SYNOPSIS
+.LP
+\fBcarnage\fR [\fIOPTIONS\fR]
+.SH DESCRIPTION
+.LP
+\fBcarnage\fR is a text-based user interface (TUI) front-end for \fBPortage\fR and \fBeix\fR.
+.br
+Its goal is to centralize common Gentoo package management tasks in a unified, efficient, and user-friendly interface.
+.PP
+\fBcarnage\fR is not meant to compete in feature completeness with the command line.
+.br
+It is dedicated to providing an intuitive browsing and inspection environment rather than replacing emerge or eix directly.
+.PP
+Internally, \fBcarnage\fR integrates with Portage and eix, adding a backend for extended functionality and caching beyond what the command line provides.
+.PP
+eix is not strictly necessary, and carnage can function without it for every other feature unrelated to packages.
+.PP
+Since eix is used for several operations internally, having a remote cache is important to have all options available. Optimizing eix will accelerate carnage at the same time.
+.SH OPTIONS
+.TS
+tab(|) expand allbox;
+lb lb
+l l.
+T{
+Option
+T}|T{
+Description
+T}
+T{
+-h, --help
+T}|T{
+Show help message and exit.
+T}
+T{
+-V, --version
+T}|T{
+Show version information and exit.
+T}
+T{
+-c, --config FILE
+T}|T{
+Path to configuration file.
+T}
+.TE
+.SH CONFIGURATION
+.LP
+A default configuration file is automatically generated at: \(ti/.config/carnage/carnage.toml
+.PP
+It is automatically reset to default when a key is missing or is unparseable.
+.PP
+The file uses the \c
+.UR https://toml.io/
+TOML
+.UE
+format and contains the following sections and options:
+.SS
+[global]
+.TS
+tab(|) expand allbox;
+lb lb lb lb
+l l l l.
+T{
+Key
+T}|T{
+Type
+T}|T{
+Description
+T}|T{
+Default
+T}
+T{
+theme
+T}|T{
+string
+T}|T{
+User interface theme name. Recommended to change through the UI.
+T}|T{
+\(lqtextual-dark\(rq
+T}
+T{
+privilege_backend
+T}|T{
+string
+T}|T{
+Backend for privilege escalation when administrative commands are needed. \fBOptions:\fR auto, pkexec, sudo, doas, none.
+T}|T{
+\(lqauto\(rq
+T}
+T{
+initial_tab
+T}|T{
+string
+T}|T{
+Tab selected when starting Carnage. \fBOptions:\fR news, glsas, browse, use, overlays.
+T}|T{
+\(lqnews\(rq
+T}
+T{
+compact_mode
+T}|T{
+bool
+T}|T{
+Reduce visual spacing for higher density.
+T}|T{
+false
+T}
+T{
+ignore_warnings
+T}|T{
+bool
+T}|T{
+Suppress warnings.
+T}|T{
+false
+T}
+T{
+terminal
+T}|T{
+array
+T}|T{
+Terminal to execute actions with. Useful to check output. Leave empty to execute as a subprocess.
+T}|T{
+[]
+T}
+.TE
+.SS
+[browse]
+.TS
+tab(|) expand allbox;
+lb lb lb lb
+l l l l.
+T{
+Key
+T}|T{
+Type
+T}|T{
+Description
+T}|T{
+Default
+T}
+T{
+search_flags
+T}|T{
+array
+T}|T{
+Default flags passed to eix during package search.
+T}|T{
+[\(lq-f\(rq, \(lq2\(rq]
+T}
+T{
+minimum_characters
+T}|T{
+int
+T}|T{
+Minimum number of characters before initiating search.
+T}|T{
+3
+T}
+.TE
+.LP
+\fBPackage search in the \(lqBrowse\(rq tab supports searching flags directly.\fR
+.br
+For example, searching for --installed will display all installed packages, ignoring search_flags defined in the configuration.
+.SS
+[overlays]
+.TS
+tab(|) expand allbox;
+lb lb lb lb
+l l l l.
+T{
+Key
+T}|T{
+Type
+T}|T{
+Description
+T}|T{
+Default
+T}
+T{
+skip_package_counting
+T}|T{
+bool
+T}|T{
+Skip counting packages for faster overlay loading.
+T}|T{
+true
+T}
+T{
+cache_max_age
+T}|T{
+int
+T}|T{
+Maximum overlay cache age (hours).
+T}|T{
+72
+T}
+T{
+overlay_source
+T}|T{
+string
+T}|T{
+URL to fetch overlay metadata.
+T}|T{
+\(lq\c
+.UR https://api.gentoo.org/overlays/repositories.xml
+.UE \c
+\(rq
+T}
+.TE
+.SS
+[use]
+.TS
+tab(|) expand allbox;
+lb lb lb lb
+l l l l.
+T{
+Key
+T}|T{
+Type
+T}|T{
+Description
+T}|T{
+Default
+T}
+T{
+minimum_characters
+T}|T{
+int
+T}|T{
+Minimum characters before USE flag search starts.
+T}|T{
+3
+T}
+T{
+cache_max_age
+T}|T{
+int
+T}|T{
+Maximum USE flag cache age (hours).
+T}|T{
+96
+T}
+.TE
+.SH BINDINGS
+.LP
+Bindings are available for each button available in a tab.
+.SS
+News
+.TS
+tab(|) expand allbox;
+lb lb
+l l.
+T{
+Key
+T}|T{
+Description
+T}
+T{
+r
+T}|T{
+Mark selected news as read.
+T}
+T{
+a
+T}|T{
+Mark all news as read.
+T}
+T{
+p
+T}|T{
+Purge all read news.
+T}
+.TE
+.SS
+Browse
+.TS
+tab(|) expand allbox;
+lb lb
+l l.
+T{
+Key
+T}|T{
+Description
+T}
+T{
+e
+T}|T{
+Emerge (install) selected package.
+T}
+T{
+c
+T}|T{
+Depclean (uninstall) selected package.
+T}
+T{
+w
+T}|T{
+Deselect (remove from @world set) selected package.
+T}
+T{
+n
+T}|T{
+Don\(cqt replace (add to @world set) selected package.
+T}
+.TE
+.SS
+Overlays
+.TS
+tab(|) expand allbox;
+lb lb
+l l.
+T{
+Key
+T}|T{
+Description
+T}
+T{
+r
+T}|T{
+Remove selected overlay.
+T}
+T{
+s
+T}|T{
+Enable and then sync selected overlay.
+T}
+.TE
+.SH SEE ALSO
+.LP
+\fBemerge\fR(1), \fBeix\fR(1), \fBportage\fR(5)
