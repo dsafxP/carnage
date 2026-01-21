@@ -147,7 +147,7 @@ def _parse_version(version_elem: etree._Element) -> PackageVersion:
     return PackageVersion(
         id=version_elem.get("id", ""),
         eapi=version_elem.get("EAPI"),
-        repository=version_elem.get("repository"),
+        repository=version_elem.get("repository") or "gentoo",
         virtual=version_elem.get("virtual") == "1",
         installed=version_elem.get("installed") == "1",
         src_uri=version_elem.get("srcURI"),
