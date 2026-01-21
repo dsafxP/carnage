@@ -104,6 +104,26 @@ class Package:
         except (subprocess.SubprocessError, FileNotFoundError):
             return False
 
+    def can_emerge(self) -> bool:
+        """
+        Check if package can be emerged (has versions available in installed repositories).
+
+        Returns:
+            True if any version's repository is available in the system, False otherwise
+        """
+        from carnage.core.portage.overlays import get_installed
+
+        if not self.versions:
+            return False
+
+        installed_overlays: set[str] = set(get_installed())
+
+        for version in self.versions:
+            if version.repository and version.repository in installed_overlays:
+                return True
+
+        return False
+
 
 def _parse_version(version_elem: etree._Element) -> PackageVersion:
     """Parse a version element from eix XML."""

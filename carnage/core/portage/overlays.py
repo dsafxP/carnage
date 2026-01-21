@@ -86,9 +86,22 @@ class Overlay:
         Returns:
             True if the overlay directory exists in the repository directory, False otherwise.
         """
+        return Overlay.is_overlay_installed(self.name)
+
+    @staticmethod
+    def is_overlay_installed(name: str) -> bool:
+        """
+        Check if an overlay is installed by name.
+
+        Args:
+            name: The name of the overlay to check.
+
+        Returns:
+            True if the overlay directory exists in the repository directory, False otherwise.
+        """
         from pathlib import Path
 
-        overlay_path: Path = get_repos_path() / self.name
+        overlay_path: Path = get_repos_path() / name
         return overlay_path.exists() and overlay_path.is_dir()
 
     def enable(self) -> tuple[int, str, str]:

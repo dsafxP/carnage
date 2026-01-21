@@ -135,11 +135,19 @@ class BrowseTab(Widget):
 
         for i, package in enumerate(self.packages):
             # Get the primary repository (overlay) from the first version
-            overlay: str = "gentoo"  # Default to gentoo
+            overlay: str = "?"  # Default to ? if no repository found
+            
             if package.versions:
                 repo: str | None = package.versions[0].repository
-                if repo and repo != "gentoo":
+                if repo:
                     overlay = repo
+                    # Check if repo is not gentoo and any other version has gentoo repository
+                    if repo != "gentoo":
+                        has_gentoo: bool = any(
+                            v.repository == "gentoo" for v in package.versions[1:]
+                        )
+                        if has_gentoo:
+                            overlay = f"{repo} / gentoo"
 
             # Truncate description for table display
             description: str = package.description or "No description"
@@ -212,38 +220,8 @@ class BrowseTab(Widget):
         if self.selected_package != package:
             return
 
-        # Update the package's world file status (we'll store it for future use)
-        # For now, we just update the button states
-        emerge_btn: Button = self.query_one("#emerge-btn", Button)
-        depclean_btn: Button = self.query_one("#depclean-btn", Button)
-        deselect_btn: Button = self.query_one("#deselect-btn", Button)
-        noreplace_btn: Button = self.query_one("#noreplace-btn", Button)
-
-        is_installed: bool = package.is_installed()
-
-        # Show emerge/depclean based on installation status
-        if is_installed:
-            emerge_btn.display = False
-            depclean_btn.display = True
-
-            # Show deselect/noreplace based on world file status
-            if in_world_file:
-                deselect_btn.display = True
-                noreplace_btn.display = False
-            else:
-                deselect_btn.display = False
-                noreplace_btn.display = True
-        else:
-            emerge_btn.display = True
-            depclean_btn.display = False
-            deselect_btn.display = False
-            noreplace_btn.display = False
-
-        # Sync disabled status
-        emerge_btn.disabled = not emerge_btn.display
-        depclean_btn.disabled = not depclean_btn.display
-        deselect_btn.disabled = not deselect_btn.display
-        noreplace_btn.disabled = not noreplace_btn.display
+        # Update button states with world file status
+        self.update_button_states(in_world_file=in_world_file)
 
     @staticmethod
     def _format_package_details(package: Package) -> str:
@@ -284,8 +262,14 @@ class BrowseTab(Widget):
 
         return details
 
-    def update_button_states(self) -> None:
-        """Update button visibility states."""
+    def update_button_states(self, in_world_file: bool | None = None) -> None:
+        """
+        Update button visibility states.
+
+        Args:
+            in_world_file: Optional boolean indicating if package is in world file.
+                          If None, deselect/noreplace buttons will be hidden until status is loaded.
+        """
         emerge_btn: Button = self.query_one("#emerge-btn", Button)
         depclean_btn: Button = self.query_one("#depclean-btn", Button)
         deselect_btn: Button = self.query_one("#deselect-btn", Button)
@@ -300,11 +284,20 @@ class BrowseTab(Widget):
                 emerge_btn.display = False
                 depclean_btn.display = True
 
-                # Initially hide deselect/noreplace until world file status is loaded
-                deselect_btn.display = False
-                noreplace_btn.display = False
+                # Show deselect/noreplace based on world file status
+                if in_world_file is not None:
+                    if in_world_file:
+                        deselect_btn.display = True
+                        noreplace_btn.display = False
+                    else:
+                        deselect_btn.display = False
+                        noreplace_btn.display = True
+                else:
+                    # World file status not loaded yet
+                    deselect_btn.display = False
+                    noreplace_btn.display = False
             else:
-                emerge_btn.display = True
+                emerge_btn.display = self.selected_package.can_emerge()
                 depclean_btn.display = False
                 deselect_btn.display = False
                 noreplace_btn.display = False
