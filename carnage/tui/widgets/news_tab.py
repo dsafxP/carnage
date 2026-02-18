@@ -47,7 +47,7 @@ class NewsTab(Widget):
         self.load_news()
 
     @work(exclusive=True, thread=True)
-    async def load_news(self) -> None:
+    def load_news(self) -> None:
         """Load news items from the system in a worker thread."""
         loading: LoadingIndicator = self.query_one("#news-loading", LoadingIndicator)
         table: DataTable = self.query_one("#news-table", DataTable)
@@ -96,10 +96,10 @@ class NewsTab(Widget):
     def _remove_read_rows(self) -> None:
         """Remove all read news from the table and data."""
         table: DataTable = self.query_one("#news-table", DataTable)
-        
+
         # Remove read items from our data
         self.news_items = [news for news in self.news_items if not news.read]
-        
+
         # Clear and repopulate table with remaining items
         table.clear(columns=True)
         table.add_columns("Status", "Date", "Title")
@@ -184,7 +184,7 @@ class NewsTab(Widget):
         purge_btn.display = has_read
 
     @work(exclusive=True, thread=True)
-    async def action_mark_read(self) -> None:
+    def action_mark_read(self) -> None:
         """Mark the selected news item as read."""
         if self.selected_news is None or self.selected_news.read:
             return
@@ -219,7 +219,7 @@ class NewsTab(Widget):
             mark_read_btn.disabled = False
 
     @work(exclusive=True, thread=True)
-    async def action_mark_all_read(self) -> None:
+    def action_mark_all_read(self) -> None:
         """Mark all news items as read."""
         if not self.news_items:
             return
@@ -248,7 +248,7 @@ class NewsTab(Widget):
             mark_all_btn.disabled = False
 
     @work(exclusive=True, thread=True)
-    async def action_purge(self) -> None:
+    def action_purge(self) -> None:
         """Purge all read news items."""
         if not self.news_items:
             return

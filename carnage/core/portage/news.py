@@ -5,7 +5,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from subprocess import CompletedProcess
 
+from portage.const import NEWS_LIB_PATH
+from portage.news import NewsItem
+from portage.util import grabfile
+
 from carnage.core.portage.portageq import ctx
+
+_NEWS_REPO_ID = "gentoo"
+_LANGUAGE_ID = "en"
 
 
 @dataclass
@@ -30,146 +37,141 @@ class News:
         return f"News(date={self.date!r}, title={self.title!r}, read={self.read})"
 
 
-def _parse_news_list_line(line: str, index: int) -> News | None:
+def _news_tracking_dir() -> Path:
+    """Directory holding eselect's news tracking files."""
+    return Path(ctx.settings["EROOT"]) / NEWS_LIB_PATH / "news"
+
+
+def _unread_file() -> Path:
+    return _news_tracking_dir() / f"news-{_NEWS_REPO_ID}.unread"
+
+
+def _read_file() -> Path:
+    return _news_tracking_dir() / f"news-{_NEWS_REPO_ID}.read"
+
+
+def _news_dir() -> Path:
+    return ctx.gentoo_repo_path / "metadata" / "news"
+
+
+def _profile_path() -> str | None:
     """
-    Parse a line from eselect news list output.
-
-    Format: "N  2019-05-23  Change of ACCEPT_LICENSE default"
-            "   2020-06-23  sys-libs/pam-1.4.0 upgrade" (read items have spaces)
-
-    First character indicates: N = unread, space = read
-
-    Args:
-        line: Line from eselect news list
-        index: 1-based index of the news item
-
-    Returns:
-        News object or None if parsing fails
+    Return the profile path relative to the profiles base directory, as
+    NewsItem.isRelevant() expects (mirrors NewsManager._profile_path logic).
     """
-    # Check if line is long enough to contain a date
-    if len(line) < 12:  # Need at least "X YYYY-MM-DD"
+    import os
+    portdir: str | None = ctx.portdbapi.repositories.mainRepoLocation()
+    if portdir is None:
         return None
-
-    # First character indicates read status: 'N' = unread, space/other = read
-    read: bool = line[0] != 'N'
-
-    # Find the date - look for YYYY-MM-DD pattern
-    # The date always starts after the status indicator and some spaces
-    date_start: int | None = None
-    for i in range(min(5, len(line) - 10)):  # Check first few positions
-        if (line[i:i + 4].isdigit() and line[i + 4] == '-' and
-                line[i + 5:i + 7].isdigit() and line[i + 7] == '-' and
-                line[i + 8:i + 10].isdigit()):
-            date_start = i
-            break
-
-    if date_start is None:
+    profiles_base: str = portdir + "/profiles/"
+    profile = ctx.settings.profile_path
+    if not profile:
         return None
+    profile = os.path.realpath(profile)
+    if profile.startswith(profiles_base):
+        return profile[len(profiles_base):]
+    return profile
 
-    # Extract date (10 characters: YYYY-MM-DD)
-    date: str = line[date_start:date_start + 10]
 
-    # Extract title - everything after the date and any trailing spaces
-    title_start: int = date_start + 10
-    # Skip any spaces after the date
-    while title_start < len(line) and line[title_start].isspace():
-        title_start += 1
-
-    if title_start >= len(line):
-        return None
-
-    title: str = line[title_start:].strip()
-
-    if not date or not title:
-        return None
-
-    return News(index=index, date=date, title=title, read=read)
+def _read_tracking_set(path: Path) -> set[str]:
+    """Read an eselect news tracking file into a set of item names."""
+    if not path.exists():
+        return set()
+    return set(grabfile(str(path)))
 
 
 def _parse_news_file(news_path: Path) -> dict[str, str]:
-    """
-    Parse a news file and extract metadata.
-    
-    Args:
-        news_path: Path to the news .txt file
-    
-    Returns:
-        Dictionary with parsed fields
-    """
+    """Parse a GLEP 42 news file and return its header fields and content."""
     if not news_path.exists():
         return {}
-    
-    with open(news_path, "r", encoding="utf-8") as f:
-        content: str = f.read()
-    
-    lines: list[str] = content.split("\n")
-    metadata = {}
-    content_start: int = 0
-    
-    # Parse header fields
+
+    with open(news_path, encoding="utf-8", errors="replace") as f:
+        content = f.read()
+
+    lines = content.split("\n")
+    metadata: dict[str, str] = {}
+    content_start = 0
+
     for i, line in enumerate(lines):
         if line.strip() == "":
             content_start = i + 1
             break
-        
         if ":" in line:
             key, value = line.split(":", 1)
             metadata[key.strip().lower().replace("-", "_")] = value.strip()
-    
-    # Get the actual content (after headers)
-    if content_start < len(lines):
-        metadata["content"] = "\n".join(lines[content_start:]).strip()
-    else:
-        metadata["content"] = ""
-    
+
+    metadata["content"] = "\n".join(lines[content_start:]).strip()
     return metadata
 
 
 def get_news() -> list[News]:
     """
-    Get all news items (both read and unread).
+    Get all news items that eselect is currently tracking (unread and read).
+
+    eselect maintains two files per repo:
+      - news-gentoo.unread  items that are relevant and not yet read
+      - news-gentoo.read    items that have been read
+
+    Items absent from both files have been purged or were never relevant,
+    and are not shown. Relevancy is additionally verified via portage's
+    NewsItem.isRelevant() so that items added to the tracking files before
+    a system change are not shown if they no longer apply.
 
     Returns:
-        List of News objects with full content loaded
+        List of News objects sorted by date (unread first, then read).
     """
+    news_dir: Path = _news_dir()
 
-    news_dir: Path = ctx.gentoo_repo_path / "metadata" / "news"
+    if not news_dir.exists():
+        return []
 
-    # Get all news list (both read and unread)
-    result: CompletedProcess[str] = subprocess.run(
-        ["eselect", "--colour=no", "--brief", "news", "list"],
-        capture_output=True,
-        text=True
-    )
+    unread: set[str] = _read_tracking_set(_unread_file())
+    read: set[str] = _read_tracking_set(_read_file())
+    tracked: set[str] = unread | read
 
+    if not tracked:
+        return []
+
+    profile: str | None = _profile_path()
     news_items: list[News] = []
-    lines: list[str] = result.stdout.strip().split("\n")
+    index = 1
 
-    for index, line in enumerate(lines, start=1):
-        if not line.strip():
+    for item_dir in sorted(news_dir.iterdir()):
+        if not item_dir.is_dir():
             continue
 
-        news: News | None = _parse_news_list_line(line, index)
-        if news is None:
+        item_name: str = item_dir.name
+
+        # Only show items eselect is actively tracking.
+        if item_name not in tracked:
             continue
 
-        # Find the news file
-        # Format: /var/db/repos/gentoo/metadata/news/YYYY-MM-DD-*/YYYY-MM-DD-*.txt
-        date_pattern: str = news.date  # e.g., "2019-05-23"
-        news_files: list[Path] = list(news_dir.glob(f"{date_pattern}-*/{date_pattern}-*.txt"))
+        news_file: Path = item_dir / f"{item_name}.{_LANGUAGE_ID}.txt"
+        if not news_file.exists():
+            continue
 
-        if news_files:
-            # Parse the news file to get full content
-            metadata: dict[str, str] = _parse_news_file(news_files[0])
+        item = NewsItem(str(news_file), item_name)
+        if not item.isValid():
+            continue
+        if not item.isRelevant(ctx.vardbapi, ctx.settings, profile):
+            continue
 
-            news.author = metadata.get("author")
-            news.posted = metadata.get("posted")
-            news.revision = metadata.get("revision")
-            news.format_version = metadata.get("news_item_format")
-            news.display_if_installed = metadata.get("display_if_installed")
-            news.content = metadata.get("content")
+        metadata: dict[str, str] = _parse_news_file(news_file)
+        date: str = item_name[:10] if len(item_name) >= 10 else item_name
 
-        news_items.append(news)
+        news_items.append(News(
+            index=index,
+            date=date,
+            title=metadata.get("title", item_name),
+            read=item_name in read,
+            author=metadata.get("author"),
+            posted=metadata.get("posted"),
+            revision=metadata.get("revision"),
+            format_version=metadata.get("news_item_format"),
+            display_if_installed=metadata.get("display_if_installed"),
+            content=metadata.get("content"),
+        ))
+        index += 1
 
     return news_items
 
@@ -177,10 +179,10 @@ def get_news() -> list[News]:
 def mark_news_read(news_index: int) -> tuple[int, str, str]:
     """
     Mark a news item as read.
-    
+
     Args:
-        news_index: 1-based index of the news item to mark as read
-    
+        news_index: 1-based index of the news item to mark as read.
+
     Returns:
         Tuple of (return_code, stdout, stderr)
     """
@@ -212,6 +214,9 @@ def mark_all_news_read() -> tuple[int, str, str]:
 def purge_read_news() -> tuple[int, str, str]:
     """
     Purge all read news items.
+
+    Purging clears the read tracking file, removing those items from view
+    entirely. They will not reappear unless eselect re-adds them as unread.
 
     Returns:
         Tuple of (return_code, stdout, stderr)
