@@ -30,7 +30,7 @@ dev = [
 Source = "https://github.com/dsafxP/carnage"
 
 [project.scripts]
-carnage = "carnage:main"
+carnage = "carnage.main:main"
 
 [tool.pyrefly]
 python-version = "3.14"
