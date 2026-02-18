@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from subprocess import CompletedProcess
 
-from carnage.core.portage.portageq import get_gentoo_repo_path
+from carnage.core.portage.portageq import ctx
 
 
 @dataclass
@@ -133,7 +133,7 @@ def get_news() -> list[News]:
         List of News objects with full content loaded
     """
 
-    news_dir: Path = get_gentoo_repo_path() / "metadata" / "news"
+    news_dir: Path = ctx.gentoo_repo_path / "metadata" / "news"
 
     # Get all news list (both read and unread)
     result: CompletedProcess[str] = subprocess.run(

@@ -37,7 +37,7 @@ class GLSATab(Widget):
         self.load_glsas()
 
     @work(exclusive=True, thread=True)
-    async def load_glsas(self) -> None:
+    def load_glsas(self) -> None:
         """Load GLSAs from the system."""
         loading: LoadingIndicator = self.query_one("#glsa-loading", LoadingIndicator)
         table: DataTable = self.query_one("#glsa-table", DataTable)
@@ -201,7 +201,7 @@ class GLSATab(Widget):
         fix_btn.display = has_glsas
 
     @work(exclusive=True, thread=True)
-    async def action_fix_glsas(self) -> None:
+    def action_fix_glsas(self) -> None:
         """Apply fixes for all GLSAs affecting the system."""
         if not self.glsa_items:
             self.notify("No GLSAs to fix", severity="warning")

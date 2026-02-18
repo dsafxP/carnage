@@ -1,13 +1,13 @@
 """Utilities for managing Gentoo Linux Security Advisories (GLSAs)."""
 
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from subprocess import CompletedProcess
 
 from lxml import etree
+from portage.glsa import (Glsa, GlsaArgumentException, GlsaFormatException,
+                          GlsaTypeException, get_applied_glsas, get_glsa_list)
 
-from carnage.core.portage.portageq import get_gentoo_repo_path
+from carnage.core.portage.portageq import ctx
 
 
 @dataclass
@@ -67,215 +67,110 @@ class GLSA:
         return f"GLSA(id={self.id!r}, title={self.title!r})"
 
 
-def get_affected_glsas() -> tuple[int, str]:
-    """
-    Get GLSAs that affect the system.
-
-    Wraps: glsa-check -tqn all
-
-    Returns:
-        Tuple of (return_code, output_string)
-        - return_code 0: No GLSAs affect the system
-        - return_code 6: GLSAs affect the system (output contains GLSA codes)
-    """
-    result: CompletedProcess[str] = subprocess.run(
-        ["glsa-check", "-tqn", "all"],
-        capture_output=True,
-        text=True
-    )
-
-    return result.returncode, result.stdout.strip()
-
-
-def fix_glsas() -> tuple[int, str, str]:
-    """
-    Fix all GLSAs affecting the system.
-
-    Wraps: glsa-check -f $(glsa-check -t all)
-
-    Returns:
-        Tuple of (return_code, stdout, stderr)
-    """
-    from carnage.core import run_privileged
-
-    # First get the list of affected GLSAs
-    returncode, glsa_list = get_affected_glsas()
-
-    if returncode == 0 or not glsa_list:
-        # No GLSAs to fix
-        return 0, "No GLSAs affecting the system.", ""
-
-    # Fix the GLSAs
-    return run_privileged(["glsa-check", "-f"] + glsa_list.split())
-
-
 def _parse_affected_packages(root: etree._Element) -> list[AffectedPackage]:
     """Parse affected packages from the XML."""
     packages: list[AffectedPackage] = []
 
-    package_elems = root.xpath("affected/package")
-    for package_elem in package_elems:
+    for package_elem in root.xpath("affected/package"):
         name = package_elem.get("name", "")
         auto = package_elem.get("auto", "yes")
         arch = package_elem.get("arch", "*")
 
-        # Parse conditions
-        unaffected_elems = package_elem.xpath("unaffected")
-        vulnerable_elems = package_elem.xpath("vulnerable")
-
-        unaffected_conditions = []
-        vulnerable_conditions = []
-
-        # Parse unaffected conditions
-        for unaffected_elem in unaffected_elems:
-            condition = {
-                "range": unaffected_elem.get("range", ""),
-                "slot": unaffected_elem.get("slot", ""),
-                "value": unaffected_elem.text or ""
+        unaffected_conditions = [
+            {
+                "range": elem.get("range", ""),
+                "slot": elem.get("slot", ""),
+                "value": elem.text or ""
             }
-            unaffected_conditions.append(condition)
+            for elem in package_elem.xpath("unaffected")
+        ]
 
-        # Parse vulnerable conditions
-        for vulnerable_elem in vulnerable_elems:
-            condition = {
-                "range": vulnerable_elem.get("range", ""),
-                "slot": vulnerable_elem.get("slot", ""),
-                "value": vulnerable_elem.text or ""
+        vulnerable_conditions = [
+            {
+                "range": elem.get("range", ""),
+                "slot": elem.get("slot", ""),
+                "value": elem.text or ""
             }
-            vulnerable_conditions.append(condition)
+            for elem in package_elem.xpath("vulnerable")
+        ]
 
-        package = AffectedPackage(
+        packages.append(AffectedPackage(
             name=name,
             auto=auto,
             arch=arch,
             unaffected_conditions=unaffected_conditions,
-            vulnerable_conditions=vulnerable_conditions
-        )
-        packages.append(package)
+            vulnerable_conditions=vulnerable_conditions,
+        ))
 
     return packages
 
 
+def _clean_code_indentation(code: str) -> str:
+    """Remove excessive indentation from code blocks."""
+    lines = code.split("\n")
+    min_indent: int | None = None
+    for line in lines:
+        if line.strip():
+            indent = len(line) - len(line.lstrip())
+            if min_indent is None or indent < min_indent:
+                min_indent = indent
+
+    if min_indent:
+        lines = [line[min_indent:] if line.strip() else line for line in lines]
+
+    return "\n".join(lines)
+
+
 def _parse_resolutions(root: etree._Element) -> list[Resolution]:
-    """Parse resolution sections with text and code blocks."""
+    """Parse resolution sections with text and optional code blocks."""
     resolutions: list[Resolution] = []
     resolution_elems = root.xpath("resolution")
 
     if not resolution_elems:
         return resolutions
 
-    resolution_elem = resolution_elems[0]
     current_text = ""
     current_code = ""
 
-    # Iterate through all elements in resolution
-    for elem in resolution_elem.iter():
+    for elem in resolution_elems[0].iter():
         if elem.tag == "p":
-            # Save current resolution if we have content
             if current_text.strip() or current_code.strip():
-                cleaned_code = _clean_code_indentation(current_code) if current_code else None
-                resolutions.append(Resolution(text=current_text.strip(), code=cleaned_code))
+                resolutions.append(Resolution(
+                    text=current_text.strip(),
+                    code=_clean_code_indentation(current_code) if current_code else None,
+                ))
                 current_text = ""
                 current_code = ""
-
-            # Start new text section
             if elem.text:
                 current_text = elem.text.strip()
 
         elif elem.tag == "code":
-            # Add code block
             if elem.text:
                 current_code += elem.text
 
-        # Handle tail text
         if elem.tail and elem.tail.strip():
-            if current_text:
-                current_text += " " + elem.tail.strip()
-            else:
-                current_text = elem.tail.strip()
+            current_text = (current_text + " " + elem.tail.strip()).strip()
 
-    # Don't forget the last resolution
     if current_text.strip() or current_code.strip():
-        cleaned_code = _clean_code_indentation(current_code) if current_code else None
-        resolutions.append(Resolution(text=current_text.strip(), code=cleaned_code))
+        resolutions.append(Resolution(
+            text=current_text.strip(),
+            code=_clean_code_indentation(current_code) if current_code else None,
+        ))
 
     return resolutions
 
 
-def _clean_code_indentation(code: str) -> str:
-    """Remove excessive indentation from code blocks."""
-    lines: list[str] = code.split('\n')
-
-    # Find the minimum indentation (excluding empty lines)
-    min_indent: int | None = None
-    for line in lines:
-        if line.strip():  # Non-empty line
-            indent: int = len(line) - len(line.lstrip())
-            if min_indent is None or indent < min_indent:
-                min_indent = indent
-
-    # Remove the minimum indentation from all lines
-    if min_indent is not None and min_indent > 0:
-        cleaned_lines: list[str] = []
-        for line in lines:
-            if line.strip():
-                cleaned_lines.append(line[min_indent:])
-            else:
-                cleaned_lines.append(line)
-        return '\n'.join(cleaned_lines)
-
-    return code
-
-
 def _parse_glsa_xml(glsa_id: str, xml_path: Path) -> GLSA | None:
-    """
-    Parse a GLSA XML file.
-
-    Args:
-        glsa_id: GLSA identifier (e.g., "200310-03")
-        xml_path: Path to the GLSA XML file
-
-    Returns:
-        GLSA object or None if parsing fails
-    """
+    """Parse a GLSA XML file into a GLSA dataclass."""
     try:
         parser = etree.XMLParser(recover=True, remove_comments=True)
-        tree = etree.parse(xml_path, parser=parser)
-        root = tree.getroot()
+        root = etree.parse(xml_path, parser=parser).getroot()
 
-        title = root.xpath("string(title)")
-        synopsis = root.xpath("string(synopsis)")
-        product = root.xpath("string(product)")
-        announced = root.xpath("string(announced)")
-        revised = root.xpath("string(revised)")
-        access = root.xpath("string(access)")
-        background = root.xpath("string(background/p)")
-        description = root.xpath("string(description/p)")
-        impact = root.xpath("string(impact/p)")
-        workaround = root.xpath("string(workaround/p)")
-
-        # Parse multiple bugs
-        bugs = root.xpath("bug/text()")
-
-        # Parse impact type
-        impact_type_elem = root.xpath("impact")
-        impact_type = impact_type_elem[0].get("type", "normal") if impact_type_elem else "normal"
-
-        # Parse revision count
         revised_elem = root.xpath("revised")
-        revision_count = revised_elem[0].get("count", "01") if revised_elem else "01"
+        impact_type_elem = root.xpath("impact")
 
-        # Parse affected packages
-        affected_packages = _parse_affected_packages(root)
-
-        # Parse resolutions
-        resolutions = _parse_resolutions(root)
-
-        # Parse references - get both URI text and link attributes
         references: list[str] = []
-        uri_elems = root.xpath("references/uri")
-        for uri_elem in uri_elems:
-            # Prefer link attribute if available, otherwise use text
+        for uri_elem in root.xpath("references/uri"):
             link = uri_elem.get("link")
             if link:
                 references.append(link)
@@ -284,53 +179,89 @@ def _parse_glsa_xml(glsa_id: str, xml_path: Path) -> GLSA | None:
 
         return GLSA(
             id=glsa_id,
-            title=title if title else None,
-            synopsis=synopsis.strip(),
-            product=product if product else None,
-            announced=announced if announced else None,
-            revised=revised if revised else None,
-            revision_count=revision_count,
-            bugs=bugs,
-            access=access if access else None,
-            background=background.strip() if background else None,
-            description=description.strip(),
-            impact=impact.strip(),
-            impact_type=impact_type,
-            workaround=workaround.strip() if workaround else None,
-            resolutions=resolutions,
-            affected_packages=affected_packages,
-            references=references
+            title=root.xpath("string(title)") or None,
+            synopsis=root.xpath("string(synopsis)").strip(),
+            product=root.xpath("string(product)") or None,
+            announced=root.xpath("string(announced)") or None,
+            revised=root.xpath("string(revised)") or None,
+            revision_count=revised_elem[0].get("count", "01") if revised_elem else "01",
+            bugs=root.xpath("bug/text()"),
+            access=root.xpath("string(access)") or None,
+            background=root.xpath("string(background/p)").strip() or None,
+            description=root.xpath("string(description/p)").strip(),
+            impact=root.xpath("string(impact/p)").strip(),
+            impact_type=impact_type_elem[0].get("type", "normal") if impact_type_elem else "normal",
+            workaround=root.xpath("string(workaround/p)").strip() or None,
+            resolutions=_parse_resolutions(root),
+            affected_packages=_parse_affected_packages(root),
+            references=references,
         )
     except (etree.ParseError, etree.XMLSyntaxError, OSError) as e:
         print(f"Error parsing GLSA {glsa_id}: {e}")
         return None
 
 
+def _is_vulnerable(glsa_id: str) -> bool:
+    """Check whether this GLSA affects the current system via the portage API."""
+    try:
+        glsa = Glsa(glsa_id, ctx.settings, ctx.vardbapi, ctx.portdbapi)
+        return glsa.isVulnerable()
+    except (GlsaArgumentException, GlsaFormatException, GlsaTypeException):
+        return False
+
+
 def fetch_glsas() -> list[GLSA]:
     """
-    Fetch all GLSAs affecting the system with their metadata.
+    Fetch all GLSAs affecting the system with their full metadata.
+
+    Vulnerability checking uses the portage API directly. Metadata is parsed
+    from the GLSA XML files with lxml for full structured detail.
 
     Returns:
         List of GLSA objects for all GLSAs affecting the system.
     """
-    glsa_metadata_dir: Path = get_gentoo_repo_path() / "metadata" / "glsa"
-
-    # Get affected GLSAs
-    returncode, glsa_codes = get_affected_glsas()
-
-    if returncode == 0 or not glsa_codes:
-        # No GLSAs affecting the system
-        return []
-
+    glsa_metadata_dir: Path = ctx.gentoo_repo_path / "metadata" / "glsa"
+    applied = set(get_applied_glsas(ctx.settings))
     glsas: list[GLSA] = []
-    for glsa_code in glsa_codes.split():
-        glsa_file: Path = glsa_metadata_dir / f"glsa-{glsa_code}.xml"
 
-        if not glsa_file.exists():
+    for glsa_id in get_glsa_list(ctx.settings):
+        if glsa_id in applied:
+            continue
+        if not _is_vulnerable(glsa_id):
             continue
 
-        glsa: GLSA | None = _parse_glsa_xml(glsa_code, glsa_file)
+        xml_path = glsa_metadata_dir / f"glsa-{glsa_id}.xml"
+        if not xml_path.exists():
+            continue
+
+        glsa = _parse_glsa_xml(glsa_id, xml_path)
         if glsa is not None:
             glsas.append(glsa)
 
     return glsas
+
+
+def fix_glsas() -> tuple[int, str, str]:
+    """
+    Fix all GLSAs affecting the system.
+
+    Wraps: glsa-check -f <glsa_ids>
+
+    Returns:
+        Tuple of (return_code, stdout, stderr)
+    """
+    from carnage.core import run_privileged
+
+    applied = set(get_applied_glsas(ctx.settings))
+    vulnerable_ids: list[str] = []
+
+    for glsa_id in get_glsa_list(ctx.settings):
+        if glsa_id in applied:
+            continue
+        if _is_vulnerable(glsa_id):
+            vulnerable_ids.append(glsa_id)
+
+    if not vulnerable_ids:
+        return 0, "No GLSAs affecting the system.", ""
+
+    return run_privileged(["glsa-check", "-f"] + vulnerable_ids)

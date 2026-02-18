@@ -15,7 +15,7 @@ from lxml import etree
 from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
-from carnage.core.portage.portageq import get_repos_path
+from carnage.core.portage.portageq import ctx
 from carnage.core.privilege import run_privileged
 
 # Cache configuration
@@ -101,7 +101,7 @@ class Overlay:
         """
         from pathlib import Path
 
-        overlay_path: Path = get_repos_path() / name
+        overlay_path: Path = ctx.repos_path / name
         return overlay_path.exists() and overlay_path.is_dir()
 
     def enable(self) -> tuple[int, str, str]:
@@ -323,7 +323,7 @@ def get_installed() -> list[str]:
     Returns:
         List of directory names from repository directory.
     """
-    repos_path: Path = get_repos_path()
+    repos_path: Path = ctx.repos_path
 
     if not repos_path.exists():
         return []

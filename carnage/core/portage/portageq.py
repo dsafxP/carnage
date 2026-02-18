@@ -1,44 +1,54 @@
-"""Basic interactions with portageq for repository path queries."""
+"""Portage repository path queries and shared portage API context."""
 
-import subprocess
+from functools import cached_property
 from pathlib import Path
-from subprocess import CompletedProcess
 
-_gentoo_repo_path: Path | None = None
+import portage
+import portage.util
+from portage.dbapi.porttree import portdbapi
+from portage.dbapi.vartree import vardbapi
 
 
-def get_gentoo_repo_path() -> Path:
+class PortageContext:
     """
-    Get the Gentoo repository path using portageq.
-
-    Uses global caching to avoid repeated subprocess calls.
-
-    Returns:
-        Path object pointing to the Gentoo repository
-    """
-    global _gentoo_repo_path
-
-    if _gentoo_repo_path is None:
-        result: CompletedProcess[str] = subprocess.run(
-            ["portageq", "get_repo_path", "/", "gentoo"],
-            capture_output=True,
-            text=True
-        )
-
-        if result.returncode == 0 and result.stdout.strip():
-            _gentoo_repo_path = Path(result.stdout.strip())
-        else:
-            # Fallback to default path if portageq fails
-            _gentoo_repo_path = Path("/var/db/repos/gentoo")
-
-    return _gentoo_repo_path
-
-def get_repos_path() -> Path:
-    """
-    Get the parent directory containing all repository paths.
-
-    Returns:
-        Path object pointing to the repositories parent directory
+    Lazily exposes the portage trees, settings, and dbapis needed for
+    interacting with the portage API.
     """
 
-    return get_gentoo_repo_path().parent
+    @cached_property
+    def _trees(self) -> portage.util.LazyItemsDict:
+        """The trees dict for the target root, built via ``create_trees()``."""
+        trees = portage.create_trees()
+        return trees[trees._target_eroot]
+
+    @cached_property
+    def settings(self) -> portage.config: # type: ignore
+        """The portage config/settings for the current root."""
+        return self._trees["vartree"].settings
+
+    @cached_property
+    def vardbapi(self) -> vardbapi:
+        """The installed-packages database (vartree)."""
+        return self._trees["vartree"].dbapi
+
+    @cached_property
+    def portdbapi(self) -> portdbapi:
+        """The ebuild repository database (porttree)."""
+        return self._trees["porttree"].dbapi
+
+    @cached_property
+    def gentoo_repo_path(self) -> Path:
+        """Path to the main Gentoo repository."""
+        for repo in self.settings.repositories:
+            if repo.name == "gentoo":
+                return Path(repo.location)
+
+        return Path("/var/db/repos/gentoo") # fallback
+
+    @cached_property
+    def repos_path(self) -> Path:
+        """Parent directory containing all repository directories."""
+        return self.gentoo_repo_path.parent
+
+
+ctx = PortageContext()
