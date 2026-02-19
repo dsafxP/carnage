@@ -5,10 +5,12 @@ from dataclasses import dataclass, field
 from subprocess import CompletedProcess
 from typing import List
 
+from gentoolkit.cpv import CPV
 from lxml import etree
 
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix import has_remote_cache
+from carnage.core.gentoolkit.package import GentoolkitPackage
 
 
 @dataclass
@@ -35,6 +37,19 @@ class PackageVersion:
     use_enabled: List[str]
     use_disabled: List[str]
 
+    def to_gentoolkit(self, category: str, name: str) -> GentoolkitPackage:
+        """
+        Return a gentoolkit Package for this specific version.
+
+        Args:
+            category: Package category (e.g. "app-portage")
+            name: Package name (e.g. "carnage")
+
+        Returns:
+            GentoolkitPackage for this CPV
+        """
+        cpv_str: str = f"{category}/{name}-{self.id}"
+        return GentoolkitPackage(CPV(cpv_str))
 
 @dataclass
 class Package:
@@ -67,6 +82,21 @@ class Package:
             if v.installed:
                 return v
         return None
+
+    def to_gentoolkit(self) -> GentoolkitPackage:
+        """
+        Return a gentoolkit Package for this package (no specific version).
+
+        Uses the installed version if available, otherwise the first version.
+        Useful for unversioned queries such as checking masks, keywords, or
+        fetching metadata that doesn't depend on a specific version.
+
+        Returns:
+            GentoolkitPackage for category/name
+        """
+        cpv_str: str = self.full_name
+
+        return GentoolkitPackage(CPV(cpv_str))
 
     def is_in_world_file(self) -> bool:
         """
@@ -103,26 +133,6 @@ class Package:
             return result.returncode == 0
         except (subprocess.SubprocessError, FileNotFoundError):
             return False
-
-    def can_emerge(self) -> bool:
-        """
-        Check if package can be emerged (has versions available in installed repositories).
-
-        Returns:
-            True if any version's repository is available in the system, False otherwise
-        """
-        from carnage.core.portage.overlays import get_installed
-
-        if not self.versions:
-            return False
-
-        installed_overlays: set[str] = set(get_installed())
-
-        for version in self.versions:
-            if version.repository and version.repository in installed_overlays:
-                return True
-
-        return False
 
 
 def _parse_version(version_elem: etree._Element) -> PackageVersion:
