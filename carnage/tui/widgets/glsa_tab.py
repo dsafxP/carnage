@@ -184,7 +184,7 @@ class GLSATab(Widget):
         if self.selected_glsa.bugs:
             details += f"[underline]Bugzilla entries:[/underline]\n"
             for bug in self.selected_glsa.bugs:
-                details += f"  • {bug}\n"
+                details += f"  • [link='https://bugs.gentoo.org/{bug}']{bug}[/link]\n"
 
         content_widget.update(details)
 
