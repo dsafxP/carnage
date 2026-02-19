@@ -14,7 +14,6 @@ Screen {
 #search-container {
     width: 100%;
     height: auto;
-    margin-bottom: 1;
     align: left middle;
 }
 
@@ -339,7 +338,7 @@ BrowseTab > Vertical {
 PackageDetailWidget {
     width: 100%;
     height: 1fr;
-    border: solid $primary;
+    border: panel $primary;
 }
 
 PackageDetailWidget TabbedContent {

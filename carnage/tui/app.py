@@ -1,6 +1,7 @@
 """Main Carnage TUI application."""
 
-from pathlib import Path
+from pathlib import PurePath
+from typing import List
 
 from textual.app import App
 
@@ -15,10 +16,14 @@ class CarnageApp(App[None]):
 
     def __init__(self) -> None:
         """Initialize the application with configuration."""
-        self.config: Configuration = get_config()
-        css_path: Path = Path("styles") / ("compact.tcss" if self.config.compact_mode else "styles.tcss")
+        css_paths: List[str | PurePath] = ["styles/styles.tcss"]
 
-        super().__init__(css_path=css_path)
+        self.config: Configuration = get_config()
+
+        if self.config.compact_mode:
+            css_paths.append("styles/compact.tcss")
+
+        super().__init__(css_path=css_paths)
 
     def on_mount(self) -> None:
         """Initialize the application."""
