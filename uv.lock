@@ -179,6 +179,7 @@ wheels = [
 name = "carnage"
 source = { editable = "." }
 dependencies = [
+    { name = "gentoolkit" },
     { name = "lxml" },
     { name = "msgpack" },
     { name = "portage" },
@@ -196,6 +197,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "gentoolkit", git = "https://github.com/gentoo/gentoolkit.git?rev=gentoolkit-0.7.1" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "lxml", specifier = ">=6.0.2" },
     { name = "msgpack", specifier = ">=1.1.2" },
@@ -349,6 +351,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/e0/a3/5982da14e113d07b325230f95060e2169f5311b1017ea8af2a29b374c289/frozenlist-1.8.0-cp314-cp314t-win_arm64.whl", hash = "sha256:102e6314ca4da683dca92e3b1355490fed5f313b768500084fbe6371fddfdb79", size = 42507, upload-time = "2025-10-06T05:37:54.513Z" },
     { url = "https://files.pythonhosted.org/packages/9a/9a/e35b4a917281c0b8419d4207f4334c8e8c5dbf4f3f5f9ada73958d937dcc/frozenlist-1.8.0-py3-none-any.whl", hash = "sha256:0c18a16eab41e82c295618a77502e17b195883241c563b00f0aa5106fc4eaa0d", size = 13409, upload-time = "2025-10-06T05:38:16.721Z" },
 ]
+
+[[package]]
+name = "gentoolkit"
+version = "0.7.1"
+source = { git = "https://github.com/gentoo/gentoolkit.git?rev=gentoolkit-0.7.1#5a2d0aedc1c5d599678d7a217abadb2ffcb7e557" }
 
 [[package]]
 name = "idna"
