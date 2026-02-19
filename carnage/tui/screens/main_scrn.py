@@ -9,7 +9,7 @@ from textual.widgets import Button, Header, Input, TabbedContent, TabPane
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix import has_cache, is_found
 from carnage.core.portage.emerge import emerge_sync
-from carnage.tui.widgets.browse_tab import BrowseTab
+from carnage.tui.widgets.browse.browse_tab import BrowseTab
 from carnage.tui.widgets.glsa_tab import GLSATab
 from carnage.tui.widgets.news_tab import NewsTab
 from carnage.tui.widgets.overlay_tab import OverlaysTab

@@ -270,7 +270,7 @@ LoadingIndicator {
     content-align: center middle;
 }
 
-/* Overlays tab - responsive layout */
+/* Overlays tab */
 #overlays-table {
     height: 40%;
     min-height: 8;
@@ -320,45 +320,72 @@ LoadingIndicator {
     margin-bottom: 1;
 }
 
-#browse-detail {
-    height: 1fr;
-    border: solid $primary;
-    padding: 1;
-}
-
-#browse-content-scroll {
-    height: 1fr;
-    border: solid $primary;
-    margin-bottom: 1;
-}
-
-#browse-content {
-    padding: 1;
-}
-
-#browse-actions {
-    width: 100%;
-    height: auto;
-    align: center middle;
-    layout: horizontal;
-    margin-top: 1;
-}
-
-#browse-actions Button {
-    margin: 0 1;
-}
-
 #browse-loading {
     width: 100%;
     height: 100%;
     content-align: center middle;
 }
 
+BrowseTab > Vertical {
+    width: 100%;
+    height: 100%;
+}
+
+#browse-detail {
+    width: 100%;
+    height: 1fr;
+}
+
+PackageDetailWidget {
+    width: 100%;
+    height: 1fr;
+    border: solid $primary;
+}
+
+PackageDetailWidget TabbedContent {
+    width: 100%;
+    height: 1fr;
+    padding: 0;
+}
+
+PackageDetailWidget ContentSwitcher {
+    border: none;
+    padding: 0;
+}
+
+#pkg-detail-scroll {
+    height: 1fr;
+    padding: 1;
+}
+
+#pkg-detail-content {
+    width: 100%;
+    height: auto;
+}
+
+#pkg-detail-actions {
+    width: 100%;
+    height: auto;
+    layout: horizontal;
+    align: center middle;
+    padding: 1 0 0 0;
+}
+
+#pkg-versions-table {
+    width: 100%;
+    height: 1fr;
+}
+
+#pkg-dummy-content {
+    padding: 1;
+    color: $text-muted;
+}
+
 /* USE flags tab */
 #useflags-table {
-    height: 35%;
-    min-height: 6;
-    max-height: 20;
+    height: 40%;
+    min-height: 8;
+    max-height: 26;
     margin-bottom: 1;
 }
 
