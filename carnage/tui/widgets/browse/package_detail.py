@@ -1,18 +1,17 @@
 """Package detail widget with tabbed views for the Browse tab."""
 
-from carnage.core import get_config
-from carnage.core import Configuration
-import textual.markup
 from pathlib import Path
 
-from rich.text import Text
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
-from textual.widgets import Button, DataTable, Static, TabbedContent, TabPane
+from textual.widgets import (Button, DataTable, Static, TabbedContent, TabPane,
+                             Tree)
+from textual.widgets._tree import TreeNode
 
+from carnage.core import Configuration, get_config
 from carnage.core.eix.search import Package, PackageVersion
 from carnage.core.gentoolkit.package import GentoolkitPackage
 from carnage.core.portage.emerge import (emerge_deselect, emerge_install,
@@ -38,6 +37,35 @@ def _default_version(package: Package) -> PackageVersion | None:
         return non_live[-1]  # versions are ordered oldest→newest by eix
 
     return package.versions[0] if package.versions else None
+
+
+def _build_file_tree(node: TreeNode[str], prefix: str, contents: dict) -> None:
+    """Recursively build a Textual Tree from a flat CONTENTS path dict."""
+    seen: set[str] = set()
+    for path in sorted(contents):
+        if not path.startswith(prefix + "/"):
+            continue
+        remainder = path[len(prefix) + 1:]
+        child_name = remainder.split("/")[0]
+        if child_name in seen:
+            continue
+        seen.add(child_name)
+
+        child_path: str = f"{prefix}/{child_name}"
+        entry_type = contents.get(child_path, [None])[0]
+        is_dir = entry_type == "dir" or any(
+            p.startswith(child_path + "/") for p in contents
+        )
+
+        config: Configuration = get_config()
+
+        if is_dir:
+            branch = node.add(f"📂 {child_name}", expand=config.expand)
+            _build_file_tree(branch, child_path, contents)
+        elif entry_type == "sym":
+            node.add_leaf(f"🔗 {child_name}")
+        else:
+            node.add_leaf(f"📄 {child_name}")
 
 
 class PackageDetailWidget(Widget):
@@ -91,15 +119,14 @@ class PackageDetailWidget(Widget):
                     id="pkg-dummy-content",
                 )
 
-            with TabPane("Installed Files", id="tab-files"):
-                yield Static(
-                    "[dim]Installed files — coming soon.[/dim]",
-                    id="pkg-dummy-content",
-                )
+            with TabPane("Installed Files", id="tab-files",
+                         disabled=not self.package.is_installed()):
+                yield Tree("/", id="pkg-files-tree")
 
     def on_mount(self) -> None:
         self._populate_versions_table()
         self._load_ebuild()
+        self._load_installed_files()
         self._load_world_file_status()
         # Buttons will be refreshed once world file status arrives; show
         # what we can immediately in the meantime.
@@ -162,7 +189,43 @@ class PackageDetailWidget(Widget):
         config: Configuration = get_config()
 
         ebuild_widget.update(
-            Group(header, Syntax(content, "bash", theme=config.syntax_style, line_numbers=True, word_wrap=False)))
+            Group(
+                header,
+                Syntax(
+                    content,
+                    "bash",
+                    theme=config.syntax_style,
+                    line_numbers=True,
+                    word_wrap=False
+                )
+            )
+        )
+
+    def _load_installed_files(self) -> None:
+        """Populate the Installed Files tab. Loaded once on mount; version-agnostic."""
+        tree: Tree[str] = self.query_one("#pkg-files-tree", Tree)
+
+        installed = self.package.installed_version()
+        if installed is None:
+            return  # Tab is disabled; nothing to do
+
+        from gentoolkit.cpv import CPV
+
+        cpv_str: str = f"{self.package.category}/{self.package.name}-{installed.id}"
+        gt_pkg = GentoolkitPackage(CPV(cpv_str))
+
+        try:
+            contents: dict = gt_pkg.parsed_contents()
+        except:
+            contents = {}
+
+        if not contents:
+            tree.root.add_leaf("[dim]No installed files found.[/dim]")
+            tree.root.expand()
+            return
+
+        _build_file_tree(tree.root, "", contents)
+        tree.root.expand()
 
     def _populate_versions_table(self) -> None:
         table = self.query_one("#pkg-versions-table", DataTable)
@@ -170,8 +233,8 @@ class PackageDetailWidget(Widget):
         table.add_columns("Version", "Overlay")
 
         for i, version in enumerate(self.package.versions):
-            label = self._version_label(version, self.package)
-            overlay = version.repository or "gentoo"
+            label: str = self._version_label(version, self.package)
+            overlay: str = version.repository or "gentoo"
             table.add_row(label, overlay, key=f"{version.id}-{i}")
 
     @staticmethod

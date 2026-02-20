@@ -149,6 +149,10 @@ PackageDetailWidget {
     padding: 0 1;
 }
 
+#pkg-files-tree {
+    padding: 0 1;
+}
+
 #pkg-dummy-content {
     padding: 0 1;
 }

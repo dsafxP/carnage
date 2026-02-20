@@ -366,6 +366,11 @@ PackageDetailWidget ContentSwitcher {
     height: auto;
 }
 
+#pkg-files-tree {
+    height: 1fr;
+    padding: 1;
+}
+
 #pkg-detail-actions {
     width: 100%;
     height: auto;

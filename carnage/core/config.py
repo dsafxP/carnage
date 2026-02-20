@@ -46,7 +46,8 @@ class Configuration:
             "browse": {
                 "search_flags": ["-f", "2"],
                 "minimum_characters": 3,
-                "syntax_style": "github-dark"
+                "syntax_style": "github-dark",
+                "expand": True,
             },
             "overlays": {
                 "skip_package_counting": True,
@@ -158,6 +159,9 @@ class Configuration:
         browse_section.add(tomlkit.comment("Pygments style to use for ebuild syntax highlighting"))
         browse_section.add(tomlkit.comment("Find a list at: https://pygments.org/styles"))
         browse_section.add("syntax_style", "github-dark")
+        browse_section.add(tomlkit.nl())
+        browse_section.add(tomlkit.comment("Expand all directories automatically in installed files section"))
+        browse_section.add("expand", True)
         doc.add("browse", browse_section)
 
         # Overlays section
@@ -300,6 +304,11 @@ class Configuration:
     def syntax_style(self) -> str:
         """Get the syntax highlighting style."""
         return self._get_nested_value(["browse", "syntax_style"], "github-dark")
+
+    @property
+    def expand(self) -> bool:
+        """Get whether to expand directories or not."""
+        return self._get_nested_value(["browse", "expand"], True)
 
     @property
     def skip_package_counting(self) -> bool:
