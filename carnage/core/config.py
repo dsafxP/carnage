@@ -45,7 +45,8 @@ class Configuration:
             },
             "browse": {
                 "search_flags": ["-f", "2"],
-                "minimum_characters": 3
+                "minimum_characters": 3,
+                "syntax_style": "github-dark"
             },
             "overlays": {
                 "skip_package_counting": True,
@@ -153,6 +154,10 @@ class Configuration:
         browse_section.add(tomlkit.comment("Minimum characters required before starting search"))
         browse_section.add(tomlkit.comment("Lower values may hinder performance"))
         browse_section.add("minimum_characters", 3)
+        browse_section.add(tomlkit.nl())
+        browse_section.add(tomlkit.comment("Pygments style to use for ebuild syntax highlighting"))
+        browse_section.add(tomlkit.comment("Find a list at: https://pygments.org/styles"))
+        browse_section.add("syntax_style", "github-dark")
         doc.add("browse", browse_section)
 
         # Overlays section
@@ -290,6 +295,11 @@ class Configuration:
     def browse_minimum_characters(self) -> int:
         """Get the minimum characters for browse search."""
         return self._get_nested_value(["browse", "minimum_characters"], 3)
+
+    @property
+    def syntax_style(self) -> str:
+        """Get the syntax highlighting style."""
+        return self._get_nested_value(["browse", "syntax_style"], "github-dark")
 
     @property
     def skip_package_counting(self) -> bool:

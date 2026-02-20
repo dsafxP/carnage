@@ -1,5 +1,11 @@
 """Package detail widget with tabbed views for the Browse tab."""
 
+from carnage.core import get_config
+from carnage.core import Configuration
+import textual.markup
+from pathlib import Path
+
+from rich.text import Text
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -76,10 +82,8 @@ class PackageDetailWidget(Widget):
                 )
 
             with TabPane("Ebuild", id="tab-ebuild"):
-                yield Static(
-                    "[dim]Ebuild viewer — coming soon.[/dim]",
-                    id="pkg-dummy-content",
-                )
+                with VerticalScroll(id="pkg-ebuild-scroll"):
+                    yield Static("", id="pkg-ebuild-content")
 
             with TabPane("Dependencies", id="tab-deps"):
                 yield Static(
@@ -95,6 +99,7 @@ class PackageDetailWidget(Widget):
 
     def on_mount(self) -> None:
         self._populate_versions_table()
+        self._load_ebuild()
         self._load_world_file_status()
         # Buttons will be refreshed once world file status arrives; show
         # what we can immediately in the meantime.
@@ -118,6 +123,46 @@ class PackageDetailWidget(Widget):
 
         return details.rstrip()
 
+    def _load_ebuild(self) -> None:
+        """Populate the Ebuild tab for the currently selected version."""
+        from rich.console import Group
+        from rich.syntax import Syntax
+        from rich.text import Text
+
+        ebuild_widget: Static = self.query_one("#pkg-ebuild-content", Static)
+
+        if self.selected_version is None:
+            ebuild_widget.update(Text.from_markup("[red]No version selected.[/red]"))
+            return
+
+        gt_pkg: GentoolkitPackage = self.selected_version.to_gentoolkit(
+            self.package.category, self.package.name
+        )
+        path_str: str | None = gt_pkg.ebuild_path()
+
+        if not path_str:
+            ebuild_widget.update(Text.from_markup(
+                f"[red]{self.package.category}/{self.package.name} ebuild path not found.[/red]"
+            ))
+            return
+
+        path = Path(path_str)
+        header: Text = Text.from_markup(f"[dim]{path}[/dim]\n")
+
+        if not path.exists():
+            ebuild_widget.update(Group(header, Text.from_markup(f"[red]{path} does not exist.[/red]")))
+            return
+
+        content: str = path.read_text(encoding="utf-8", errors="replace").strip()
+
+        if not content:
+            ebuild_widget.update(Group(header, Text.from_markup(f"[red]{path} is empty.[/red]")))
+            return
+
+        config: Configuration = get_config()
+
+        ebuild_widget.update(
+            Group(header, Syntax(content, "bash", theme=config.syntax_style, line_numbers=True, word_wrap=False)))
 
     def _populate_versions_table(self) -> None:
         table = self.query_one("#pkg-versions-table", DataTable)
@@ -151,6 +196,7 @@ class PackageDetailWidget(Widget):
             return
 
         self.selected_version = version
+        self._load_ebuild()
         self._update_buttons()
 
         gt_pkg: GentoolkitPackage = version.to_gentoolkit(

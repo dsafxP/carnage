@@ -356,6 +356,16 @@ PackageDetailWidget ContentSwitcher {
     height: auto;
 }
 
+#pkg-ebuild-scroll {
+    height: 1fr;
+    padding: 1;
+}
+
+#pkg-ebuild-content {
+    width: 100%;
+    height: auto;
+}
+
 #pkg-detail-actions {
     width: 100%;
     height: auto;
