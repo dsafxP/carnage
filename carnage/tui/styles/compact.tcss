@@ -66,11 +66,6 @@ TextArea:focus {
     margin-bottom: 0;
 }
 
-#news-detail {
-    border: none;
-    padding: 0;
-}
-
 #news-content-scroll {
     border: none;
     margin-bottom: 0;
@@ -89,11 +84,6 @@ TextArea:focus {
     height: 35%;
     min-height: 4;
     margin-bottom: 0;
-}
-
-#glsa-detail {
-    border: none;
-    padding: 0;
 }
 
 #glsa-content-scroll {
@@ -115,11 +105,6 @@ TextArea:focus {
     min-height: 5;
     max-height: 30;
     margin-bottom: 0;
-}
-
-#overlays-detail {
-    border: none;
-    padding: 0;
 }
 
 #overlays-content-scroll {

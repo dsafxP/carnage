@@ -202,8 +202,6 @@ LoadingIndicator {
 
 #news-detail {
     height: 1fr;
-    border: solid $primary;
-    padding: 1;
 }
 
 #news-content-scroll {
@@ -237,8 +235,6 @@ LoadingIndicator {
 
 #glsa-detail {
     height: 1fr;
-    border: solid $primary;
-    padding: 1;
 }
 
 #glsa-content-scroll {
@@ -279,8 +275,6 @@ LoadingIndicator {
 
 #overlays-detail {
     height: 1fr;
-    border: solid $primary;
-    padding: 1;
 }
 
 #overlays-content-scroll {
