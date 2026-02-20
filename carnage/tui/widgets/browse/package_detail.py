@@ -168,11 +168,7 @@ class PackageDetailWidget(Widget):
     @work(exclusive=True, thread=True)
     def _load_world_file_status(self) -> None:
         """Check world file membership in a thread then refresh buttons."""
-        try:
-            in_world_file = self.package.is_in_world_file()
-        except Exception:
-            in_world_file = False
-        self._in_world_file = in_world_file
+        self._in_world_file = self.package.is_in_world_file()
         self.app.call_from_thread(self._update_buttons)
 
 
@@ -217,6 +213,9 @@ class PackageDetailWidget(Widget):
         noreplace_btn.disabled = not noreplace_btn.display
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.disabled:
+            return
+
         if event.button.id == "emerge-btn":
             self.action_emerge()
         elif event.button.id == "depclean-btn":
@@ -229,19 +228,21 @@ class PackageDetailWidget(Widget):
 
     @work(exclusive=True, thread=True)
     def action_emerge(self) -> None:
-        if self.selected_version is None or self.package.is_installed():
+        emerge_btn: Button = self.query_one("#emerge-btn", Button)
+        
+        if self.selected_version is None or self.package.is_installed() or emerge_btn.disabled:
             return
 
-        # Emerge the selected specific version atom
-        atom = f"={self.package.full_name}-{self.selected_version.id}"
-        self.app.call_from_thread(
-            self.notify,
-            f"Installing {atom}... (don't close until finished!)",
-            severity="warning",
-            timeout=15,
-        )
+        atom: str = f"={self.package.full_name}-{self.selected_version.id}"
 
         try:
+            emerge_btn.disabled = True
+            self.app.call_from_thread(
+                self.notify,
+                f"Installing {atom}... (don't close until finished!)",
+                severity="warning",
+                timeout=15,
+            )
             returncode, _, stderr = emerge_install(atom)
             if returncode == 0:
                 self.app.call_from_thread(self.notify, f"Successfully installed {atom}")
@@ -253,25 +254,29 @@ class PackageDetailWidget(Widget):
             self.app.call_from_thread(
                 self.notify, f"Error installing: {e}", severity="error"
             )
+        finally:
+            emerge_btn.disabled = False
 
     @work(exclusive=True, thread=True)
     def action_depclean(self) -> None:
-        if not self.package.is_installed():
+        depclean_btn: Button = self.query_one("#depclean-btn", Button)
+
+        if not self.package.is_installed() or depclean_btn.disabled:
             return
 
-        atom = self.package.full_name
-        self.app.call_from_thread(
-            self.notify,
-            f"Removing {atom}... (don't close until finished!)",
-            severity="warning",
-            timeout=15,
-        )
+        atom: str = self.package.full_name
 
         try:
+            depclean_btn.disabled = True
+            self.app.call_from_thread(
+                self.notify,
+                f"Removing {atom}... (don't close until finished!)",
+                severity="warning",
+                timeout=15,
+            )
             returncode, _, stderr = emerge_uninstall(atom)
             if returncode == 0:
                 self.app.call_from_thread(self.notify, f"Successfully removed {atom}")
-                #self.app.call_from_thread(self._post_action_refresh)
             else:
                 self.app.call_from_thread(
                     self.notify, f"Failed to remove: {stderr}", severity="error"
@@ -280,18 +285,25 @@ class PackageDetailWidget(Widget):
             self.app.call_from_thread(
                 self.notify, f"Error removing: {e}", severity="error"
             )
+        finally:
+            depclean_btn.disabled = False
 
     @work(exclusive=True, thread=True)
     def action_deselect(self) -> None:
-        atom = self.package.full_name
-        self.app.call_from_thread(
-            self.notify,
-            f"Removing {atom} from world file...",
-            severity="warning",
-            timeout=10,
-        )
+        deselect_btn: Button = self.query_one("#deselect-btn", Button)
+        if deselect_btn.disabled:
+            return
+
+        atom: str = self.package.full_name
 
         try:
+            deselect_btn.disabled = True
+            self.app.call_from_thread(
+                self.notify,
+                f"Removing {atom} from world file...",
+                severity="warning",
+                timeout=10,
+            )
             returncode, _, stderr = emerge_deselect(atom)
             if returncode == 0:
                 self.app.call_from_thread(
@@ -308,18 +320,25 @@ class PackageDetailWidget(Widget):
             self.app.call_from_thread(
                 self.notify, f"Error removing from world file: {e}", severity="error"
             )
+        finally:
+            deselect_btn.disabled = False
 
     @work(exclusive=True, thread=True)
     def action_noreplace(self) -> None:
-        atom = self.package.full_name
-        self.app.call_from_thread(
-            self.notify,
-            f"Adding {atom} to world file...",
-            severity="warning",
-            timeout=10,
-        )
+        noreplace_btn: Button = self.query_one("#noreplace-btn", Button)
+        if noreplace_btn.disabled:
+            return
+
+        atom: str = self.package.full_name
 
         try:
+            noreplace_btn.disabled = True
+            self.app.call_from_thread(
+                self.notify,
+                f"Adding {atom} to world file...",
+                severity="warning",
+                timeout=10,
+            )
             returncode, _, stderr = emerge_noreplace(atom)
             if returncode == 0:
                 self.app.call_from_thread(
@@ -336,3 +355,5 @@ class PackageDetailWidget(Widget):
             self.app.call_from_thread(
                 self.notify, f"Error adding to world file: {e}", severity="error"
             )
+        finally:
+            noreplace_btn.disabled = False
