@@ -48,6 +48,7 @@ class Configuration:
                 "minimum_characters": 3,
                 "syntax_style": "github-dark",
                 "expand": True,
+                "depth": 1
             },
             "overlays": {
                 "skip_package_counting": True,
@@ -160,8 +161,11 @@ class Configuration:
         browse_section.add(tomlkit.comment("Find a list at: https://pygments.org/styles"))
         browse_section.add("syntax_style", "github-dark")
         browse_section.add(tomlkit.nl())
-        browse_section.add(tomlkit.comment("Expand all directories automatically in installed files section"))
+        browse_section.add(tomlkit.comment("Expand all tree nodes automatically"))
         browse_section.add("expand", True)
+        browse_section.add(tomlkit.nl())
+        browse_section.add(tomlkit.comment("Dependency tree depth limit"))
+        browse_section.add("depth", 1)
         doc.add("browse", browse_section)
 
         # Overlays section
@@ -307,8 +311,13 @@ class Configuration:
 
     @property
     def expand(self) -> bool:
-        """Get whether to expand directories or not."""
+        """Get whether to expand nodes or not."""
         return self._get_nested_value(["browse", "expand"], True)
+
+    @property
+    def depth(self) -> int:
+        """Get dependency tree's maximum depth."""
+        return self._get_nested_value(["browse", "depth"], 1)
 
     @property
     def skip_package_counting(self) -> bool:

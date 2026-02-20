@@ -29,6 +29,7 @@ def _default_version(package: Package) -> PackageVersion | None:
       3. First version available
     """
     installed = package.installed_version()
+
     if installed is not None:
         return installed
 
@@ -39,16 +40,42 @@ def _default_version(package: Package) -> PackageVersion | None:
     return package.versions[0] if package.versions else None
 
 
+def _build_dep_tree(node: TreeNode[str], deps: list, current_depth: int = 0) -> None:
+    """Recursively build a Textual Tree from graph_depends() flat results."""
+    config: Configuration = get_config()
+
+    for dep_depth, pkg in deps:
+        if dep_depth != current_depth + 1:
+            continue
+
+        label: str = f"{pkg.category}/[bold]{pkg.name}[/bold]-{pkg.version}"
+
+        has_children: bool = any(d == current_depth + 2 for d, _ in deps)
+
+        if has_children:
+            child: TreeNode[str] = node.add(label, expand=config.expand)
+            _build_dep_tree(child, deps, dep_depth)
+        else:
+            node.add_leaf(label)
+
+
 def _build_file_tree(node: TreeNode[str], prefix: str, contents: dict) -> None:
     """Recursively build a Textual Tree from a flat CONTENTS path dict."""
     seen: set[str] = set()
+    config: Configuration = get_config()
+
     for path in sorted(contents):
+
         if not path.startswith(prefix + "/"):
             continue
+
         remainder = path[len(prefix) + 1:]
+
         child_name = remainder.split("/")[0]
+
         if child_name in seen:
             continue
+
         seen.add(child_name)
 
         child_path: str = f"{prefix}/{child_name}"
@@ -57,10 +84,8 @@ def _build_file_tree(node: TreeNode[str], prefix: str, contents: dict) -> None:
             p.startswith(child_path + "/") for p in contents
         )
 
-        config: Configuration = get_config()
-
         if is_dir:
-            branch = node.add(f"📂 {child_name}", expand=config.expand)
+            branch: TreeNode[str] = node.add(f"📂 {child_name}", expand=config.expand)
             _build_file_tree(branch, child_path, contents)
         elif entry_type == "sym":
             node.add_leaf(f"🔗 {child_name}")
@@ -114,10 +139,7 @@ class PackageDetailWidget(Widget):
                     yield Static("", id="pkg-ebuild-content")
 
             with TabPane("Dependencies", id="tab-deps"):
-                yield Static(
-                    "[dim]Dependency graph — coming soon.[/dim]",
-                    id="pkg-dummy-content",
-                )
+                yield Tree(f"{self.package.full_name}", id="pkg-deps-tree")
 
             with TabPane("Installed Files", id="tab-files",
                          disabled=not self.package.is_installed()):
@@ -125,6 +147,7 @@ class PackageDetailWidget(Widget):
 
     def on_mount(self) -> None:
         self._populate_versions_table()
+        self._load_deps()
         self._load_ebuild()
         self._load_installed_files()
         self._load_world_file_status()
@@ -201,6 +224,42 @@ class PackageDetailWidget(Widget):
             )
         )
 
+    @work(exclusive=True, thread=True)
+    def _load_deps(self) -> None:
+        """Populate the Dependencies tab for the selected version."""
+        if self.selected_version is None:
+            return
+
+        from gentoolkit.dependencies import Dependencies
+
+        cpv_str: str = f"{self.package.category}/{self.package.name}-{self.selected_version.id}"
+        dep = Dependencies(cpv_str)
+
+        config: Configuration = get_config()
+
+        try:
+            results = dep.graph_depends(max_depth=config.depth)
+        except:
+            results = []
+
+        self.app.call_from_thread(self._populate_dep_tree, results)
+
+    def _populate_dep_tree(self, results: list) -> None:
+        """Update the dep tree widget on the main thread."""
+        tree: Tree = self.query_one("#pkg-deps-tree", Tree)
+        tree.clear()
+
+        if self.selected_version:
+            tree.root.label = f"{self.package.category}/[bold]{self.package.name}[/bold]-{self.selected_version.id}"
+
+        tree.root.expand()
+
+        if not results:
+            tree.root.add_leaf("[dim]No dependencies found.[/dim]")
+            return
+
+        _build_dep_tree(tree.root, results)
+
     def _load_installed_files(self) -> None:
         """Populate the Installed Files tab. Loaded once on mount; version-agnostic."""
         tree: Tree[str] = self.query_one("#pkg-files-tree", Tree)
@@ -259,6 +318,7 @@ class PackageDetailWidget(Widget):
             return
 
         self.selected_version = version
+        self._load_deps()
         self._load_ebuild()
         self._update_buttons()
 

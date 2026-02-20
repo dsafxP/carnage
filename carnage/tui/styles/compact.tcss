@@ -153,6 +153,10 @@ PackageDetailWidget {
     padding: 0 1;
 }
 
+#pkg-deps-tree {
+    padding: 0 1;
+}
+
 #pkg-dummy-content {
     padding: 0 1;
 }
