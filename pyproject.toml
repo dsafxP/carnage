@@ -16,7 +16,7 @@ dependencies = [
     "portage>=3.0.77",
     "textual>=8.0.0",
     "tomlkit>=0.14.0",
-    "gentoolkit @ git+https://github.com/gentoo/gentoolkit.git@gentoolkit-0.7.1"
+    "gentoolkit @ git+https://anongit.gentoo.org/git/proj/gentoolkit.git@gentoolkit-0.7.1"
 ]
 
 [project.optional-dependencies]

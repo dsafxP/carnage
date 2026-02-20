@@ -197,7 +197,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "gentoolkit", git = "https://github.com/gentoo/gentoolkit.git?rev=gentoolkit-0.7.1" },
+    { name = "gentoolkit", git = "https://anongit.gentoo.org/git/proj/gentoolkit.git?rev=gentoolkit-0.7.1" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "lxml", specifier = ">=6.0.2" },
     { name = "msgpack", specifier = ">=1.1.2" },
@@ -355,7 +355,7 @@ wheels = [
 [[package]]
 name = "gentoolkit"
 version = "0.7.1"
-source = { git = "https://github.com/gentoo/gentoolkit.git?rev=gentoolkit-0.7.1#5a2d0aedc1c5d599678d7a217abadb2ffcb7e557" }
+source = { git = "https://anongit.gentoo.org/git/proj/gentoolkit.git?rev=gentoolkit-0.7.1#5a2d0aedc1c5d599678d7a217abadb2ffcb7e557" }
 
 [[package]]
 name = "idna"
