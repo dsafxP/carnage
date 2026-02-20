@@ -24,7 +24,7 @@ dev = [
     "pyrefly>=0.53.0",
     "msgpack-types>=0.7.0",
     "textual-dev>=1.8.0",
-    "isort>=7.0.0"
+    "isort>=8.0.0"
 ]
 
 [project.urls]
