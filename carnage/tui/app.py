@@ -5,6 +5,7 @@ from typing import List
 
 from textual.app import App
 
+from carnage.core.args import css_path as arg_custom_css_path
 from carnage.core.config import Configuration, get_config
 from carnage.tui.screens.main_scrn import MainScreen
 
@@ -22,6 +23,9 @@ class CarnageApp(App[None]):
 
         if self.config.compact_mode:
             css_paths.append("styles/compact.tcss")
+
+        if arg_custom_css_path.exists():
+            css_paths.append(arg_custom_css_path)
 
         super().__init__(css_path=css_paths)
 

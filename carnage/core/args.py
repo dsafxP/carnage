@@ -15,8 +15,7 @@ class __ArgsInit:
     def _parse_args() -> argparse.Namespace:
         parser = argparse.ArgumentParser(
             prog=APP_NAME,
-            description=APP_DESC,
-            formatter_class=argparse.RawDescriptionHelpFormatter
+            description=APP_DESC
         )
 
         # Version argument
@@ -36,6 +35,15 @@ class __ArgsInit:
             metavar="FILE"
         )
 
+        # CSS file path
+        parser.add_argument(
+            "--css",
+            type=Path,
+            default=Path.home() / ".config/carnage/custom.tcss",
+            help="Path to custom CSS file",
+            metavar="FILE"
+        )
+
         return parser.parse_args()
 
     def get_element(self, element: str) -> Any:
@@ -48,3 +56,4 @@ __args = __ArgsInit()
 
 # Public
 config_path: Path | None = __args.get_element("config")
+css_path: Path = __args.get_element("css")

@@ -24,7 +24,7 @@ class Configuration:
             config_path: Path to config file. Defaults to ~/.config/carnage/carnage.toml
         """
         if config_path is None:
-            config_path = Path.home() / ".config" / "carnage" / "carnage.toml"
+            config_path = Path.home() / ".config/carnage/carnage.toml"
 
         self.config_path = config_path
         self._config: Dict[str, Any] = {}
