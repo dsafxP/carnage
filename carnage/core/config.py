@@ -161,7 +161,7 @@ class Configuration:
         browse_section.add(tomlkit.comment("Find a list at: https://pygments.org/styles"))
         browse_section.add("syntax_style", "github-dark")
         browse_section.add(tomlkit.nl())
-        browse_section.add(tomlkit.comment("Expand all tree nodes automatically"))
+        browse_section.add(tomlkit.comment("Expand all tree nodes automatically in dependencies or installed files"))
         browse_section.add("expand", True)
         browse_section.add(tomlkit.nl())
         browse_section.add(tomlkit.comment("Dependency tree depth limit"))
