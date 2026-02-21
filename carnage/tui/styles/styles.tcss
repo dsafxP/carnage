@@ -10,14 +10,13 @@ Screen {
     padding: 1;
 }
 
-/* Horizontal container for search and sync button */
+/* Search */
 #search-container {
     width: 100%;
     height: auto;
     align: left middle;
 }
 
-/* Search input styling */
 #search-input {
     width: 1fr;
     border: solid $primary;
@@ -31,7 +30,6 @@ Screen {
     opacity: 0.5;
 }
 
-/* Sync button styling */
 #sync-btn {
     width: auto;
     min-width: 15;
@@ -108,10 +106,7 @@ DataTable > .datatable--header {
     text-style: bold;
 }
 
-DataTable > .datatable--cursor {
-    background: $accent;
-}
-
+DataTable > .datatable--cursor,
 DataTable:focus > .datatable--cursor {
     background: $accent;
 }
@@ -155,16 +150,8 @@ Button:disabled {
 }
 
 /* Containers */
-Vertical {
-    width: 100%;
-    height: auto;
-}
-
-Horizontal {
-    width: 100%;
-    height: auto;
-}
-
+Vertical,
+Horizontal,
 Container {
     width: 100%;
     height: auto;
@@ -175,7 +162,7 @@ ScrollableContainer {
     scrollbar-gutter: stable;
 }
 
-/* Text areas and input */
+/* Text areas */
 TextArea {
     width: 100%;
     height: 1fr;
@@ -186,11 +173,56 @@ TextArea:focus {
     border: double $accent;
 }
 
-/* Loading indicator */
-LoadingIndicator {
+/* Loading indicators */
+LoadingIndicator,
+#glsa-loading,
+#overlays-loading,
+#browse-loading,
+#useflags-loading {
     width: 100%;
     height: 100%;
     content-align: center middle;
+}
+
+/* Tab detail panels */
+#news-detail,
+#glsa-detail,
+#overlays-detail {
+    height: 1fr;
+}
+
+/* Tab content scrollers */
+#news-content-scroll,
+#glsa-content-scroll,
+#overlays-content-scroll {
+    height: 1fr;
+    border: solid $primary;
+    margin-bottom: 1;
+}
+
+/* Tab text content */
+#news-content,
+#glsa-content,
+#overlays-content,
+#useflags-content {
+    padding: 1;
+}
+
+/* Tab action bars */
+#news-actions,
+#glsa-actions,
+#overlays-actions {
+    width: 100%;
+    height: auto;
+    align: center middle;
+    layout: horizontal;
+    margin-top: 1;
+}
+
+#news-actions Button,
+#glsa-actions Button,
+#overlays-actions Button {
+    margin: 0 1;
 }
 
 /* News tab */
@@ -200,69 +232,11 @@ LoadingIndicator {
     margin-bottom: 1;
 }
 
-#news-detail {
-    height: 1fr;
-}
-
-#news-content-scroll {
-    height: 1fr;
-    border: solid $primary;
-    margin-bottom: 1;
-}
-
-#news-content {
-    padding: 1;
-}
-
-#news-actions {
-    width: 100%;
-    height: auto;
-    align: center middle;
-    layout: horizontal;
-    margin-top: 1;
-}
-
-#news-actions Button {
-    margin: 0 1;
-}
-
 /* GLSAs tab */
 #glsa-table {
     height: 30%;
     min-height: 5;
     margin-bottom: 1;
-}
-
-#glsa-detail {
-    height: 1fr;
-}
-
-#glsa-content-scroll {
-    height: 1fr;
-    border: solid $primary;
-    margin-bottom: 1;
-}
-
-#glsa-content {
-    padding: 1;
-}
-
-#glsa-actions {
-    width: 100%;
-    height: auto;
-    align: center middle;
-    layout: horizontal;
-    margin-top: 1;
-}
-
-#glsa-actions Button {
-    margin: 0 1;
-}
-
-#glsa-loading {
-    width: 100%;
-    height: 100%;
-    content-align: center middle;
 }
 
 /* Overlays tab */
@@ -273,50 +247,12 @@ LoadingIndicator {
     margin-bottom: 1;
 }
 
-#overlays-detail {
-    height: 1fr;
-}
-
-#overlays-content-scroll {
-    height: 1fr;
-    border: solid $primary;
-    margin-bottom: 1;
-}
-
-#overlays-content {
-    padding: 1;
-}
-
-#overlays-actions {
-    width: 100%;
-    height: auto;
-    align: center middle;
-    layout: horizontal;
-    margin-top: 1;
-}
-
-#overlays-actions Button {
-    margin: 0 1;
-}
-
-#overlays-loading {
-    width: 100%;
-    height: 100%;
-    content-align: center middle;
-}
-
 /* Browse tab */
 #browse-table {
     height: 40%;
     min-height: 8;
     max-height: 25;
     margin-bottom: 1;
-}
-
-#browse-loading {
-    width: 100%;
-    height: 100%;
-    content-align: center middle;
 }
 
 BrowseTab > Vertical {
@@ -346,34 +282,20 @@ PackageDetailWidget ContentSwitcher {
     padding: 0;
 }
 
-#pkg-detail-scroll {
-    height: 1fr;
-    padding: 1;
-}
-
-#pkg-detail-content {
-    width: 100%;
-    height: auto;
-}
-
-#pkg-ebuild-scroll {
-    height: 1fr;
-    padding: 1;
-}
-
-#pkg-ebuild-content {
-    width: 100%;
-    height: auto;
-}
-
-#pkg-files-tree {
-    height: 1fr;
-    padding: 1;
-}
-
+/* Package detail scrollers and trees */
+#pkg-detail-scroll,
+#pkg-ebuild-scroll,
+#pkg-files-tree,
 #pkg-deps-tree {
     height: 1fr;
     padding: 1;
+}
+
+/* Package detail static content */
+#pkg-detail-content,
+#pkg-ebuild-content {
+    width: 100%;
+    height: auto;
 }
 
 #pkg-detail-actions {
@@ -411,14 +333,4 @@ PackageDetailWidget ContentSwitcher {
 #useflags-content-scroll {
     height: 1fr;
     border: solid $primary;
-}
-
-#useflags-content {
-    padding: 1;
-}
-
-#useflags-loading {
-    width: 100%;
-    height: 100%;
-    content-align: center middle;
 }

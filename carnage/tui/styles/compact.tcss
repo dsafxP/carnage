@@ -59,6 +59,40 @@ TextArea:focus {
     background: $boost;
 }
 
+/* Tab detail panels */
+#news-detail,
+#glsa-detail,
+#overlays-detail,
+#useflags-detail,
+#browse-detail {
+    border: none;
+    padding: 0;
+}
+
+/* Tab content scrollers */
+#news-content-scroll,
+#glsa-content-scroll,
+#overlays-content-scroll,
+#useflags-content-scroll {
+    border: none;
+    margin-bottom: 0;
+}
+
+/* Tab text content */
+#news-content,
+#glsa-content,
+#overlays-content,
+#useflags-content {
+    padding: 0 1;
+}
+
+/* Tab action bars */
+#news-actions,
+#glsa-actions,
+#overlays-actions {
+    margin-top: 0;
+}
+
 /* News tab */
 #news-table {
     height: 35%;
@@ -66,37 +100,11 @@ TextArea:focus {
     margin-bottom: 0;
 }
 
-#news-content-scroll {
-    border: none;
-    margin-bottom: 0;
-}
-
-#news-content {
-    padding: 0 1;
-}
-
-#news-actions {
-    margin-top: 0;
-}
-
 /* GLSAs tab */
 #glsa-table {
     height: 35%;
     min-height: 4;
     margin-bottom: 0;
-}
-
-#glsa-content-scroll {
-    border: none;
-    margin-bottom: 0;
-}
-
-#glsa-content {
-    padding: 0 1;
-}
-
-#glsa-actions {
-    margin-top: 0;
 }
 
 /* Overlays tab */
@@ -107,19 +115,6 @@ TextArea:focus {
     margin-bottom: 0;
 }
 
-#overlays-content-scroll {
-    border: none;
-    margin-bottom: 0;
-}
-
-#overlays-content {
-    padding: 0 1;
-}
-
-#overlays-actions {
-    margin-top: 0;
-}
-
 /* Browse tab */
 #browse-table {
     height: 45%;
@@ -128,37 +123,21 @@ TextArea:focus {
     margin-bottom: 0;
 }
 
-#browse-detail {
-    border: none;
-    padding: 0;
-}
-
 PackageDetailWidget {
     border: none;
 }
 
-#pkg-detail-scroll {
+/* Package detail scrollers, trees, and dummy content */
+#pkg-detail-scroll,
+#pkg-ebuild-scroll,
+#pkg-files-tree,
+#pkg-deps-tree,
+#pkg-dummy-content {
     padding: 0 1;
 }
 
 #pkg-detail-actions {
     padding: 0;
-}
-
-#pkg-ebuild-scroll {
-    padding: 0 1;
-}
-
-#pkg-files-tree {
-    padding: 0 1;
-}
-
-#pkg-deps-tree {
-    padding: 0 1;
-}
-
-#pkg-dummy-content {
-    padding: 0 1;
 }
 
 /* USE flags tab */
@@ -167,17 +146,4 @@ PackageDetailWidget {
     min-height: 4;
     max-height: 25;
     margin-bottom: 0;
-}
-
-#useflags-detail {
-    border: none;
-    padding: 0;
-}
-
-#useflags-content-scroll {
-    border: none;
-}
-
-#useflags-content {
-    padding: 0 1;
 }
