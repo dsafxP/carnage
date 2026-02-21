@@ -20,11 +20,12 @@ eix is not strictly necessary, and carnage can function without it for every oth
 Since eix is used for several operations internally, having a remote cache is important to have all options available. Optimizing eix will accelerate carnage at the same time.
 
 # OPTIONS
-| Option              | Description                        |
-|---------------------|------------------------------------|
-| -h, \-\-help        | Show help message and exit.        |
-| -V, \-\-version     | Show version information and exit. |
-| -c, \-\-config FILE | Path to configuration file.        |
+| Option              | Description                                                                |
+|---------------------|----------------------------------------------------------------------------|
+| -h, \-\-help        | Show help message and exit.                                                |
+| -V, \-\-version     | Show version information and exit.                                         |
+| -c, \-\-config FILE | Path to configuration file.                                                |
+| -\-css              | Path to custom Textual CSS file. Defaults to ~/.config/carnage/custom.tcss |
 
 # CONFIGURATION
 A default configuration file is automatically generated at: ~/.config/carnage/carnage.toml
