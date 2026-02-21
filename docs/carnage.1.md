@@ -46,10 +46,13 @@ The file uses the [TOML](https://toml.io/) format and contains the following sec
 
 ## [browse]
 
-| Key                | Type  | Description                                            | Default     |
-|--------------------|-------|--------------------------------------------------------|-------------|
-| search_flags       | array | Default flags passed to eix during package search.     | ["-f", "2"] |
-| minimum_characters | int   | Minimum number of characters before initiating search. | 3           |
+| Key                | Type   | Description                                                             | Default       |
+|--------------------|--------|-------------------------------------------------------------------------|---------------|
+| search_flags       | array  | Default flags passed to eix during package search.                      | ["-f", "2"]   |
+| minimum_characters | int    | Minimum number of characters before initiating search.                  | 3             |
+| syntax_style       | string | Pygments style to use for ebuild syntax highlighting.                   | "github-dark" |
+| expand             | bool   | Expand all tree nodes automatically in dependencies or installed files. | true          |
+| depth              | int    | Dependency tree depth limit.                                            | 1             |
 
 **Package search in the "Browse" tab supports searching flags directly.**  
 For example, searching for \-\-installed will display all installed packages, ignoring search_flags defined in the configuration.
@@ -70,7 +73,7 @@ For example, searching for \-\-installed will display all installed packages, ig
 | cache_max\_age     | int  | Maximum USE flag cache age (hours).               | 96      |
 
 # BINDINGS
-Bindings are available for each button available in a tab.
+Bindings are available for each button in a tab.
 
 ## News
 
