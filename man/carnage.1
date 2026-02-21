@@ -46,6 +46,11 @@ T{
 T}|T{
 Path to configuration file.
 T}
+T{
+--css
+T}|T{
+Path to custom Textual CSS file. Defaults to \(ti/.config/carnage/custom.tcss
+T}
 .TE
 .SH CONFIGURATION
 .LP
@@ -161,6 +166,33 @@ Minimum number of characters before initiating search.
 T}|T{
 3
 T}
+T{
+syntax_style
+T}|T{
+string
+T}|T{
+Pygments style to use for ebuild syntax highlighting.
+T}|T{
+\(lqgithub-dark\(rq
+T}
+T{
+expand
+T}|T{
+bool
+T}|T{
+Expand all tree nodes automatically in dependencies or installed files.
+T}|T{
+true
+T}
+T{
+depth
+T}|T{
+int
+T}|T{
+Dependency tree depth limit.
+T}|T{
+1
+T}
 .TE
 .LP
 \fBPackage search in the \(lqBrowse\(rq tab supports searching flags directly.\fR
@@ -248,7 +280,7 @@ T}
 .TE
 .SH BINDINGS
 .LP
-Bindings are available for each button available in a tab.
+Bindings are available for each button in a tab.
 .SS
 News
 .TS
