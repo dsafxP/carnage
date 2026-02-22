@@ -298,7 +298,8 @@ PackageDetailWidget ContentSwitcher {
     height: auto;
 }
 
-#pkg-detail-actions {
+#pkg-detail-actions,
+#pkg-use-actions {
     width: 100%;
     height: auto;
     layout: horizontal;
@@ -311,9 +312,15 @@ PackageDetailWidget ContentSwitcher {
     height: 1fr;
 }
 
-#pkg-dummy-content {
-    padding: 1;
-    color: $text-muted;
+/* Package use flags editor */
+
+#pkg-use-version {
+    height: auto;
+    padding: 1 1 1 1;
+}
+
+#pkg-use-list {
+    height: auto;
 }
 
 /* USE flags tab */

@@ -132,11 +132,12 @@ PackageDetailWidget {
 #pkg-ebuild-scroll,
 #pkg-files-tree,
 #pkg-deps-tree,
-#pkg-dummy-content {
+#pkg-use-version {
     padding: 0 1;
 }
 
-#pkg-detail-actions {
+#pkg-detail-actions,
+#pkg-use-actions {
     padding: 0;
 }
 

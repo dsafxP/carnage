@@ -7,8 +7,9 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
-from textual.widgets import (Button, DataTable, Static, TabbedContent, TabPane,
-                             Tree)
+from textual.widgets import (Button, DataTable, SelectionList, Static,
+                             TabbedContent, TabPane, Tree)
+from textual.widgets._selection_list import Selection
 from textual.widgets._tree import TreeNode
 
 from carnage.core import Configuration, get_config
@@ -16,6 +17,7 @@ from carnage.core.eix.search import Package, PackageVersion
 from carnage.core.gentoolkit.package import GentoolkitPackage
 from carnage.core.portage.emerge import (emerge_deselect, emerge_install,
                                          emerge_noreplace, emerge_uninstall)
+from carnage.core.gentoolkit.euse import euse_disable, euse_enable
 from carnage.tui.widgets.table import NavigableDataTable
 
 
@@ -112,6 +114,7 @@ class PackageDetailWidget(Widget):
         self.package = package
         self.selected_version: PackageVersion | None = _default_version(package)
         self._in_world_file: bool | None = None  # None = not yet loaded
+        self._use_flag_originals: dict[str, bool] = {}  # flag -> enabled at load time
 
     def compose(self) -> ComposeResult:
         with TabbedContent():
@@ -129,10 +132,16 @@ class PackageDetailWidget(Widget):
                 yield NavigableDataTable(id="pkg-versions-table", cursor_type="row")
 
             with TabPane("USE Flags", id="tab-use"):
-                yield Static(
-                    "[dim]USE flag editor — coming soon.[/dim]",
-                    id="pkg-dummy-content",
-                )
+                yield Static("", id="pkg-use-version")
+                with VerticalScroll(id="pkg-use-scroll"):
+                    yield SelectionList(id="pkg-use-list")
+                with Vertical(id="pkg-use-actions"):
+                    yield Button(
+                        "Apply changes",
+                        id="use-apply-btn",
+                        variant="warning",
+                        disabled=True,
+                    )
 
             with TabPane("Ebuild", id="tab-ebuild"):
                 with VerticalScroll(id="pkg-ebuild-scroll"):
@@ -147,6 +156,7 @@ class PackageDetailWidget(Widget):
 
     def on_mount(self) -> None:
         self._populate_versions_table()
+        self._load_use_flags()
         self._load_deps()
         self._load_ebuild()
         self._load_installed_files()
@@ -223,6 +233,115 @@ class PackageDetailWidget(Widget):
                 )
             )
         )
+
+    def _load_use_flags(self) -> None:
+        """Populate the USE Flags tab for the currently selected version."""
+        version_label: Static = self.query_one("#pkg-use-version", Static)
+        use_list: SelectionList = self.query_one("#pkg-use-list", SelectionList)
+        apply_btn: Button = self.query_one("#use-apply-btn", Button)
+
+        use_list.clear_options()
+        use_list.disabled = False
+
+        apply_btn.disabled = True
+        self._use_flag_originals = {}
+
+        if self.selected_version is None:
+            version_label.update("[dim]No version selected.[/dim]")
+
+            use_list.disabled = True
+            return
+
+        version_label.update(
+            f"[dim]{self.package.full_name}-{self.selected_version.id}[/dim]"
+        )
+
+        flags: list[str] = self.selected_version.iuse
+        if not flags:
+            use_list.add_option(("[red]No USE flags found.[/red]", "__none__"))
+
+            use_list.disabled = True
+            return
+
+        enabled_set: set[str] = set(self.selected_version.use_enabled)
+
+        for flag in sorted(flags):
+            enabled: bool = flag in enabled_set
+            self._use_flag_originals[flag] = enabled
+            use_list.add_option(Selection(flag, flag, initial_state=enabled))
+
+    def on_selection_list_selected_changed(
+        self, event: SelectionList.SelectedChanged
+    ) -> None:
+        """Show/hide the Apply button when the selection drifts from the original."""
+        if event.selection_list.id != "pkg-use-list":
+            return
+
+        apply_btn: Button = self.query_one("#use-apply-btn", Button)
+
+        current_enabled: set[str] = set(event.selection_list.selected)
+        changed: bool = any(
+            (flag in current_enabled) != original
+            for flag, original in self._use_flag_originals.items()
+        )
+
+        apply_btn.disabled = not changed
+
+    @work(exclusive=True, thread=True)
+    def _apply_use_flags(self) -> None:
+        """Diff the checklist against originals and run euse for each change."""
+        apply_btn: Button = self.query_one("#use-apply-btn", Button)
+        if apply_btn.disabled:
+            return
+
+        use_list: SelectionList = self.query_one("#pkg-use-list", SelectionList)
+        atom: str = self.package.full_name
+
+        currently_enabled: set[str] = set(use_list.selected)
+
+        to_enable: list[str] = [
+            f for f, was in self._use_flag_originals.items()
+            if not was and f in currently_enabled
+        ]
+        to_disable: list[str] = [
+            f for f, was in self._use_flag_originals.items()
+            if was and f not in currently_enabled
+        ]
+
+        errors: list[str] = []
+
+        try:
+            apply_btn.disabled = True
+            if to_enable:
+                rc, _, stderr = euse_enable(to_enable, atom)
+                if rc != 0:
+                    errors.append(f"enable {to_enable}: {stderr.strip()}")
+            if to_disable:
+                rc, _, stderr = euse_disable(to_disable, atom)
+                if rc != 0:
+                    errors.append(f"disable {to_disable}: {stderr.strip()}")
+        except Exception as e:
+            self.app.call_from_thread(
+                self.notify, f"Error applying USE flags: {e}", severity="error"
+            )
+            return
+        finally:
+            apply_btn.disabled = False
+
+        if errors:
+            self.app.call_from_thread(
+                self.notify,
+                "Some flags failed:\n" + "\n".join(errors),
+                severity="error",
+                timeout=10,
+            )
+        else:
+            self.app.call_from_thread(
+                self.notify,
+                f"USE flags updated for {atom}",
+            )
+            # Refresh originals to reflect the new baseline
+            self.app.call_from_thread(self._load_use_flags)
 
     @work(exclusive=True, thread=True)
     def _load_deps(self) -> None:
@@ -318,6 +437,7 @@ class PackageDetailWidget(Widget):
             return
 
         self.selected_version = version
+        self._load_use_flags()
         self._load_deps()
         self._load_ebuild()
         self._update_buttons()
@@ -385,7 +505,9 @@ class PackageDetailWidget(Widget):
         if event.button.disabled:
             return
 
-        if event.button.id == "emerge-btn":
+        if event.button.id == "use-apply-btn":
+            self._apply_use_flags()
+        elif event.button.id == "emerge-btn":
             self.action_emerge()
         elif event.button.id == "depclean-btn":
             self.action_depclean()
