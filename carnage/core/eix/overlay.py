@@ -4,7 +4,7 @@ import os
 import subprocess
 from subprocess import CompletedProcess
 
-from carnage.core.eix import has_cache, has_remote_cache
+from carnage.core.eix.eix import has_cache, has_remote_cache
 
 NO_CACHE_PACKAGE_COUNT = -3
 

@@ -5,7 +5,7 @@ import subprocess
 from subprocess import CompletedProcess
 from typing import List
 
-from carnage.core.eix import has_remote_cache
+from carnage.core.eix.eix import has_remote_cache
 
 
 def get_all_useflags() -> List[str]:

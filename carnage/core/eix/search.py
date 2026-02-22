@@ -9,7 +9,7 @@ from gentoolkit.cpv import CPV
 from lxml import etree
 
 from carnage.core.config import Configuration, get_config
-from carnage.core.eix import has_remote_cache
+from carnage.core.eix.eix import has_remote_cache
 from carnage.core.gentoolkit.package import GentoolkitPackage
 
 
