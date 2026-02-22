@@ -523,6 +523,26 @@ class PackageDetailWidget(Widget):
         deselect_btn.disabled = not deselect_btn.display
         noreplace_btn.disabled = not noreplace_btn.display
 
+    def _mark_installed(self, version_id: str) -> None:
+        """Update the Package instance to reflect a successful emerge."""
+        for v in self.package.versions:
+            v.installed = v.id == version_id
+        self._load_world_file_status()
+        #self._update_buttons()
+        self._load_installed_files()
+        # Re-enable the files tab
+        self.query_one("#tab-files").disabled = False
+
+    def _mark_uninstalled(self) -> None:
+        """Update the Package instance to reflect a successful depclean."""
+        for v in self.package.versions:
+            v.installed = False
+        self._in_world_file = None
+        self._update_buttons()
+        # Disable the files tab since nothing is installed anymore
+        self.query_one("#tab-files").disabled = True
+
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.disabled:
             return
@@ -559,6 +579,8 @@ class PackageDetailWidget(Widget):
             returncode, _, stderr = emerge_install(atom)
             if returncode == 0:
                 self.app.call_from_thread(self.notify, f"Successfully installed {atom}")
+
+                self.app.call_from_thread(self._mark_installed, self.selected_version.id)
             else:
                 self.app.call_from_thread(
                     self.notify, f"Failed to install: {stderr}", severity="error"
@@ -590,6 +612,8 @@ class PackageDetailWidget(Widget):
             returncode, _, stderr = emerge_uninstall(atom)
             if returncode == 0:
                 self.app.call_from_thread(self.notify, f"Successfully removed {atom}")
+
+                self.app.call_from_thread(self._mark_uninstalled)
             else:
                 self.app.call_from_thread(
                     self.notify, f"Failed to remove: {stderr}", severity="error"
