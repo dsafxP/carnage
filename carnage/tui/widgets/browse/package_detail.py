@@ -14,10 +14,11 @@ from textual.widgets._tree import TreeNode
 
 from carnage.core import Configuration, get_config
 from carnage.core.eix.search import Package, PackageVersion
+from carnage.core.gentoolkit.euse import euse_disable, euse_enable
+from carnage.core.gentoolkit.flag import get_all_cpv_usef
 from carnage.core.gentoolkit.package import GentoolkitPackage
 from carnage.core.portage.emerge import (emerge_deselect, emerge_install,
                                          emerge_noreplace, emerge_uninstall)
-from carnage.core.gentoolkit.euse import euse_disable, euse_enable
 from carnage.tui.widgets.table import NavigableDataTable
 
 
@@ -256,14 +257,18 @@ class PackageDetailWidget(Widget):
             f"[dim]{self.package.full_name}-{self.selected_version.id}[/dim]"
         )
 
-        flags: list[str] = self.selected_version.iuse
+        flags: set[str] = set(self.selected_version.iuse)
         if not flags:
             use_list.add_option(("[red]No USE flags found.[/red]", "__none__"))
-
             use_list.disabled = True
             return
 
-        enabled_set: set[str] = set(self.selected_version.use_enabled)
+        cpv_str: str = f"{self.package.category}/{self.package.name}-{self.selected_version.id}"
+
+        portage_enabled: set[str] = set(get_all_cpv_usef(cpv_str)[0])
+
+        # Only consider flags eix knows about
+        enabled_set: set[str] = portage_enabled & flags
 
         for flag in sorted(flags):
             enabled: bool = flag in enabled_set
@@ -286,6 +291,24 @@ class PackageDetailWidget(Widget):
         )
 
         apply_btn.disabled = not changed
+
+    def _commit_use_flag_changes(
+            self, to_enable: list[str], to_disable: list[str]
+    ) -> None:
+        """Update the baseline after a successful apply without re-querying portage."""
+        for flag in to_enable:
+            self._use_flag_originals[flag] = True
+        for flag in to_disable:
+            self._use_flag_originals[flag] = False
+
+        # Re-evaluate the apply button against the new baseline
+        use_list: SelectionList = self.query_one("#pkg-use-list", SelectionList)
+        current_enabled: set[str] = set(use_list.selected)  # type: ignore[arg-type]
+        changed: bool = any(
+            (flag in current_enabled) != original
+            for flag, original in self._use_flag_originals.items()
+        )
+        self.query_one("#use-apply-btn", Button).disabled = not changed
 
     @work(exclusive=True, thread=True)
     def _apply_use_flags(self) -> None:
@@ -340,8 +363,7 @@ class PackageDetailWidget(Widget):
                 self.notify,
                 f"USE flags updated for {atom}",
             )
-            # Refresh originals to reflect the new baseline
-            self.app.call_from_thread(self._load_use_flags)
+            self.app.call_from_thread(self._commit_use_flag_changes, to_enable, to_disable)
 
     @work(exclusive=True, thread=True)
     def _load_deps(self) -> None:
