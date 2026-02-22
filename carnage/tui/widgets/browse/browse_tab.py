@@ -138,4 +138,11 @@ class BrowseTab(Widget):
         if not (0 <= row_index < len(self.packages)):
             return
 
-        self._mount_detail_widget(self.packages[row_index])
+        package = self.packages[row_index]
+
+        # Don't remount if the same package is already displayed
+        existing = self.query(PackageDetailWidget)
+        if existing and existing.first().package.full_name == package.full_name:
+            return
+
+        self._mount_detail_widget(package)
