@@ -57,7 +57,7 @@ def emerge_deselect(package_atom: str) -> tuple[int, str, str]:
     Returns:
         Tuple of (return_code, stdout, stderr)
     """
-    return run_privileged(["emerge", "-W", package_atom], None, False)
+    return run_privileged(["emerge", "-W", package_atom], use_terminal=False)
 
 
 def emerge_noreplace(package_atom: str) -> tuple[int, str, str]:
@@ -72,4 +72,4 @@ def emerge_noreplace(package_atom: str) -> tuple[int, str, str]:
     Returns:
         Tuple of (return_code, stdout, stderr)
     """
-    return run_privileged(["emerge", "-n", package_atom], None, False)
+    return run_privileged(["emerge", "-n", package_atom], use_terminal=False)
