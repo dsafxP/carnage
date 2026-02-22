@@ -12,8 +12,6 @@ class GentoolkitPackage(Package):
     @cached_property
     def available(self) -> bool:
         """True if the package exists in a repo and is not masked."""
-        try:
-            future = _executor.submit(lambda: self.exists() and not self.is_masked())
-            return future.result(timeout=5)
-        except:
-            return False
+        future = _executor.submit(lambda: self.exists() and not self.is_masked())
+
+        return future.result(timeout=5)
