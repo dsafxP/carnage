@@ -201,7 +201,7 @@ class GLSATab(Widget):
         fix_btn.display = has_glsas
 
     @work(exclusive=True, thread=True)
-    def action_fix_glsas(self) -> None:
+    def _action_fix_glsas(self) -> None:
         """Apply fixes for all GLSAs affecting the system."""
         if not self.glsa_items:
             self.notify("No GLSAs to fix", severity="warning")
@@ -210,9 +210,10 @@ class GLSATab(Widget):
         self.app.call_from_thread(self.notify, "Applying fixes... (don't close until finished!)", severity="warning", timeout=15)
 
         fix_btn: Button = self.query_one("#fix-glsa-btn", Button)
-
         try:
             fix_btn.disabled = True
+
+            fix_btn.label = "Applying..."
             
             returncode, stdout, stderr = fix_glsas()
 
@@ -227,15 +228,19 @@ class GLSATab(Widget):
         finally:
             fix_btn.disabled = False
 
+            fix_btn.label = "Apply fixes"
+
+            self.app.bell()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
         if event.button.id == "fix-glsa-btn":
-            self.action_fix_glsas()
+            self._action_fix_glsas()
 
 
 __symbols: dict[str, str] = {
     "lt": "<",
-    "le": "<=",
+    "le": "≤",
     "eq": "=",
     "ge": "≥",
     "gt": ">"

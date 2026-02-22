@@ -311,61 +311,6 @@ class PackageDetailWidget(Widget):
         self.query_one("#use-apply-btn", Button).disabled = not changed
 
     @work(exclusive=True, thread=True)
-    def _apply_use_flags(self) -> None:
-        """Diff the checklist against originals and run euse for each change."""
-        apply_btn: Button = self.query_one("#use-apply-btn", Button)
-        if apply_btn.disabled:
-            return
-
-        use_list: SelectionList = self.query_one("#pkg-use-list", SelectionList)
-        atom: str = self.package.full_name
-
-        currently_enabled: set[str] = set(use_list.selected)
-
-        to_enable: list[str] = [
-            f for f, was in self._use_flag_originals.items()
-            if not was and f in currently_enabled
-        ]
-        to_disable: list[str] = [
-            f for f, was in self._use_flag_originals.items()
-            if was and f not in currently_enabled
-        ]
-
-        errors: list[str] = []
-
-        try:
-            apply_btn.disabled = True
-            if to_enable:
-                rc, _, stderr = euse_enable(to_enable, atom)
-                if rc != 0:
-                    errors.append(f"enable {to_enable}: {stderr.strip()}")
-            if to_disable:
-                rc, _, stderr = euse_disable(to_disable, atom)
-                if rc != 0:
-                    errors.append(f"disable {to_disable}: {stderr.strip()}")
-        except Exception as e:
-            self.app.call_from_thread(
-                self.notify, f"Error applying USE flags: {e}", severity="error"
-            )
-            return
-        finally:
-            apply_btn.disabled = False
-
-        if errors:
-            self.app.call_from_thread(
-                self.notify,
-                "Some flags failed:\n" + "\n".join(errors),
-                severity="error",
-                timeout=10,
-            )
-        else:
-            self.app.call_from_thread(
-                self.notify,
-                f"USE flags updated for {atom}",
-            )
-            self.app.call_from_thread(self._commit_use_flag_changes, to_enable, to_disable)
-
-    @work(exclusive=True, thread=True)
     def _load_deps(self) -> None:
         """Populate the Dependencies tab for the selected version."""
         if self.selected_version is None:
@@ -548,19 +493,82 @@ class PackageDetailWidget(Widget):
             return
 
         if event.button.id == "use-apply-btn":
-            self._apply_use_flags()
+            self._action_apply_use_flags()
         elif event.button.id == "emerge-btn":
-            self.action_emerge()
+            self._action_emerge()
         elif event.button.id == "depclean-btn":
-            self.action_depclean()
+            self._action_depclean()
         elif event.button.id == "deselect-btn":
-            self.action_deselect()
+            self._action_deselect()
         elif event.button.id == "noreplace-btn":
-            self.action_noreplace()
+            self._action_noreplace()
 
 
     @work(exclusive=True, thread=True)
-    def action_emerge(self) -> None:
+    def _action_apply_use_flags(self) -> None:
+        """Diff the checklist against originals and run euse for each change."""
+        apply_btn: Button = self.query_one("#use-apply-btn", Button)
+
+        if apply_btn.disabled:
+            return
+
+        use_list: SelectionList = self.query_one("#pkg-use-list", SelectionList)
+        atom: str = self.package.full_name
+
+        currently_enabled: set[str] = set(use_list.selected)
+
+        to_enable: list[str] = [
+            f for f, was in self._use_flag_originals.items()
+            if not was and f in currently_enabled
+        ]
+        to_disable: list[str] = [
+            f for f, was in self._use_flag_originals.items()
+            if was and f not in currently_enabled
+        ]
+
+        errors: list[str] = []
+
+        try:
+            apply_btn.disabled = True
+
+            apply_btn.label = "Applying..."
+
+            if to_enable:
+                rc, _, stderr = euse_enable(to_enable, atom)
+                if rc != 0:
+                    errors.append(f"enable {to_enable}: {stderr.strip()}")
+            if to_disable:
+                rc, _, stderr = euse_disable(to_disable, atom)
+                if rc != 0:
+                    errors.append(f"disable {to_disable}: {stderr.strip()}")
+        except Exception as e:
+            self.app.call_from_thread(
+                self.notify, f"Error applying USE flags: {e}", severity="error"
+            )
+            return
+        finally:
+            apply_btn.disabled = False
+
+            apply_btn.label = "Apply changes"
+
+            self.app.bell()
+
+        if errors:
+            self.app.call_from_thread(
+                self.notify,
+                "Some flags failed:\n" + "\n".join(errors),
+                severity="error",
+                timeout=10,
+            )
+        else:
+            self.app.call_from_thread(
+                self.notify,
+                f"USE flags updated for {atom}",
+            )
+            self.app.call_from_thread(self._commit_use_flag_changes, to_enable, to_disable)
+
+    @work(exclusive=True, thread=True)
+    def _action_emerge(self) -> None:
         emerge_btn: Button = self.query_one("#emerge-btn", Button)
         
         if self.selected_version is None or self.package.is_installed() or emerge_btn.disabled:
@@ -570,6 +578,9 @@ class PackageDetailWidget(Widget):
 
         try:
             emerge_btn.disabled = True
+
+            emerge_btn.label = "Emerging..."
+
             self.app.call_from_thread(
                 self.notify,
                 f"Installing {atom}... (don't close until finished!)",
@@ -592,8 +603,12 @@ class PackageDetailWidget(Widget):
         finally:
             emerge_btn.disabled = False
 
+            emerge_btn.label = "Emerge"
+
+            self.app.bell()
+
     @work(exclusive=True, thread=True)
-    def action_depclean(self) -> None:
+    def _action_depclean(self) -> None:
         depclean_btn: Button = self.query_one("#depclean-btn", Button)
 
         if not self.package.is_installed() or depclean_btn.disabled:
@@ -603,6 +618,9 @@ class PackageDetailWidget(Widget):
 
         try:
             depclean_btn.disabled = True
+
+            depclean_btn.label = "Cleaning..."
+
             self.app.call_from_thread(
                 self.notify,
                 f"Removing {atom}... (don't close until finished!)",
@@ -625,8 +643,12 @@ class PackageDetailWidget(Widget):
         finally:
             depclean_btn.disabled = False
 
+            depclean_btn.label = "Depclean"
+
+            self.app.bell()
+
     @work(exclusive=True, thread=True)
-    def action_deselect(self) -> None:
+    def _action_deselect(self) -> None:
         deselect_btn: Button = self.query_one("#deselect-btn", Button)
         if deselect_btn.disabled:
             return
@@ -635,6 +657,9 @@ class PackageDetailWidget(Widget):
 
         try:
             deselect_btn.disabled = True
+
+            deselect_btn.label = "Deselecting..."
+
             self.app.call_from_thread(
                 self.notify,
                 f"Removing {atom} from world file...",
@@ -660,8 +685,12 @@ class PackageDetailWidget(Widget):
         finally:
             deselect_btn.disabled = False
 
+            deselect_btn.label = "Deselect"
+
+            self.app.bell()
+
     @work(exclusive=True, thread=True)
-    def action_noreplace(self) -> None:
+    def _action_noreplace(self) -> None:
         noreplace_btn: Button = self.query_one("#noreplace-btn", Button)
         if noreplace_btn.disabled:
             return
@@ -670,6 +699,9 @@ class PackageDetailWidget(Widget):
 
         try:
             noreplace_btn.disabled = True
+
+            noreplace_btn.label = "Noreplacing..."
+
             self.app.call_from_thread(
                 self.notify,
                 f"Adding {atom} to world file...",
@@ -694,3 +726,7 @@ class PackageDetailWidget(Widget):
             )
         finally:
             noreplace_btn.disabled = False
+
+            noreplace_btn.label = "Noreplace"
+
+            self.app.bell()

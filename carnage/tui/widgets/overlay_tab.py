@@ -19,7 +19,7 @@ class OverlaysTab(Widget):
 
     BINDINGS = [
         Binding("r", "remove", "Remove", show=True),
-        Binding("s", "enable_sync", "Enable & sync", show=True)
+        Binding("s", "enable_sync", "Enable & Sync", show=True)
     ]
 
     def __init__(self):
@@ -283,7 +283,7 @@ class OverlaysTab(Widget):
         remove_btn.disabled = not remove_btn.display
 
     @work(exclusive=True, thread=True)
-    async def action_enable_sync(self) -> None:
+    async def _action_enable_sync(self) -> None:
         """Enable and sync the selected overlay."""
         if self.selected_overlay is None or self.selected_overlay.installed:
             return
@@ -298,6 +298,8 @@ class OverlaysTab(Widget):
 
         try:
             enable_btn.disabled = True
+
+            enable_btn.label = "Adding..."
 
             overlay: Overlay = self.selected_overlay
 
@@ -318,8 +320,12 @@ class OverlaysTab(Widget):
         finally:
             enable_btn.disabled = False
 
+            enable_btn.label = "Enable & Sync"
+
+            self.app.bell()
+
     @work(exclusive=True, thread=True)
-    async def action_remove(self) -> None:
+    async def _action_remove(self) -> None:
         """Remove the selected overlay."""
         if self.selected_overlay is None or not self.selected_overlay.installed:
             return
@@ -331,6 +337,8 @@ class OverlaysTab(Widget):
 
         try:
             remove_btn.disabled = True
+
+            remove_btn.label = "Removing..."
 
             overlay: Overlay = self.selected_overlay
 
@@ -351,9 +359,13 @@ class OverlaysTab(Widget):
         finally:
             remove_btn.disabled = False
 
+            remove_btn.label = "Remove"
+
+            self.app.bell()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
         if event.button.id == "enable-sync-btn":
-            self.action_enable_sync()
+            self._action_enable_sync()
         elif event.button.id == "remove-btn":
-            self.action_remove()
+            self._action_remove()

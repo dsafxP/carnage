@@ -133,7 +133,7 @@ class MainScreen(Screen):
             tabbed_content.active = "browse"
 
     @work(exclusive=True, thread=True)
-    async def action_sync(self) -> None:
+    async def _action_sync(self) -> None:
         """Sync the portage tree using emerge."""
         # Get the sync button
         sync_btn: Button = self.query_one("#sync-btn", Button)
@@ -185,7 +185,9 @@ class MainScreen(Screen):
             sync_btn.disabled = False
             sync_btn.label = "Sync"
 
+            self.app.bell()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
         if event.button.id == "sync-btn":
-            self.action_sync()
+            self._action_sync()

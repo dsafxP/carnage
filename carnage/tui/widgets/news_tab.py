@@ -184,7 +184,7 @@ class NewsTab(Widget):
         purge_btn.display = has_read
 
     @work(exclusive=True, thread=True)
-    def action_mark_read(self) -> None:
+    def _action_mark_read(self) -> None:
         """Mark the selected news item as read."""
         if self.selected_news is None or self.selected_news.read:
             return
@@ -198,6 +198,8 @@ class NewsTab(Widget):
 
         try:
             mark_read_btn.disabled = True
+
+            mark_read_btn.label = "Marking..."
 
             returncode, _, stderr = mark_news_read(news_index)
 
@@ -218,8 +220,12 @@ class NewsTab(Widget):
         finally:
             mark_read_btn.disabled = False
 
+            mark_read_btn.label = "Mark as Read"
+
+            self.app.bell()
+
     @work(exclusive=True, thread=True)
-    def action_mark_all_read(self) -> None:
+    def _action_mark_all_read(self) -> None:
         """Mark all news items as read."""
         if not self.news_items:
             return
@@ -231,6 +237,8 @@ class NewsTab(Widget):
 
         try:
             mark_all_btn.disabled = True
+
+            mark_all_btn.label = "Marking..."
 
             returncode, _, stderr = mark_all_news_read()
 
@@ -247,8 +255,12 @@ class NewsTab(Widget):
         finally:
             mark_all_btn.disabled = False
 
+            mark_all_btn.label = "Mark all as Read"
+
+            self.app.bell()
+
     @work(exclusive=True, thread=True)
-    def action_purge(self) -> None:
+    def _action_purge(self) -> None:
         """Purge all read news items."""
         if not self.news_items:
             return
@@ -260,6 +272,8 @@ class NewsTab(Widget):
 
         try:
             purge_btn.disabled = True
+
+            purge_btn.label = "Purging..."
 
             returncode, _, stderr = purge_read_news()
 
@@ -274,11 +288,15 @@ class NewsTab(Widget):
         finally:
             purge_btn.disabled = False
 
+            purge_btn.label = "Purge Read"
+
+            self.app.bell()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
         if event.button.id == "mark-read-btn":
-            self.action_mark_read()
+            self._action_mark_read()
         elif event.button.id == "mark-all-read-btn":
-            self.action_mark_all_read()
+            self._action_mark_all_read()
         elif event.button.id == "purge-btn":
-            self.action_purge()
+            self._action_purge()
