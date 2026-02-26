@@ -377,7 +377,11 @@ class PackageDetailWidget(Widget):
         table.clear(columns=True)
         table.add_columns("Version", "Overlay")
 
+        non_virtual_ids: set[str] = {v.id for v in self.package.versions if not v.virtual}
+
         for i, version in enumerate(self.package.versions):
+            if version.virtual and version.id in non_virtual_ids:
+                continue
             label: str = self._version_label(version, self.package)
             overlay: str = version.repository or "gentoo"
             table.add_row(label, overlay, key=f"{version.id}-{i}")
