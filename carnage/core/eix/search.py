@@ -51,6 +51,77 @@ class PackageVersion:
         cpv_str: str = f"{category}/{name}-{self.id}"
         return GentoolkitPackage(CPV(cpv_str))
 
+    def all_deps(self) -> list[str]:
+        """
+        Return a deduplicated flat list of category/name atoms from all
+        dep strings (depend, rdepend, bdepend, pdepend, idepend).
+
+        Parses the raw eix dep strings without calling Portage — safe for
+        remote-only packages. USE conditionals, version constraints, slot
+        specs, and USE flag annotations are all stripped.
+        """
+        raw_parts: list[str | None] = [
+            self.depend, self.rdepend, self.bdepend,
+            self.pdepend, self.idepend,
+        ]
+        combined: str = " ".join(p for p in raw_parts if p)
+        return _parse_dep_string(combined)
+
+def _parse_dep_string(raw: str) -> list[str]:
+    """
+    Parse an eix dep string into a deduplicated list of category/name atoms.
+
+    Strips version operators, USE conditionals, slot specs, USE flag
+    annotations, and HTML entities. Returns bare category/name strings.
+    """
+    import html
+    text: str = html.unescape(raw)
+
+    # Drop USE conditional tokens (flag? or !flag?)
+    import re
+    text = re.sub(r'!?\w[\w.+-]*\?', '', text)
+
+    # Remove grouping parentheses
+    text = re.sub(r'[()]', ' ', text)
+
+    # Remove blocker operators
+    text = re.sub(r'!!?', '', text)
+
+    atoms: list[str] = []
+    seen: set[str] = set()
+
+    for token in text.split():
+        # Strip leading version operators
+        token = re.sub(r'^[><=~!]+', '', token)
+
+        if '/' not in token:
+            continue
+
+        # Strip slot and USE flag annotations
+        token = re.sub(r'[:\[].*$', '', token)
+
+        parts = token.split('/')
+        if len(parts) != 2:
+            continue
+
+        category, pkg = parts
+
+        # Strip version suffix (hyphen followed by a digit)
+        pkg = re.sub(r'-\d.*$', '', pkg)
+
+        # Validate both parts
+        if not re.match(r'^[a-zA-Z0-9_][a-zA-Z0-9_.+-]*$', category):
+            continue
+        if not re.match(r'^[a-zA-Z0-9_][a-zA-Z0-9_.+-]*$', pkg):
+            continue
+
+        atom: str = f"{category}/{pkg}"
+        if atom not in seen:
+            seen.add(atom)
+            atoms.append(atom)
+
+    return atoms
+
 @dataclass
 class Package:
     """Represents a Gentoo package with all its versions."""
