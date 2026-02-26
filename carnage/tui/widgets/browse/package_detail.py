@@ -51,7 +51,12 @@ def _build_dep_tree(node: TreeNode[str], deps: list, current_depth: int = 0) -> 
         if dep_depth != current_depth + 1:
             continue
 
-        label: str = f"{pkg.category}/[bold]{pkg.name}[/bold]-{pkg.version}"
+        # pkg is either a gentoolkit Package or a bare atom string
+        if isinstance(pkg, str):
+            category, _, name = pkg.partition("/")
+            label = f"{category}/[bold]{name}[/bold]"
+        else:
+            label = f"{pkg.category}/[bold]{pkg.name}[/bold]-{pkg.version}"
 
         has_children: bool = any(d == current_depth + 2 for d, _ in deps)
 
@@ -327,6 +332,9 @@ class PackageDetailWidget(Widget):
             results = dep.graph_depends(max_depth=config.depth)
         except:
             results = []
+
+        if not results:
+            results = [(1, atom) for atom in self.selected_version.all_deps()]
 
         self.app.call_from_thread(self._populate_dep_tree, results)
 
