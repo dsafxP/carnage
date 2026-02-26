@@ -12,7 +12,6 @@
 #search-input {
     border: none;
     background: $surface;
-    pointer: text;
 }
 
 #search-input:focus {
@@ -23,7 +22,6 @@
 /* Tabs */
 Tab {
     padding: 0 1;
-    pointer: pointer;
 }
 
 ContentSwitcher {

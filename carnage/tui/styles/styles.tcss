@@ -58,6 +58,10 @@ Tab:hover {
     color: $text;
 }
 
+Tab:disabled {
+    color: $text-disabled;
+}
+
 Tab.-active {
     background: $primary;
     color: $text;
