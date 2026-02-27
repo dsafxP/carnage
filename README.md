@@ -2,7 +2,7 @@
 
 ![carnage logo](./assets/carnage.svg)
 
-<h1>${\text{\color{#ff0000}carnage}}$</h1>
+<h1>carnage</h1>
 
 Text-based user interface (TUI) front-end for **Portage** and [**eix**](https://wiki.gentoo.org/wiki/Eix).
 
