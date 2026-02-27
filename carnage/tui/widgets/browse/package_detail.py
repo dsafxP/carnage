@@ -32,13 +32,18 @@ def _default_version(package: Package) -> PackageVersion | None:
       3. First version available
     """
     installed = package.installed_version()
-
     if installed is not None:
         return installed
 
-    non_live = [v for v in package.versions if v.id != "9999"]
+    non_live: list[PackageVersion] = [v for v in package.versions if v.id != "9999"]
+
+    non_live_local: list[PackageVersion] = [v for v in non_live if not v.virtual]
+
+    if non_live_local:
+        return non_live_local[-1]
+
     if non_live:
-        return non_live[-1]  # versions are ordered oldest→newest by eix
+        return non_live[-1]
 
     return package.versions[0] if package.versions else None
 
