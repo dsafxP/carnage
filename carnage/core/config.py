@@ -137,6 +137,7 @@ class Configuration:
         global_section.add("initial_tab", "news")
         global_section.add(tomlkit.nl())
         global_section.add(tomlkit.comment("Compact mode reduces visual noise and increases content density"))
+        global_section.add(tomlkit.comment("Preferred to be set directly through Carnage"))
         global_section.add("compact_mode", False)
         global_section.add(tomlkit.nl())
         global_section.add(tomlkit.comment("Ignore all warnings"))
@@ -253,6 +254,20 @@ class Configuration:
             current = current[key]
         current[keys[-1]] = value
 
+    def _set_nested_value_and_save(self, keys: List[str], value: Any) -> None:
+        """Set a nested value, sync to the TOML document, and save."""
+        self._set_nested_value(keys, value)
+
+        if self._toml_doc:
+            current = self._toml_doc
+            for key in keys[:-1]: # type: ignore
+                if key not in current: # type: ignore
+                    current[key] = {}
+                current = current[key]
+            current[keys[-1]] = value  # type: ignore
+
+        self._save_config()
+
     # Global settings
     @property
     def theme(self) -> str:
@@ -262,12 +277,7 @@ class Configuration:
     @theme.setter
     def theme(self, value: str) -> None:
         """Set the theme setting."""
-        self._set_nested_value(["global", "theme"], value)
-
-        if self._toml_doc:
-            self._toml_doc["global"]["theme"] = self.theme # type: ignore
-
-        self._save_config()
+        self._set_nested_value_and_save(["global", "theme"], value)
 
     @property
     def privilege_backend(self) -> str:
@@ -283,6 +293,11 @@ class Configuration:
     def compact_mode(self) -> bool:
         """Get the compact mode setting."""
         return self._get_nested_value(["global", "compact_mode"], False)
+
+    @compact_mode.setter
+    def compact_mode(self, value: bool) -> None:
+        """Set the compact mode setting."""
+        self._set_nested_value_and_save(["global", "compact_mode"], value)
 
     @property
     def ignore_warnings(self) -> bool:

@@ -1,0 +1,579 @@
+/* Carnage TUI Styles */
+
+Screen {
+    background: $background;
+}
+
+/*  Layout  */
+
+#main-container {
+    width: 100%;
+    height: 100%;
+    padding: 1;
+
+    .compact & {
+        padding: 0;
+    }
+}
+
+/*  Search  */
+
+#search-container {
+    width: 100%;
+    height: auto;
+    align: left middle;
+}
+
+#search-input {
+    width: 1fr;
+    border: solid $primary;
+
+    &:focus {
+        border: double $accent;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+    }
+}
+
+#sync-btn {
+    width: auto;
+    min-width: 15;
+    margin-left: 1;
+}
+
+/*  Tabs  */
+
+TabbedContent {
+    width: 100%;
+    height: 1fr;
+}
+
+Tabs {
+    width: 100%;
+    background: $surface;
+}
+
+Tab {
+    padding: 0 2;
+    background: $surface;
+    color: $text-muted;
+
+    &:hover {
+        background: $boost;
+        color: $text;
+    }
+
+    &:disabled {
+        color: $text-disabled;
+    }
+
+    &.-active {
+        background: $primary;
+        color: $text;
+        text-style: bold;
+    }
+}
+
+ContentSwitcher {
+    width: 100%;
+    height: 1fr;
+    background: $panel;
+    border: solid $primary;
+    padding: 1;
+}
+
+TabPane {
+    width: 100%;
+    height: 1fr;
+}
+
+/*  Header and Footer  */
+
+Header {
+    background: $primary;
+    color: $text;
+}
+
+Footer {
+    background: $surface;
+}
+
+/*  General widgets  */
+
+Label {
+    width: 100%;
+    height: auto;
+    content-align: center middle;
+    padding: 1;
+}
+
+DataTable {
+    width: 100%;
+    height: 1fr;
+
+    & > .datatable--header {
+        background: $primary;
+        color: $text;
+        text-style: bold;
+    }
+
+    & > .datatable--cursor,
+    &:focus > .datatable--cursor {
+        background: $accent;
+    }
+}
+
+ListView {
+    width: 100%;
+    height: 1fr;
+    border: solid $primary;
+
+    ListItem {
+        padding: 0 1;
+
+        &:hover {
+            background: $boost;
+        }
+
+        &.-selected {
+            background: $accent;
+        }
+    }
+}
+
+Button {
+    width: auto;
+    min-width: 16;
+    margin: 0 1;
+
+    &.-primary {
+        background: $primary;
+        color: $text;
+    }
+
+    &:hover {
+        background: $accent;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+    }
+}
+
+Vertical,
+Horizontal,
+Container {
+    width: 100%;
+    height: auto;
+}
+
+ScrollableContainer {
+    scrollbar-gutter: stable;
+}
+
+TextArea {
+    width: 100%;
+    height: 1fr;
+    border: solid $primary;
+
+    &:focus {
+        border: double $accent;
+    }
+}
+
+/*  Loading indicators  */
+
+LoadingIndicator,
+#glsa-loading,
+#overlays-loading,
+#browse-loading,
+#useflags-loading {
+    width: 100%;
+    height: 100%;
+    content-align: center middle;
+}
+
+/*  News tab  */
+
+#news-table {
+    height: 30%;
+    min-height: 5;
+    margin-bottom: 1;
+}
+
+#news-detail {
+    height: 1fr;
+}
+
+#news-content-scroll {
+    height: 1fr;
+    border: solid $primary;
+    margin-bottom: 1;
+}
+
+#news-content {
+    padding: 1;
+}
+
+#news-actions {
+    width: 100%;
+    height: auto;
+    align: center middle;
+    layout: horizontal;
+    margin-top: 1;
+
+    Button {
+        margin: 0 1;
+    }
+}
+
+/*  GLSAs tab  */
+
+#glsa-table {
+    height: 30%;
+    min-height: 5;
+    margin-bottom: 1;
+}
+
+#glsa-detail {
+    height: 1fr;
+}
+
+#glsa-content-scroll {
+    height: 1fr;
+    border: solid $primary;
+    margin-bottom: 1;
+}
+
+#glsa-content {
+    padding: 1;
+}
+
+#glsa-actions {
+    width: 100%;
+    height: auto;
+    align: center middle;
+    layout: horizontal;
+    margin-top: 1;
+
+    Button {
+        margin: 0 1;
+    }
+}
+
+/*  Overlays tab  */
+
+#overlays-table {
+    height: 40%;
+    min-height: 8;
+    max-height: 25;
+    margin-bottom: 1;
+}
+
+#overlays-detail {
+    height: 1fr;
+}
+
+#overlays-content-scroll {
+    height: 1fr;
+    border: solid $primary;
+    margin-bottom: 1;
+}
+
+#overlays-content {
+    padding: 1;
+}
+
+#overlays-actions {
+    width: 100%;
+    height: auto;
+    align: center middle;
+    layout: horizontal;
+    margin-top: 1;
+
+    Button {
+        margin: 0 1;
+    }
+}
+
+/*  USE Flags tab  */
+
+#useflags-table {
+    height: 40%;
+    min-height: 8;
+    max-height: 26;
+    margin-bottom: 1;
+}
+
+#useflags-detail {
+    height: 1fr;
+    border: solid $primary;
+    padding: 1;
+}
+
+#useflags-content-scroll {
+    height: 1fr;
+    border: solid $primary;
+}
+
+#useflags-content {
+    padding: 1;
+}
+
+/*  Browse tab  */
+
+#browse-table {
+    height: 40%;
+    min-height: 8;
+    max-height: 25;
+    margin-bottom: 1;
+}
+
+BrowseTab > Vertical {
+    width: 100%;
+    height: 100%;
+}
+
+#browse-detail {
+    width: 100%;
+    height: 1fr;
+}
+
+/*  Package detail widget  */
+
+PackageDetailWidget {
+    width: 100%;
+    height: 1fr;
+    border: panel $primary;
+
+    TabbedContent {
+        width: 100%;
+        height: 1fr;
+        padding: 0;
+    }
+
+    ContentSwitcher {
+        border: none;
+        padding: 0;
+    }
+}
+
+#pkg-detail-scroll,
+#pkg-ebuild-scroll,
+#pkg-files-tree,
+#pkg-deps-tree {
+    height: 1fr;
+    padding: 1;
+}
+
+#pkg-detail-content,
+#pkg-ebuild-content {
+    width: 100%;
+    height: auto;
+}
+
+#pkg-detail-actions,
+#pkg-use-actions {
+    width: 100%;
+    height: auto;
+    layout: horizontal;
+    align: center middle;
+    padding: 1 0 0 0;
+}
+
+#pkg-versions-table {
+    width: 100%;
+    height: 1fr;
+}
+
+#pkg-use-version {
+    height: auto;
+    padding: 1;
+}
+
+#pkg-use-list {
+    height: auto;
+}
+
+/* Compact mode overrides */
+
+.compact {
+    #main-container {
+        padding: 0;
+    }
+
+    #search-input {
+        border: none;
+        background: $surface;
+
+        &:focus {
+            border: none;
+            background: $boost;
+        }
+    }
+
+    Tab {
+        padding: 0 1;
+    }
+
+    ContentSwitcher {
+        border: none;
+        padding: 0;
+    }
+
+    Label {
+        padding: 0;
+    }
+
+    ListView {
+        border: none;
+
+        ListItem {
+            padding: 0;
+        }
+    }
+
+    Button {
+        min-width: 12;
+    }
+
+    TextArea {
+        border: none;
+        background: $surface;
+
+        &:focus {
+            border: none;
+            background: $boost;
+        }
+    }
+
+    /* News tab */
+    #news-table {
+        height: 35%;
+        min-height: 4;
+        margin-bottom: 0;
+    }
+
+    #news-detail {
+        border: none;
+        padding: 0;
+    }
+
+    #news-content-scroll {
+        border: none;
+        margin-bottom: 0;
+    }
+
+    #news-content {
+        padding: 0 1;
+    }
+
+    #news-actions {
+        margin-top: 0;
+    }
+
+    /* GLSAs tab */
+    #glsa-table {
+        height: 35%;
+        min-height: 4;
+        margin-bottom: 0;
+    }
+
+    #glsa-detail {
+        border: none;
+        padding: 0;
+    }
+
+    #glsa-content-scroll {
+        border: none;
+        margin-bottom: 0;
+    }
+
+    #glsa-content {
+        padding: 0 1;
+    }
+
+    #glsa-actions {
+        margin-top: 0;
+    }
+
+    /* Overlays tab */
+    #overlays-table {
+        height: 45%;
+        min-height: 5;
+        max-height: 30;
+        margin-bottom: 0;
+    }
+
+    #overlays-detail {
+        border: none;
+        padding: 0;
+    }
+
+    #overlays-content-scroll {
+        border: none;
+        margin-bottom: 0;
+    }
+
+    #overlays-content {
+        padding: 0 1;
+    }
+
+    #overlays-actions {
+        margin-top: 0;
+    }
+
+    /* USE Flags tab */
+    #useflags-table {
+        height: 40%;
+        min-height: 4;
+        max-height: 25;
+        margin-bottom: 0;
+    }
+
+    #useflags-detail {
+        border: none;
+        padding: 0;
+    }
+
+    #useflags-content-scroll {
+        border: none;
+    }
+
+    #useflags-content {
+        padding: 0 1;
+    }
+
+    /* Browse tab */
+    #browse-table {
+        height: 45%;
+        min-height: 5;
+        max-height: 30;
+        margin-bottom: 0;
+    }
+
+    #browse-detail {
+        border: none;
+        padding: 0;
+    }
+
+    /* Package detail widget */
+    PackageDetailWidget {
+        border: none;
+    }
+
+    #pkg-detail-scroll,
+    #pkg-ebuild-scroll,
+    #pkg-files-tree,
+    #pkg-deps-tree,
+    #pkg-use-version {
+        padding: 0 1;
+    }
+
+    #pkg-detail-actions,
+    #pkg-use-actions {
+        padding: 0;
+    }
+}

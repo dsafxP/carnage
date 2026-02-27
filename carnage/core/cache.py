@@ -19,7 +19,7 @@ class CacheManager:
                       Defaults to ~/.cache/carnage/
         """
         if cache_dir is None:
-            cache_dir = Path.home() / ".cache" / "carnage"
+            cache_dir = Path.home() / ".cache/carnage"
 
         self.cache_dir = cache_dir
         self.cache_dir.mkdir(parents=True, exist_ok=True)
