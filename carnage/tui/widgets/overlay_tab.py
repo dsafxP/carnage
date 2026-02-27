@@ -1,5 +1,6 @@
 """Overlays tab widget for managing Gentoo overlays."""
 
+from carnage.core.cache import get_cache_manager
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -7,7 +8,6 @@ from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
-from carnage.core.cache import CacheManager
 from carnage.core.config import get_config
 from carnage.core.eix.eix import has_remote_cache, is_found
 from carnage.core.portage.overlays import Overlay, clear_cache, get_or_cache
@@ -27,7 +27,7 @@ class OverlaysTab(Widget):
         self.overlays: list[Overlay] = []
         self.filtered_overlays: list[Overlay] = []
         self.selected_overlay: Overlay | None = None
-        self.cache_manager = CacheManager()
+        self.cache_manager = get_cache_manager()
         self._pending_selection: str | None = None
         self._current_filter: str = ""
         self._config = get_config()

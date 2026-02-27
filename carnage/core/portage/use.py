@@ -136,21 +136,18 @@ def _parse_useflag_descriptions() -> Dict[str, str]:
     return descriptions
 
 
-def get_or_cache_useflags(cache_manager: CacheManager | None = None,
+def get_or_cache_useflags(cache_manager: CacheManager,
                           force_refresh: bool = False) -> List[UseFlag]:
     """
     Get USE flags with descriptions from cache or fetch fresh data.
 
     Args:
-        cache_manager: CacheManager instance. If None, creates a new one.
+        cache_manager: CacheManager instance.
         force_refresh: If True, ignore cache and fetch fresh data.
 
     Returns:
         List of UseFlag objects with descriptions.
     """
-    if cache_manager is None:
-        cache_manager = CacheManager()
-
     config: Configuration = get_config()
     max_age = timedelta(hours=config.use_cache_max_age)
 
@@ -162,14 +159,9 @@ def get_or_cache_useflags(cache_manager: CacheManager | None = None,
                 return [UseFlag.from_dict(data) for data in cached_data]
 
     # Fetch fresh data
-    print("Fetching USE flags...")
     useflag_names: list[str] = get_all_useflags()
-
-    print("Parsing USE flag descriptions...")
     descriptions: dict[str, str] = _parse_useflag_descriptions()
-
-    print("Building USE flag objects...")
-    useflags = []
+    useflags: list[Any] = []
 
     for flag_name in useflag_names:
         # Skip flags that are only special characters
@@ -195,7 +187,7 @@ def get_or_cache_useflags(cache_manager: CacheManager | None = None,
     return useflags
 
 
-def clear_useflags_cache(cache_manager: CacheManager | None = None) -> bool:
+def clear_useflags_cache(cache_manager: CacheManager) -> bool:
     """
     Clear the USE flags cache.
 
@@ -205,9 +197,6 @@ def clear_useflags_cache(cache_manager: CacheManager | None = None) -> bool:
     Returns:
         True if cache was cleared, False otherwise.
     """
-    if cache_manager is None:
-        cache_manager = CacheManager()
-
     # Clear main useflags cache
     cleared: bool = cache_manager.delete(CACHE_KEY_USEFLAGS)
 

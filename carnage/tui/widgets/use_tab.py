@@ -7,7 +7,7 @@ from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
 from textual.widgets import DataTable, LoadingIndicator, Static
 
-from carnage.core.cache import CacheManager
+from carnage.core.cache import get_cache_manager
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.search import Package, fetch_packages_by_query
 from carnage.core.eix.use import get_package_count_for_useflag
@@ -23,7 +23,7 @@ class UseFlagsTab(Widget):
         self.useflags: list[UseFlag] = []
         self.filtered_useflags: list[UseFlag] = []
         self.selected_useflag: UseFlag | None = None
-        self.cache_manager = CacheManager()
+        self.cache_manager = get_cache_manager()
         self._current_search: str = ""
         self._pending_selection: str | None = None
 

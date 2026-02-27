@@ -406,7 +406,7 @@ def fetch_extra(source_url: str | None = None) -> list[Overlay]:
     return overlays
 
 
-def get_or_cache(cache_manager: CacheManager | None = None,
+def get_or_cache(cache_manager: CacheManager,
                 source_url: str | None = None,
                 force_refresh: bool = False) -> list[Overlay]:
     """
@@ -420,9 +420,6 @@ def get_or_cache(cache_manager: CacheManager | None = None,
     Returns:
         List of Overlay objects with all metadata populated.
     """
-    if cache_manager is None:
-        cache_manager = CacheManager()
-
     config: Configuration = get_config()
     max_age = timedelta(hours=config.overlays_cache_max_age)
 
@@ -463,17 +460,14 @@ def get_or_cache(cache_manager: CacheManager | None = None,
     return overlays
 
 
-def clear_cache(cache_manager: CacheManager | None = None) -> bool:
+def clear_cache(cache_manager: CacheManager) -> bool:
     """
     Clear the overlays cache.
 
     Args:
-        cache_manager: CacheManager instance. If None, creates a new one.
+        cache_manager: CacheManager instance.
 
     Returns:
         True if cache was cleared, False otherwise.
     """
-    if cache_manager is None:
-        cache_manager = CacheManager()
-
     return cache_manager.delete(CACHE_KEY)

@@ -183,3 +183,14 @@ class CacheManager:
             path.stem
             for path in self.cache_dir.glob("*.msgpack")
         ]
+
+_cache: CacheManager | None = None
+
+
+def get_cache_manager() -> CacheManager:
+    global _cache
+
+    if _cache is None:
+        _cache = CacheManager()
+
+    return _cache
