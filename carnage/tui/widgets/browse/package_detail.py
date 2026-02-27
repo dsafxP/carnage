@@ -265,12 +265,21 @@ class PackageDetailWidget(Widget):
         flags: set[str] = set(self.selected_version.iuse)
         if not flags:
             use_list.add_option(("[red]No USE flags found.[/red]", "__none__"))
+            apply_btn.display = False
             use_list.disabled = True
             return
 
         cpv_str: str = f"{self.package.category}/{self.package.name}-{self.selected_version.id}"
 
-        portage_enabled: set[str] = set(get_all_cpv_usef(cpv_str)[0])
+        portage_enabled: set[str]
+
+        # euse fails on a virtual version
+        if self.selected_version.virtual:
+            apply_btn.display = False
+            use_list.disabled = True
+            portage_enabled = set()
+        else:
+            portage_enabled = set(get_all_cpv_usef(cpv_str)[0])
 
         # Only consider flags eix knows about
         enabled_set: set[str] = portage_enabled & flags
