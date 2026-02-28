@@ -1,8 +1,12 @@
+from os import system
+
 from textual.app import App
 from textual.screen import Screen
 
 from carnage.core import Configuration, get_config
 from carnage.core.cache import get_cache_manager
+from carnage.core.eix.eix import is_found
+from carnage.tui.screens.main_scrn import MainScreen
 
 
 def toggle_compact_mode(screen: Screen) -> None:
@@ -16,10 +20,20 @@ def toggle_compact_mode(screen: Screen) -> None:
 
     screen.set_class(compact, "compact")
 
-def clear_cache(app: App | None) -> None:
+def clear_cache(app: App) -> None:
     """Clear carnage cache"""
 
     get_cache_manager().clear()
 
-    if app:
-        app.notify("Cache cleared.")
+    app.notify("Cache cleared.")
+
+def eix_update(app: App) -> None:
+    """Run eix-update and then restart carnage."""
+    if not is_found():
+        app.notify("eix unavailable.", severity="error")
+        return
+
+    with app.suspend():
+        system("eix-update")
+
+    app.switch_screen(MainScreen())
