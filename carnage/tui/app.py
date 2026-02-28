@@ -8,7 +8,9 @@ from textual.screen import Screen
 
 from carnage.core.args import css_path as arg_custom_css_path
 from carnage.core.config import Configuration, get_config
-from carnage.tui.commands import clear_cache, eix_update, toggle_compact_mode
+from carnage.core.eix.eix import is_found
+from carnage.tui.commands import (clear_cache, eix_remote_update, eix_update,
+                                  toggle_compact_mode)
 from carnage.tui.screens.main_scrn import MainScreen
 
 
@@ -46,9 +48,15 @@ class CarnageApp(App):
         # Clear cache
         yield SystemCommand("Clear cache", clear_cache.__doc__ or "",
                             lambda: clear_cache(self))
-        # eix-update
-        yield SystemCommand("eix update", eix_update.__doc__ or "",
+
+        # eix
+        if is_found():
+            # eix-update
+            yield SystemCommand("eix update", eix_update.__doc__ or "",
                             lambda: eix_update(self))
+            # eix-remote update
+            yield SystemCommand("eix remote update", eix_remote_update.__doc__ or "",
+                            lambda: eix_remote_update(self))
 
 
 def run() -> None:

@@ -5,7 +5,6 @@ from textual.screen import Screen
 
 from carnage.core import Configuration, get_config
 from carnage.core.cache import get_cache_manager
-from carnage.core.eix.eix import is_found
 from carnage.tui.screens.main_scrn import MainScreen
 
 
@@ -28,12 +27,17 @@ def clear_cache(app: App) -> None:
     app.notify("Cache cleared.")
 
 def eix_update(app: App) -> None:
-    """Run eix-update and then restart carnage."""
-    if not is_found():
-        app.notify("eix unavailable.", severity="error")
-        return
-
+    """Run eix-update and then restart carnage"""
     with app.suspend():
         system("eix-update")
+
+    app.switch_screen(MainScreen())
+
+def eix_remote_update(app: App) -> None:
+    """Run eix-remote update and then restart carnage"""
+    with app.suspend():
+        system("eix-remote update")
+
+    get_cache_manager().clear() # refresh to use new remote data
 
     app.switch_screen(MainScreen())
