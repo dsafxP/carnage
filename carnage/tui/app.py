@@ -10,7 +10,7 @@ from carnage.core.args import css_path as arg_custom_css_path
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.eix import is_found
 from carnage.tui.commands import (clear_cache, eix_remote_update, eix_update,
-                                  run_eclean_dist, run_eclean_pkg,
+                                  run_eclean_dist, run_eclean_pkg, sync,
                                   toggle_compact_mode)
 from carnage.tui.screens.main_screen import MainScreen
 
@@ -55,6 +55,9 @@ class CarnageApp(App):
         # eclean-pkg
         yield SystemCommand("Clean packages", run_eclean_pkg.__doc__ or "",
                             lambda: run_eclean_pkg(self))
+        # Sync
+        yield SystemCommand("Sync", sync.__doc__ or "",
+                            lambda: sync(self))
 
         # eix
         if is_found():

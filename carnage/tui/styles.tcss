@@ -37,12 +37,6 @@ Screen {
     }
 }
 
-#sync-btn {
-    width: auto;
-    min-width: 15;
-    margin-left: 1;
-}
-
 /*  Tabs  */
 
 TabbedContent {

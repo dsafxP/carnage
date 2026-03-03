@@ -33,18 +33,6 @@ def emerge_uninstall(package_atom: str) -> tuple[int, str, str]:
     return run_privileged(["emerge", "-q", "--nospinner", "--depclean", package_atom])
 
 
-def emerge_sync() -> tuple[int, str, str]:
-    """
-    Sync portage tree using emerge.
-
-    Wraps: emerge --sync
-
-    Returns:
-        Tuple of (return_code, stdout, stderr)
-    """
-    return run_privileged(["emerge", "--sync"])
-
-
 def emerge_deselect(package_atom: str) -> tuple[int, str, str]:
     """
     Remove package from world file using emerge.
