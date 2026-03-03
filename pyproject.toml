@@ -14,17 +14,17 @@ dependencies = [
     "lxml>=6.0.2",
     "msgpack>=1.1.2",
     "portage>=3.0.77",
-    "textual>=8.0.0",
+    "textual>=8.0.1",
     "tomlkit>=0.14.0",
     "gentoolkit @ git+https://anongit.gentoo.org/git/proj/gentoolkit.git@gentoolkit-0.7.1"
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pyrefly>=0.53.0",
+    "pyrefly>=0.55.0",
     "msgpack-types>=0.7.0",
     "textual-dev>=1.8.0",
-    "isort>=8.0.0"
+    "isort>=8.0.1"
 ]
 
 [project.urls]
