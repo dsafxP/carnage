@@ -100,3 +100,26 @@ def run_privileged(
     )
 
     return result.returncode, result.stdout, result.stderr
+
+def system_privileged(cmd: str, backend: str | None = None) -> int:
+    """
+    Run a shell command with privilege escalation via os.system().
+
+    Intended for interactive commands that need a terminal (e.g. emerge).
+    Returns the exit code.
+
+    Args:
+        cmd: Shell command string to run.
+        backend: Specific backend to use. If None, use configured backend.
+
+    Returns:
+        Exit code of the command.
+    """
+    if backend is None:
+        backend = get_configured_backend()
+
+    if backend and backend in BACKENDS:
+        cmd = f"{BACKENDS[backend]} {cmd}"
+
+    from os import system
+    return system(cmd)
