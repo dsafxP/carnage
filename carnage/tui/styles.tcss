@@ -1,21 +1,5 @@
 /* Carnage TUI Styles */
 
-Screen {
-    background: $background;
-}
-
-/*  Layout  */
-
-#main-container {
-    width: 100%;
-    height: 100%;
-    padding: 1;
-
-    .compact & {
-        padding: 0;
-    }
-}
-
 /*  Search  */
 
 #search-container {
