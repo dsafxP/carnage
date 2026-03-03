@@ -12,7 +12,7 @@ from carnage.core.eix.eix import is_found
 from carnage.tui.commands import (clear_cache, eix_remote_update, eix_update,
                                   run_eclean_dist, run_eclean_pkg,
                                   toggle_compact_mode)
-from carnage.tui.screens.main_scrn import MainScreen
+from carnage.tui.screens.main_screen import MainScreen
 
 
 class CarnageApp(App):

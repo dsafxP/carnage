@@ -7,7 +7,7 @@ from textual.screen import Screen
 from carnage.core import Configuration, get_config
 from carnage.core.cache import get_cache_manager
 from carnage.core.gentoolkit.eclean import eclean_dist, eclean_pkg
-from carnage.tui.screens.main_scrn import MainScreen
+from carnage.tui.screens.main_screen import MainScreen
 
 
 def toggle_compact_mode(screen: Screen) -> None:
