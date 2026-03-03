@@ -87,10 +87,12 @@ class OverlaysTab(Widget):
             table.add_columns("Name", "Packages", "Description")
 
         for i, overlay in enumerate(self.filtered_overlays):
+            label: str = f"{"[green]✓[/green]" if overlay.is_installed() else " "} {overlay.name}"
+
             if self.should_skip_pkg_count:
                 # Skip package count display
                 table.add_row(
-                    overlay.name,
+                    label,
                     (overlay.description.strip() if overlay.description else "No description"),
                     key=str(i)
                 )
@@ -98,7 +100,7 @@ class OverlaysTab(Widget):
                 # Show package count
                 package_count: str = str(overlay.package_count) if overlay.package_count is not None else "0"
                 table.add_row(
-                    overlay.name,
+                    label,
                     package_count,
                     (overlay.description.strip() if overlay.description else "No description"),
                     key=str(i)
@@ -226,7 +228,7 @@ class OverlaysTab(Widget):
         content_widget: Static = self.query_one("#overlays-content", Static)
 
         # Format the overlay content
-        details: str = f"[bold]{self.selected_overlay.name}[/bold] {'(Installed)' if self.selected_overlay.installed else ''}\n\n"
+        details: str = f"[bold]{self.selected_overlay.name}[/bold]\n\n"
 
         if self.selected_overlay.description:
             details += f"{self.selected_overlay.description}\n\n"
