@@ -131,3 +131,21 @@ class MainScreen(Screen):
         elif active_tab_id in ("news", "glsas") and query:
             # Switch to Browse tab and trigger search there
             tabbed_content.active = "browse"
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id != "search-input":
+            return
+
+        tabbed_content: TabbedContent = self.query_one(TabbedContent)
+        active_tab_id: str = tabbed_content.active
+
+        # Focus the relevant widget in the active tab
+        if active_tab_id == "browse":
+            browse_tab: BrowseTab = tabbed_content.query_one("#browse", TabPane).query_one(BrowseTab)
+            browse_tab.query_one("#browse-table").focus()
+        elif active_tab_id == "overlays":
+            overlays_tab: OverlaysTab = tabbed_content.query_one("#overlays", TabPane).query_one(OverlaysTab)
+            overlays_tab.focus()
+        elif active_tab_id == "use":
+            use_tab: UseFlagsTab = tabbed_content.query_one("#use", TabPane).query_one(UseFlagsTab)
+            use_tab.focus()
