@@ -74,21 +74,19 @@ def _build_dep_tree(node: TreeNode[str], deps: list, current_depth: int = 0) -> 
 
 def _build_file_tree(node: TreeNode[str], prefix: str, contents: dict) -> None:
     """Recursively build a Textual Tree from a flat CONTENTS path dict."""
+    from rich.markup import escape
+    from rich.text import Text
+
     seen: set[str] = set()
     config: Configuration = get_config()
 
     for path in sorted(contents):
-
         if not path.startswith(prefix + "/"):
             continue
-
         remainder = path[len(prefix) + 1:]
-
         child_name = remainder.split("/")[0]
-
         if child_name in seen:
             continue
-
         seen.add(child_name)
 
         child_path: str = f"{prefix}/{child_name}"
@@ -98,12 +96,19 @@ def _build_file_tree(node: TreeNode[str], prefix: str, contents: dict) -> None:
         )
 
         if is_dir:
-            branch: TreeNode[str] = node.add(f"📂 {child_name}", expand=config.expand)
+            label = Text("📂 ", style="dim")
+            label.append(escape(child_name), style=f"bold magenta link file://{child_path}")
+            branch: TreeNode[str] = node.add(label, expand=config.expand)
             _build_file_tree(branch, child_path, contents)
         elif entry_type == "sym":
-            node.add_leaf(f"🔗 {child_name}")
+            label = Text("🔗 ", style="")
+            label.append(escape(child_name), style=f"cyan link file://{child_path}")
+            node.add_leaf(label)
         else:
-            node.add_leaf(f"📄 {child_name}")
+            label = Text("📄 ", style="")
+            label.append(escape(child_name), style=f"green link file://{child_path}")
+            label.highlight_regex(r"\.[^/]+$", "bold red")
+            node.add_leaf(label)
 
 
 class PackageDetailWidget(Widget):

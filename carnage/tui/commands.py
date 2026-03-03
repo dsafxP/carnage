@@ -1,5 +1,3 @@
-from carnage.core.eix.eix import has_remote_cache
-from carnage.core.eix.eix import has_cache
 from os import system
 
 from textual import work
@@ -8,6 +6,7 @@ from textual.screen import Screen
 
 from carnage.core import Configuration, get_config
 from carnage.core.cache import get_cache_manager
+from carnage.core.eix.eix import has_cache, has_remote_cache
 from carnage.core.gentoolkit.eclean import eclean_dist, eclean_pkg
 from carnage.core.privilege import system_privileged
 from carnage.tui.screens.main_screen import MainScreen
