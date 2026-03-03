@@ -26,29 +26,27 @@ class MainScreen(Screen):
         """Create child widgets for the screen."""
         yield Header()
 
-        with Container(id="main-container"):
-            # Horizontal container for search bar and sync button
-            with Horizontal(id="search-container"):
-                yield Input(
-                    id="search-input"
-                )
+        # Search bar
+        yield Input(
+            id="search-input"
+        )
 
-            # Tabbed content
-            with TabbedContent(initial="news"):
-                with TabPane("News", id="news"):
-                    yield NewsTab()
+        # Tabbed content
+        with TabbedContent(initial="news"):
+            with TabPane("News", id="news"):
+                yield NewsTab()
 
-                with TabPane("GLSAs", id="glsas"):
-                    yield GLSATab()
+            with TabPane("GLSAs", id="glsas"):
+                yield GLSATab()
 
-                with TabPane("Browse", id="browse", disabled=True):
-                    yield BrowseTab()
+            with TabPane("Browse", id="browse", disabled=True):
+                yield BrowseTab()
 
-                with TabPane("USE", id="use", disabled=True):
-                    yield UseFlagsTab()
+            with TabPane("USE", id="use", disabled=True):
+                yield UseFlagsTab()
 
-                with TabPane("Overlays", id="overlays"):
-                    yield OverlaysTab()
+            with TabPane("Overlays", id="overlays"):
+                yield OverlaysTab()
 
     def on_mount(self) -> None:
         """Check eix availability when screen is mounted."""
