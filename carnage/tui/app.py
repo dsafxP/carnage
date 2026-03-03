@@ -21,10 +21,10 @@ class CarnageApp(App):
     TITLE = "carnage"
 
     def __init__(self) -> None:
-        """Initialize the application with configuration."""
-        css_paths: List[str | PurePath] = ["styles.tcss"]
+        """Initialize the application."""
+        self.__config: Configuration = get_config()
 
-        self.config: Configuration = get_config()
+        css_paths: List[str | PurePath] = ["styles.tcss"]
 
         if arg_custom_css_path.exists():
             css_paths.append(arg_custom_css_path)
@@ -34,11 +34,11 @@ class CarnageApp(App):
     def on_mount(self) -> None:
         """Initialize the application."""
         self.push_screen(MainScreen())
-        self.theme = self.config.theme
+        self.theme = self.__config.theme
 
     def watch_theme(self, theme: str) -> None:
         """Watch for theme changes."""
-        self.config.theme = theme
+        self.__config.theme = theme
 
     def get_system_commands(self, screen: Screen) -> Iterable[SystemCommand]:
         yield from super().get_system_commands(screen)
@@ -64,9 +64,3 @@ class CarnageApp(App):
             # eix-remote update
             yield SystemCommand("eix remote update", eix_remote_update.__doc__ or "",
                             lambda: eix_remote_update(self))
-
-
-def run() -> None:
-    """Run the Carnage TUI application."""
-    app: CarnageApp = CarnageApp()
-    app.run()
