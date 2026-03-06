@@ -113,7 +113,7 @@ class OverlaysTab(Widget):
             for i, overlay in enumerate(self.filtered_overlays):
                 if overlay.name == selected_name:
                     # Trigger the selection event to update the UI
-                    self.selected_overlay = overlay
+                    self.selected_overlay = None
                     table.move_cursor(row=i)
                     break
 
