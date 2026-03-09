@@ -4,6 +4,7 @@ The first instance binds a socket and listens for signals from subsequent
 instances. Additional instances send a signal and exit immediately.
 """
 
+import atexit
 import socket
 import threading
 from pathlib import Path
@@ -46,7 +47,8 @@ class InstanceLock:
         thread, and returns True.
 
         If another instance holds the lock, sends it a signal and
-        returns False.
+        returns False. If the socket is stale (process dead), cleans
+        it up and retries once.
 
         Returns:
             True if this is the primary instance, False otherwise.
@@ -56,8 +58,10 @@ class InstanceLock:
         try:
             sock.bind(str(self.socket_path))
         except OSError:
-            # Socket already exists — another instance is running
             sock.close()
+            if self._is_stale():
+                self.socket_path.unlink(missing_ok=True)
+                return self.acquire()
             self._signal_primary()
             return False
 
@@ -69,7 +73,20 @@ class InstanceLock:
             name="carnage-instance-lock",
         )
         self._thread.start()
+        atexit.register(self.release)
         return True
+
+    def _is_stale(self) -> bool:
+        """Check if the socket file exists but no process is listening."""
+        try:
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.connect(str(self.socket_path))
+            sock.close()
+            return False  # connected fine, someone is home
+        except ConnectionRefusedError:
+            return True  # socket file exists but process is dead
+        except OSError:
+            return False  # something else, don't assume stale
 
     def release(self) -> None:
         """Release the lock and clean up the socket file."""
