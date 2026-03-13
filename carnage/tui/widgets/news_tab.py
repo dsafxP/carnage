@@ -75,7 +75,7 @@ class NewsTab(Widget):
         table.add_columns("Status", "Date", "Title")
 
         for news in self.news_items:
-            status: str = "Read" if news.read else "New"
+            status: str = "[dim]Read[/]" if news.read else "[green]New[/]"
             table.add_row(status, news.date, news.title, key=str(news.index))
 
         self.update_button_states()
@@ -88,7 +88,7 @@ class NewsTab(Widget):
         for i, news in enumerate(self.news_items):
             if news.index == news_index:
                 # Update the specific row (add 1 because cursor_row is 0-based but we need the actual row)
-                table.update_cell_at(Coordinate(i, 0), "Read")
+                table.update_cell_at(Coordinate(i, 0), "[dim]Read[/]")
                 break
 
         self.update_button_states()
@@ -105,7 +105,7 @@ class NewsTab(Widget):
         table.add_columns("Status", "Date", "Title")
 
         for news in self.news_items:
-            status: str = "Read" if news.read else "New"
+            status: str = "[dim]Read[/]" if news.read else "[green]New[/]"
             table.add_row(status, news.date, news.title, key=str(news.index))
 
         # Clear selection if the selected news was purged
@@ -143,13 +143,13 @@ class NewsTab(Widget):
         content_widget: Static = self.query_one("#news-content", Static)
 
         # Format the news content
-        details: str = f"[bold]{self.selected_news.title}[/bold]\n\n"
-        details += f"[dim]Posted: {self.selected_news.posted or self.selected_news.date}[/dim]\n"
+        details: str = f"[r]{self.selected_news.title}[/]\n\n"
+        details += f"[dim][b]Posted:[/] {self.selected_news.posted or self.selected_news.date}\n"
 
         if self.selected_news.author:
-            details += f"[dim]Author: {self.selected_news.author}[/dim]\n"
+            details += f"[b]Author:[/] {self.selected_news.author}[/]\n"
 
-        details += "\n" + "-" * 60 + "\n\n"
+        details += "\n" + "_" * 60 + "\n" # TODO: Replace with an actual Rule from Textual...
 
         if self.selected_news.content:
             details += self.selected_news.content

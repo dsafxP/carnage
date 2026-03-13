@@ -204,20 +204,20 @@ class UseFlagsTab(Widget):
     @staticmethod
     def _format_useflag_details(useflag: UseFlag, package_count: int, packages: list[Package]) -> str:
         """Format detailed USE flag information for display."""
-        details: str = f"[bold]{useflag.name}[/bold]\n\n"
+        details: str = f"[r]{useflag.name}[/]\n\n"
 
         if useflag.description:
-            details += f"[dim]{useflag.description}[/dim]\n\n"
+            details += f"{useflag.description}\n\n"
 
-        details += f"Packages: {package_count}\n"
+        details += f"[b]Packages:[/] {package_count}\n"
 
         # Show packages that use this flag
         if packages:
-            details += "Packages with this flag:\n"
+            details += "[b]Packages with this flag:[/]\n"
             for package in packages:
                 details += f"  • {package.full_name}"
                 details += "\n"
         else:
-            details += "No packages found with this flag\n"
+            details += "[red]No packages found with this flag[/]\n"
 
         return details

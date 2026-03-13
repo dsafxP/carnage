@@ -186,16 +186,16 @@ class PackageDetailWidget(Widget):
         """Format the top-level package details block."""
         pkg: Package = self.package
         version_label: str = f" {self.selected_version.id}" if self.selected_version else ""
-        details: str = f"[bold]{pkg.category}/{pkg.name}[/bold]{version_label}\n\n"
+        details: str = f"[r]{pkg.category}/[b]{pkg.name}[/][/]{version_label}\n\n"
 
         if pkg.description:
             details += f"{pkg.description}\n\n"
 
         if pkg.homepage:
-            details += f"{pkg.homepage}\n\n"
+            details += f"[dim]{pkg.homepage}\n\n"
 
         if pkg.licenses:
-            details += f"[dim]License(s): {', '.join(pkg.licenses)}[/dim]\n"
+            details += f"[b]License(s):[/] {', '.join(pkg.licenses)}[/]\n"
 
         return details.rstrip()
 
@@ -208,7 +208,7 @@ class PackageDetailWidget(Widget):
         ebuild_widget: Static = self.query_one("#pkg-ebuild-content", Static)
 
         if self.selected_version is None:
-            ebuild_widget.update(Text.from_markup("[red]No version selected.[/red]"))
+            ebuild_widget.update(Text.from_markup("[red]No version selected.[/]"))
             return
 
         gt_pkg: GentoolkitPackage = self.selected_version.to_gentoolkit(
@@ -218,21 +218,21 @@ class PackageDetailWidget(Widget):
 
         if not path_str:
             ebuild_widget.update(Text.from_markup(
-                f"[red]{self.package.category}/{self.package.name} ebuild path not found.[/red]"
+                f"[red]{self.package.category}/{self.package.name} ebuild path not found.[/]"
             ))
             return
 
         path = Path(path_str)
-        header: Text = Text.from_markup(f"[dim]{path}[/dim]\n")
+        header: Text = Text.from_markup(f"[dim][link=file://{path}]{path}[/][/]\n")
 
         if not path.exists():
-            ebuild_widget.update(Group(header, Text.from_markup(f"[red]{path} does not exist.[/red]")))
+            ebuild_widget.update(Group(header, Text.from_markup(f"[red]{path} does not exist.[/]")))
             return
 
         content: str = path.read_text(encoding="utf-8", errors="replace").strip()
 
         if not content:
-            ebuild_widget.update(Group(header, Text.from_markup(f"[red]{path} is empty.[/red]")))
+            ebuild_widget.update(Group(header, Text.from_markup(f"[red]{path} is empty.[/]")))
             return
 
         config: Configuration = get_config()
@@ -601,7 +601,7 @@ class PackageDetailWidget(Widget):
     @work(exclusive=True, thread=True)
     def _action_emerge(self) -> None:
         emerge_btn: Button = self.query_one("#emerge-btn", Button)
-        
+
         if self.selected_version is None or self.package.is_installed() or emerge_btn.disabled:
             return
 

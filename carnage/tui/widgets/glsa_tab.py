@@ -98,33 +98,33 @@ class GLSATab(Widget):
         content_widget: Static = self.query_one("#glsa-content", Static)
 
         # Format the GLSA content
-        details: str = f"[bold]{self.selected_glsa.title or self.selected_glsa.synopsis}[/bold]\n\n"
+        details: str = f"[r]{self.selected_glsa.title or self.selected_glsa.synopsis}[/]\n\n"
 
         if self.selected_glsa.product:
-            details += f"[dim]Product: {self.selected_glsa.product}\n[/dim]"
+            details += f"[dim][b]Product:[/] {self.selected_glsa.product}\n"
 
-        details += f"[dim]ID: {self.selected_glsa.id}[/dim]\n"
+        details += f"[b]ID:[/] {self.selected_glsa.id}\n"
 
         if self.selected_glsa.announced:
-            details += f"[dim]Announced: {self.selected_glsa.announced}[/dim]\n"
+            details += f"[b]Announced:[/] {self.selected_glsa.announced}\n"
 
         #if self.selected_glsa.revised:
         #   details += f"Revised: {self.selected_glsa.revised} (revision {self.selected_glsa.revision_count})\n"
 
         if self.selected_glsa.impact_type:
-            details += f"[dim]Severity: {self.selected_glsa.impact_type}[/dim]\n"
-            
-        if self.selected_glsa.access:
-            details += f"[dim]Exploitable: {self.selected_glsa.access}[/dim]\n"
+            details += f"[b]Severity:[/] {self.selected_glsa.impact_type}\n"
 
-        details += "\n" + "-" * 60 + "\n\n"
+        if self.selected_glsa.access:
+            details += f"[b]Exploitable:[/] {self.selected_glsa.access}[/]\n"
+
+        details += "\n" + "_" * 60 + "\n" # TODO: Replace with an actual Rule from Textual...
 
         # Render affected packages
         if self.selected_glsa.affected_packages:
-            details += f"\n[underline]Affected Packages:[/underline]\n\n"
+            details += f"\n[b]Affected Packages:[/]\n\n"
 
             for package in self.selected_glsa.affected_packages:
-                details += f"[dim]Package: [bold]{package.name}[/bold] on [bold]{package.arch}[/bold][/dim]\n"
+                details += f"[dim][b]Package:[/] [r]{package.name}[/] on [b]{package.arch}[/][/dim]\n"
 
                 # Render vulnerable versions (affected)
                 if package.vulnerable_conditions:
@@ -134,7 +134,7 @@ class GLSATab(Widget):
                         slot_info: str = f":{condition['slot']}" if condition["slot"] else ""
                         affected_versions.append(f"{range_symbol} [bold]{condition['value']}{slot_info}[/bold]")
 
-                    details += f"[red]Affected versions: {', '.join(affected_versions)}[/red]\n"
+                    details += f"[red][b]Affected versions:[/] {', '.join(affected_versions)}[/red]\n"
 
                 # Render unaffected versions
                 if package.unaffected_conditions:
@@ -144,25 +144,25 @@ class GLSATab(Widget):
                         slot_info = f":{condition['slot']}" if condition["slot"] else ""
                         unaffected_versions.append(f"{range_symbol} [bold]{condition['value']}{slot_info}[/bold]")
 
-                    details += f"[green]Unaffected versions: {', '.join(unaffected_versions)}[/green]\n"
+                    details += f"[green][b]Unaffected versions:[/] {', '.join(unaffected_versions)}[/green]\n"
 
                 details += "\n"  # Add spacing between packages
 
         if self.selected_glsa.background:
-            details += f"[underline]Background:[/underline]\n{self.selected_glsa.background}\n\n"
+            details += f"[b]Background:[/]\n{self.selected_glsa.background}\n\n"
 
         if self.selected_glsa.description:
-            details += f"[underline]Description:[/underline]\n{self.selected_glsa.description}\n\n"
+            details += f"[b]Description:[/]\n{self.selected_glsa.description}\n\n"
 
         if self.selected_glsa.impact:
-            details += f"[underline]Impact:[/underline]\n{self.selected_glsa.impact}\n\n"
+            details += f"[b]Impact:[/]\n{self.selected_glsa.impact}\n\n"
 
         if self.selected_glsa.workaround:
-            details += f"[underline]Workaround:[/underline]\n{self.selected_glsa.workaround}\n\n"
+            details += f"[b]Workaround:[/]\n{self.selected_glsa.workaround}\n\n"
 
         # Render resolutions
         if self.selected_glsa.resolutions:
-            details += f"[underline]Resolution:[/underline]\n"
+            details += f"[b]Resolution:[/]\n"
 
             for i, resolution in enumerate(self.selected_glsa.resolutions, 1):
                 if resolution.text:
@@ -176,13 +176,13 @@ class GLSATab(Widget):
                     details += "\n"
 
         if self.selected_glsa.references:
-            details += f"[underline]References:[/underline]\n"
+            details += f"[b]References:[/]\n"
             for ref in self.selected_glsa.references:
                 details += f"  • {ref}\n"
             details += "\n"
 
         if self.selected_glsa.bugs:
-            details += f"[underline]Bugzilla entries:[/underline]\n"
+            details += f"[b]Bugzilla entries:[/]\n"
             for bug in self.selected_glsa.bugs:
                 details += f"  • [link='https://bugs.gentoo.org/{bug}']{bug}[/link]\n"
 
@@ -206,7 +206,7 @@ class GLSATab(Widget):
         if not self.glsa_items:
             self.notify("No GLSAs to fix", severity="warning")
             return
-        
+
         self.app.call_from_thread(self.notify, "Applying fixes... (don't close until finished!)", severity="warning", timeout=15)
 
         fix_btn: Button = self.query_one("#fix-glsa-btn", Button)
@@ -214,7 +214,7 @@ class GLSATab(Widget):
             fix_btn.disabled = True
 
             fix_btn.label = "Applying..."
-            
+
             returncode, stdout, stderr = fix_glsas()
 
             if returncode == 0:

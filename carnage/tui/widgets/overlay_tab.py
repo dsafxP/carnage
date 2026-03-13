@@ -232,33 +232,33 @@ class OverlaysTab(Widget):
         content_widget: Static = self.query_one("#overlays-content", Static)
 
         # Format the overlay content
-        details: str = f"[bold]{self.selected_overlay.name}[/bold]\n\n"
+        details: str = f"[r]{self.selected_overlay.name}[/]\n\n"
 
         if self.selected_overlay.description:
             details += f"{self.selected_overlay.description}\n\n"
 
-        details += f"Status: {self.selected_overlay.status.value.title()}\n"
+        details += f"[dim][b]Status:[/] {self.selected_overlay.status.value.title()}\n"
 
         # Only show package count if counting is enabled
         if not self.should_skip_pkg_count:
             package_count: int | None = self.selected_overlay.package_count or 0
-            details += f"Packages: {package_count}\n"
+            details += f"[b]Packages:[/] {package_count}\n"
 
         if self.selected_overlay.homepage:
-            details += f"Homepage: {self.selected_overlay.homepage}\n"
+            details += f"[b]Homepage:[/] {self.selected_overlay.homepage}\n"
 
-        details += f"Owner: {self.selected_overlay.owner.name} ({self.selected_overlay.owner.email})\n\n"
+        details += f"[b]Owner:[/] {self.selected_overlay.owner.name} ({self.selected_overlay.owner.email})[/]\n\n"
 
         # Sources
         if self.selected_overlay.sources:
-            details += "Sources:\n"
+            details += "[b]Sources:[/]\n"
             for source in self.selected_overlay.sources:
                 details += f"  • {source.source_type.value}: {source.url}\n"
             details += "\n"
 
         # Feeds
         if self.selected_overlay.feeds:
-            details += "Feeds:\n"
+            details += "[b]Feeds:[/]\n"
             for feed in self.selected_overlay.feeds:
                 details += f"  • {feed}\n"
 
