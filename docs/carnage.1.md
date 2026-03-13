@@ -99,6 +99,7 @@ Bindings are available for each button in a tab.
 |-----|----------------------------------------|
 | r   | Remove selected overlay.               |
 | e   | Enable and then sync selected overlay. |
+| s   | Sync selected overlay.                 |
 
 # SEE ALSO
 **emerge**(1), **eix**(1), **portage**(5)

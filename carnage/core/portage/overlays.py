@@ -114,13 +114,19 @@ class Overlay:
         """
         return run_privileged(["eselect", "repository", "enable", self.name], use_terminal=False)
 
-    def sync(self) -> tuple[int, str, str]:
+    def sync(self, app: App | None = None) -> int:
         """
         Sync this overlay using emaint.
         Returns:
-            Tuple of (return_code, stdout, stderr)
+            Return code integer
         """
-        return run_privileged(["emaint", "sync", "-r", self.name], use_terminal=False)
+        cmd: str = f"emaint sync -r {self.name}"
+
+        if app:
+            with app.suspend():
+                return system_privileged(cmd)
+
+        return system_privileged(cmd)
 
     def enable_and_sync(self, app: App | None = None) -> int:
         """

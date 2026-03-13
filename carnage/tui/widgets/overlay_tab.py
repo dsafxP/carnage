@@ -19,7 +19,8 @@ class OverlaysTab(Widget):
 
     BINDINGS = [
         Binding("r", "remove", "Remove", show=True),
-        Binding("e", "enable_sync", "Enable & Sync", show=True)
+        Binding("e", "enable_sync", "Enable & Sync", show=True),
+        Binding("s", "sync", "Sync", show=True)
     ]
 
     def __init__(self):
@@ -45,6 +46,7 @@ class OverlaysTab(Widget):
 
                 with Vertical(id="overlays-actions"):
                     yield Button("Enable & Sync", id="enable-sync-btn", variant="success")
+                    yield Button("Sync", id="sync-btn", variant="warning")
                     yield Button("Remove", id="remove-btn", variant="error")
 
     def on_mount(self) -> None:
@@ -163,7 +165,7 @@ class OverlaysTab(Widget):
                     zero_package_overlays.append(overlay.name)
 
             # If we have overlays with 0 packages, suggest clearing cache
-            if zero_package_overlays and len(zero_package_overlays) > 5:  # Only notify if significant number
+            if zero_package_overlays and len(zero_package_overlays) > 8:  # Only notify if significant number
                 self.notify(
                     f"Found {len(zero_package_overlays)} overlays with 0 packages. "
                     "Remote cache is available - clear cache to count remote overlays?",
@@ -267,22 +269,27 @@ class OverlaysTab(Widget):
         """Update button visibility states."""
         enable_btn: Button = self.query_one("#enable-sync-btn", Button)
         remove_btn: Button = self.query_one("#remove-btn", Button)
+        sync_btn: Button = self.query_one("#sync-btn", Button)
 
         # Show appropriate button based on installation status
         if self.selected_overlay:
             if self.selected_overlay.installed:
                 enable_btn.display = False
                 remove_btn.display = True
+                sync_btn.display = True
             else:
                 enable_btn.display = True
                 remove_btn.display = False
+                sync_btn.display = False
         else:
             enable_btn.display = False
             remove_btn.display = False
+            sync_btn.display = False
 
         # Sync button states
         enable_btn.disabled = not enable_btn.display
         remove_btn.disabled = not remove_btn.display
+        sync_btn.disabled = not sync_btn.display
 
     def _action_enable_sync(self) -> None:
         """Enable and sync the selected overlay."""
@@ -319,6 +326,40 @@ class OverlaysTab(Widget):
             enable_btn.disabled = False
 
             enable_btn.label = "Enable & Sync"
+
+            self.app.bell()
+
+    def _action_sync(self) -> None:
+        """Sync the selected overlay."""
+        if self.selected_overlay is None or not self.selected_overlay.installed:
+            return
+
+        sync_btn: Button = self.query_one("#sync-btn", Button)
+
+        if sync_btn.disabled:
+            return
+
+        try:
+            sync_btn.disabled = True
+
+            sync_btn.label = "Syncing..."
+
+            overlay: Overlay = self.selected_overlay
+
+            returncode = overlay.sync(self.app)
+
+            if returncode == 0:
+                self.notify(f"Successfully synchronized {overlay.name}")
+
+                self._pending_selection = overlay.name
+            else:
+                self.app.notify(f"Failed to sync with code: {returncode}", severity="error")
+        except Exception as e:
+            self.app.notify(f"Error syncing: {e}", severity="error")
+        finally:
+            sync_btn.disabled = False
+
+            sync_btn.label = "Sync"
 
             self.app.bell()
 
@@ -367,3 +408,5 @@ class OverlaysTab(Widget):
             self._action_enable_sync()
         elif event.button.id == "remove-btn":
             self._action_remove()
+        elif event.button.id == "sync-btn":
+            self._action_sync()
