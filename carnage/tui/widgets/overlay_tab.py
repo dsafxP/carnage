@@ -10,7 +10,8 @@ from textual.widgets import Button, DataTable, LoadingIndicator, Static
 from carnage.core.cache import get_cache_manager
 from carnage.core.config import get_config
 from carnage.core.eix.eix import has_remote_cache, is_found
-from carnage.core.portage.overlays import Overlay, clear_cache, get_or_cache
+from carnage.core.portage.overlays import (Overlay, OverlayStatus, clear_cache,
+                                           get_or_cache)
 from carnage.tui.widgets.table import NavigableDataTable
 
 
@@ -89,7 +90,8 @@ class OverlaysTab(Widget):
             table.add_columns("Name", "Packages", "Description")
 
         for i, overlay in enumerate(self.filtered_overlays):
-            label: str = f"{"[green]✓[/green]" if overlay.is_installed() else " "} {overlay.name}"
+            name: str = f"[italic]{overlay.name}[/]" if overlay.status == OverlayStatus.OFFICIAL else overlay.name
+            label: str = f"{'[green]✓[/]' if overlay.is_installed() else ' '} {name}"
 
             if self.should_skip_pkg_count:
                 # Skip package count display
