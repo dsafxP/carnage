@@ -11,12 +11,14 @@ from pathlib import Path
 from typing import Literal
 
 from lxml import etree
+from textual.app import App
 
 from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
+from carnage.core.eix.eix import is_found
 from carnage.core.eix.overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
 from carnage.core.portage.portageq import ctx
-from carnage.core.privilege import run_privileged
+from carnage.core.privilege import run_privileged, system_privileged
 
 # Cache configuration
 CACHE_KEY = "overlays_data"
@@ -110,7 +112,7 @@ class Overlay:
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
-        return run_privileged(["eselect", "repository", "enable", self.name], None, False)
+        return run_privileged(["eselect", "repository", "enable", self.name], use_terminal=False)
 
     def sync(self) -> tuple[int, str, str]:
         """
@@ -118,17 +120,22 @@ class Overlay:
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
-        return run_privileged(["emaint", "sync", "-r", self.name], None, False)
+        return run_privileged(["emaint", "sync", "-r", self.name], use_terminal=False)
 
-    def enable_and_sync(self) -> tuple[int, str, str]:
+    def enable_and_sync(self, app: App | None = None) -> int:
         """
         Enable and sync this overlay in one operation.
         Returns:
-            Tuple of (return_code, stdout, stderr) from the combined operation.
+            Return code integer
             If enable fails, sync is not attempted.
         """
-        cmd: str = f"eselect repository enable {self.name} && emaint sync -r {self.name}"
-        return run_privileged(["sh", "-c", cmd], None, False)
+        cmd: str = f"sh -c 'eselect repository enable {self.name} && emaint sync -r {self.name}'"
+
+        if app:
+            with app.suspend():
+                return system_privileged(cmd)
+
+        return system_privileged(cmd)
 
     def disable(self) -> tuple[int, str, str]:
         """
@@ -137,7 +144,7 @@ class Overlay:
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
-        return run_privileged(["eselect", "repository", "disable", self.name], None, False)
+        return run_privileged(["eselect", "repository", "disable", self.name], use_terminal=False)
 
     def remove(self) -> tuple[int, str, str]:
         """
@@ -146,7 +153,7 @@ class Overlay:
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
-        return run_privileged(["eselect", "repository", "remove", self.name], None, False)
+        return run_privileged(["eselect", "repository", "remove", self.name], use_terminal=False)
 
     def to_dict(self) -> dict:
         """Convert overlay to dictionary for serialization."""
@@ -429,7 +436,7 @@ def get_or_cache(cache_manager: CacheManager,
             cached_data = cache_manager.get(CACHE_KEY)
             if cached_data:
                 cached_overlays: list[Overlay] = [Overlay.from_dict(data) for data in cached_data]
-                
+
                 # Check if we need to refresh package counts due to configuration change
                 if config.skip_package_counting:
                     # If package counting is now skipped, but we have real counts, that's fine
@@ -437,7 +444,7 @@ def get_or_cache(cache_manager: CacheManager,
                 else:
                     # If package counting is enabled, check if we have skipped counts
                     has_skipped_counts: bool = any(
-                        overlay.package_count == SKIPPED_PACKAGE_COUNT 
+                        overlay.package_count == SKIPPED_PACKAGE_COUNT
                         for overlay in cached_overlays
                     )
 

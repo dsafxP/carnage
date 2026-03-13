@@ -19,7 +19,7 @@ class OverlaysTab(Widget):
 
     BINDINGS = [
         Binding("r", "remove", "Remove", show=True),
-        Binding("s", "enable_sync", "Enable & Sync", show=True)
+        Binding("e", "enable_sync", "Enable & Sync", show=True)
     ]
 
     def __init__(self):
@@ -44,7 +44,7 @@ class OverlaysTab(Widget):
                     yield Static("Select an overlay to view details", id="overlays-content")
 
                 with Vertical(id="overlays-actions"):
-                    yield Button("Enable & Sync", id="enable-sync-btn", variant="primary")
+                    yield Button("Enable & Sync", id="enable-sync-btn", variant="success")
                     yield Button("Remove", id="remove-btn", variant="error")
 
     def on_mount(self) -> None:
@@ -284,8 +284,7 @@ class OverlaysTab(Widget):
         enable_btn.disabled = not enable_btn.display
         remove_btn.disabled = not remove_btn.display
 
-    @work(exclusive=True, thread=True)
-    async def _action_enable_sync(self) -> None:
+    def _action_enable_sync(self) -> None:
         """Enable and sync the selected overlay."""
         if self.selected_overlay is None or self.selected_overlay.installed:
             return
@@ -295,9 +294,6 @@ class OverlaysTab(Widget):
         if enable_btn.disabled:
             return
 
-        self.app.call_from_thread(self.notify, "Enabling and syncing... (don't close until finished!)", severity="warning",
-                                  timeout=15)
-
         try:
             enable_btn.disabled = True
 
@@ -305,20 +301,20 @@ class OverlaysTab(Widget):
 
             overlay: Overlay = self.selected_overlay
 
-            returncode, stdout, stderr = overlay.enable_and_sync()
+            returncode = overlay.enable_and_sync(self.app)
 
             if returncode == 0:
-                self.app.call_from_thread(self.notify, f"Successfully installed {overlay.name}")
+                self.notify(f"Successfully installed {overlay.name}")
 
                 self._pending_selection = overlay.name
 
                 # Update overlay status and refresh table
-                self.app.call_from_thread(self._update_overlay_installation_status, overlay.name, True)
-                self.app.call_from_thread(self._populate_table)
+                self._update_overlay_installation_status(overlay.name, True)
+                self._populate_table()
             else:
-                self.app.call_from_thread(self.notify, f"Failed to enable and sync: {stderr}", severity="error")
+                self.app.notify(f"Failed to enable and sync with code: {returncode}", severity="error")
         except Exception as e:
-            self.app.call_from_thread(self.notify, f"Error enabling and syncing: {e}", severity="error")
+            self.app.notify(f"Error enabling and syncing: {e}", severity="error")
         finally:
             enable_btn.disabled = False
 
