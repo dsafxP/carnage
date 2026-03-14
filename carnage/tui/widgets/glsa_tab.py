@@ -104,21 +104,21 @@ class GLSATab(Widget):
         header: str = f"[r]{self.selected_glsa.title or self.selected_glsa.synopsis}[/]\n\n"
 
         if self.selected_glsa.product:
-            header += f"[dim][b]Product:[/] {self.selected_glsa.product}\n"
+            header += f"[dim][b]Product:[/] {self.selected_glsa.product}[/]\n"
 
-        header += f"[b]ID:[/] {self.selected_glsa.id}\n"
+        header += f"[dim][b]ID:[/] {self.selected_glsa.id}[/]\n"
 
         if self.selected_glsa.announced:
-            header += f"[b]Announced:[/] {self.selected_glsa.announced}\n"
+            header += f"[dim][b]Announced:[/] {self.selected_glsa.announced}[/]\n"
 
         #if self.selected_glsa.revised:
-        #   header += f"Revised: {self.selected_glsa.revised} (revision {self.selected_glsa.revision_count})\n"
+        #   header += f"[dim]Revised: {self.selected_glsa.revised} (revision {self.selected_glsa.revision_count})[/]\n"
 
         if self.selected_glsa.impact_type:
-            header += f"[b]Severity:[/] {self.selected_glsa.impact_type}\n"
+            header += f"[dim][b]Severity:[/] {self.selected_glsa.impact_type}[/]\n"
 
         if self.selected_glsa.access:
-            header += f"[b]Exploitable:[/] {self.selected_glsa.access}[/]"
+            header += f"[dim][b]Exploitable:[/] {self.selected_glsa.access}[/]"
 
         header_widget.update(header)
 

@@ -146,10 +146,10 @@ class NewsTab(Widget):
         content_widget: Static = self.query_one("#news-content", Static)
 
         header: str = f"[r]{self.selected_news.title}[/]\n\n"
-        header += f"[dim][b]Posted:[/] {self.selected_news.posted or self.selected_news.date}\n"
+        header += f"[dim][b]Posted:[/] {self.selected_news.posted or self.selected_news.date}[/]\n"
 
         if self.selected_news.author:
-            header += f"[b]Author:[/] {self.selected_news.author}[/]"
+            header += f"[dim][b]Author:[/] {self.selected_news.author}[/]"
 
         header_widget.update(header)
         content_widget.update(self.selected_news.content or "[red]No content available[/]")

@@ -148,7 +148,7 @@ class PackageDetailWidget(Widget):
                 yield NavigableDataTable(id="pkg-versions-table", cursor_type="row")
 
             with TabPane("USE Flags", id="tab-use"):
-                yield Static("", id="pkg-use-version")
+                yield Static(id="pkg-use-version")
                 with VerticalScroll(id="pkg-use-scroll"):
                     yield SelectionList(id="pkg-use-list")
                 with Vertical(id="pkg-use-actions"):
@@ -161,7 +161,7 @@ class PackageDetailWidget(Widget):
 
             with TabPane("Ebuild", id="tab-ebuild"):
                 with VerticalScroll(id="pkg-ebuild-scroll"):
-                    yield Static("", id="pkg-ebuild-content")
+                    yield Static(id="pkg-ebuild-content")
 
             with TabPane("Dependencies", id="tab-deps"):
                 yield Tree(f"{self.package.full_name}", id="pkg-deps-tree")
@@ -192,10 +192,10 @@ class PackageDetailWidget(Widget):
             details += f"{pkg.description}\n\n"
 
         if pkg.homepage:
-            details += f"[dim]{pkg.homepage}\n\n"
+            details += f"[dim]{pkg.homepage}[/]\n\n"
 
         if pkg.licenses:
-            details += f"[b]License(s):[/] {', '.join(pkg.licenses)}[/]\n"
+            details += f"[dim][b]License(s):[/] {', '.join(pkg.licenses)}[/]\n"
 
         return details.rstrip()
 
