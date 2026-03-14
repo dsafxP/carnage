@@ -231,6 +231,7 @@ LoadingIndicator,
     margin-bottom: 1;
 }
 
+#glsa-header,
 #glsa-content {
     padding: 1;
 }
@@ -450,6 +451,7 @@ PackageDetailWidget {
         margin-bottom: 0;
     }
 
+    #news-header,
     #news-content {
         padding: 0 1;
     }
@@ -475,6 +477,7 @@ PackageDetailWidget {
         margin-bottom: 0;
     }
 
+    #glsa-header,
     #glsa-content {
         padding: 0 1;
     }

@@ -5,7 +5,7 @@ from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
-from textual.widgets import Button, DataTable, LoadingIndicator, Static
+from textual.widgets import Button, DataTable, LoadingIndicator, Rule, Static
 
 from carnage.core.portage.glsas import GLSA, fetch_glsas, fix_glsas
 from carnage.tui.widgets.table import NavigableDataTable
@@ -27,7 +27,9 @@ class GLSATab(Widget):
 
             with Vertical(id="glsa-detail"):
                 with VerticalScroll(id="glsa-content-scroll"):
-                    yield Static("Select a GLSA to view details", id="glsa-content")
+                    yield Static("Select a GLSA to view details", id="glsa-header")
+                    yield Rule(line_style="heavy")
+                    yield Static(id="glsa-content")
 
                 with Vertical(id="glsa-actions"):
                     yield Button("Apply fixes", id="fix-glsa-btn", variant="primary")
@@ -95,33 +97,36 @@ class GLSATab(Widget):
             return
 
         # Display GLSA details
+        header_widget: Static = self.query_one("#glsa-header", Static)
         content_widget: Static = self.query_one("#glsa-content", Static)
 
         # Format the GLSA content
-        details: str = f"[r]{self.selected_glsa.title or self.selected_glsa.synopsis}[/]\n\n"
+        header: str = f"[r]{self.selected_glsa.title or self.selected_glsa.synopsis}[/]\n\n"
 
         if self.selected_glsa.product:
-            details += f"[dim][b]Product:[/] {self.selected_glsa.product}\n"
+            header += f"[dim][b]Product:[/] {self.selected_glsa.product}\n"
 
-        details += f"[b]ID:[/] {self.selected_glsa.id}\n"
+        header += f"[b]ID:[/] {self.selected_glsa.id}\n"
 
         if self.selected_glsa.announced:
-            details += f"[b]Announced:[/] {self.selected_glsa.announced}\n"
+            header += f"[b]Announced:[/] {self.selected_glsa.announced}\n"
 
         #if self.selected_glsa.revised:
-        #   details += f"Revised: {self.selected_glsa.revised} (revision {self.selected_glsa.revision_count})\n"
+        #   header += f"Revised: {self.selected_glsa.revised} (revision {self.selected_glsa.revision_count})\n"
 
         if self.selected_glsa.impact_type:
-            details += f"[b]Severity:[/] {self.selected_glsa.impact_type}\n"
+            header += f"[b]Severity:[/] {self.selected_glsa.impact_type}\n"
 
         if self.selected_glsa.access:
-            details += f"[b]Exploitable:[/] {self.selected_glsa.access}[/]\n"
+            header += f"[b]Exploitable:[/] {self.selected_glsa.access}[/]"
 
-        details += "\n" + "_" * 60 + "\n" # TODO: Replace with an actual Rule from Textual...
+        header_widget.update(header)
+
+        details: str = ""
 
         # Render affected packages
         if self.selected_glsa.affected_packages:
-            details += f"\n[b]Affected Packages:[/]\n\n"
+            details += f"[b]Affected Packages:[/]\n\n"
 
             for package in self.selected_glsa.affected_packages:
                 details += f"[dim][b]Package:[/] [r]{package.name}[/] on [b]{package.arch}[/][/dim]\n"
