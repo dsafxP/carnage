@@ -121,6 +121,11 @@ ListView {
     }
 }
 
+Rule {
+    color: $primary;
+    margin: 1 1;
+}
+
 Button {
     width: auto;
     min-width: 16;
@@ -191,6 +196,7 @@ LoadingIndicator,
     margin-bottom: 1;
 }
 
+#news-header,
 #news-content {
     padding: 1;
 }

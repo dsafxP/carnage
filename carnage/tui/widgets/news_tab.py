@@ -6,7 +6,7 @@ from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
 from textual.coordinate import Coordinate
 from textual.widget import Widget
-from textual.widgets import Button, DataTable, LoadingIndicator, Static
+from textual.widgets import Button, DataTable, LoadingIndicator, Rule, Static
 
 from carnage.core import (News, get_news, mark_all_news_read, mark_news_read,
                           purge_read_news)
@@ -35,7 +35,9 @@ class NewsTab(Widget):
 
             with Vertical(id="news-detail"):
                 with VerticalScroll(id="news-content-scroll"):
-                    yield Static("Select a news item to view details", id="news-content")
+                    yield Static("Select a news item to view details", id="news-header")
+                    yield Rule(line_style="heavy")
+                    yield Static(id="news-content")
 
                 with Vertical(id="news-actions"):
                     yield Button("Mark as Read", id="mark-read-btn", variant="primary")
@@ -140,23 +142,17 @@ class NewsTab(Widget):
             return
 
         # Display news details
+        header_widget: Static = self.query_one("#news-header", Static)
         content_widget: Static = self.query_one("#news-content", Static)
 
-        # Format the news content
-        details: str = f"[r]{self.selected_news.title}[/]\n\n"
-        details += f"[dim][b]Posted:[/] {self.selected_news.posted or self.selected_news.date}\n"
+        header: str = f"[r]{self.selected_news.title}[/]\n\n"
+        header += f"[dim][b]Posted:[/] {self.selected_news.posted or self.selected_news.date}\n"
 
         if self.selected_news.author:
-            details += f"[b]Author:[/] {self.selected_news.author}[/]\n"
+            header += f"[b]Author:[/] {self.selected_news.author}[/]"
 
-        details += "\n" + "_" * 60 + "\n" # TODO: Replace with an actual Rule from Textual...
-
-        if self.selected_news.content:
-            details += self.selected_news.content
-        else:
-            details += "[dim]No content available[/dim]"
-
-        content_widget.update(details)
+        header_widget.update(header)
+        content_widget.update(self.selected_news.content or "[red]No content available[/]")
 
         # Update button states
         self.update_button_states()
