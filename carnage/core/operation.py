@@ -1,23 +1,17 @@
 """User operation execution with privilege escalation and logging."""
 
-from __future__ import annotations
-
-from collections.abc import Callable
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from carnage.tui.app import CarnageApp
-
 import asyncio
 import logging
 import shlex
 import shutil
 from asyncio.subprocess import Process
+from collections.abc import Callable
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from platformdirs import user_log_path
+from textual.app import App
 
 from carnage.core.config import Configuration, get_config
 
@@ -179,7 +173,7 @@ class Operation:
 
         return returncode
 
-    def start_in_app(self, app: CarnageApp, *, on_complete: Callable[[], None] | None = None) -> None:
+    def start_in_app(self, app: App, *, on_complete: Callable[[bool], None] | None = None) -> None:
         """
         Start this operation as a Textual worker.
 
@@ -188,27 +182,45 @@ class Operation:
         - The worker runs exclusively (only one operation at a time).
 
         Args:
-            app: The CarnageApp instance
-            on_complete: Optional callback when operation succeeds (runs before notification)
+            app: The App instance
+            on_complete: Optional callback when operation finishes (receives success bool)
         """
-        if app.blocked:
-            app.notify("An operation is already running.", severity="warning")
+
+        # Check if the app has a blocked attribute
+        has_blocked = hasattr(app, "blocked")
+
+        if has_blocked and app.blocked:  # type: ignore
+            if hasattr(app, "notify"):
+                app.notify("An operation is already running.", severity="warning")
             return
 
-        app.blocked = True
+        if has_blocked:
+            app.blocked = True  # type: ignore
 
         async def _worker() -> None:
+            success = False
             try:
                 await self.run()
+                success = True
+
                 if on_complete:
-                    on_complete()
+                    on_complete(success)
+
                 app.notify(f"Command finished successfully: {self.cmd[0]}", severity="information")
             except OperationError as e:
+                if on_complete:
+                    on_complete(success)  # success is False
+
                 app.notify(f"Command failed (exit {e.returncode}): {e.cmd[0]}", severity="error")
             except Exception as e:
                 _log.exception("Unexpected error in operation worker")
+
+                if on_complete:
+                    on_complete(success)  # success is False
+
                 app.notify(f"Internal error: {e}", severity="error")
             finally:
-                app.blocked = False
+                if has_blocked:
+                    app.blocked = False  # type: ignore
 
         app.run_worker(_worker(), exclusive=True)
