@@ -25,6 +25,7 @@ dev = [
     "msgpack-types>=0.7.0",
     "textual-dev>=1.8.0",
     "ruff>=0.15.10",
+    "prek>=0.3.9",
 ]
 
 [project.scripts]
