@@ -10,8 +10,7 @@ from textual.widgets import Button, DataTable, LoadingIndicator, Static
 from carnage.core.cache import get_cache_manager
 from carnage.core.config import get_config
 from carnage.core.eix.eix import has_remote_cache, is_found
-from carnage.core.portage.overlays import (Overlay, OverlayStatus, clear_cache,
-                                           get_or_cache)
+from carnage.core.portage.overlays import Overlay, OverlayStatus, clear_cache, get_or_cache
 from carnage.tui.widgets.table import NavigableDataTable
 
 
@@ -21,7 +20,7 @@ class OverlaysTab(Widget):
     BINDINGS = [
         Binding("r", "remove", "Remove", show=True),
         Binding("e", "enable_sync", "Enable & Sync", show=True),
-        Binding("s", "sync", "Sync", show=True)
+        Binding("s", "sync", "Sync", show=True),
     ]
 
     def __init__(self):
@@ -64,9 +63,12 @@ class OverlaysTab(Widget):
         else:
             # Filter overlays by name and description
             self.filtered_overlays = [
-                overlay for overlay in self.overlays
-                if (self._current_filter in overlay.name.lower() or
-                    (overlay.description and self._current_filter in overlay.description.lower()))
+                overlay
+                for overlay in self.overlays
+                if (
+                    self._current_filter in overlay.name.lower()
+                    or (overlay.description and self._current_filter in overlay.description.lower())
+                )
             ]
 
         # Update the table with filtered results
@@ -96,9 +98,7 @@ class OverlaysTab(Widget):
             if self.should_skip_pkg_count:
                 # Skip package count display
                 table.add_row(
-                    label,
-                    (overlay.description.strip() if overlay.description else "No description"),
-                    key=str(i)
+                    label, (overlay.description.strip() if overlay.description else "No description"), key=str(i)
                 )
             else:
                 # Show package count
@@ -107,7 +107,7 @@ class OverlaysTab(Widget):
                     label,
                     package_count,
                     (overlay.description.strip() if overlay.description else "No description"),
-                    key=str(i)
+                    key=str(i),
                 )
 
         # Restore selection if there was a pending one and it exists in filtered results
@@ -172,7 +172,7 @@ class OverlaysTab(Widget):
                     f"Found {len(zero_package_overlays)} overlays with 0 packages. "
                     "Remote cache is available - clear cache to count remote overlays?",
                     severity="warning",
-                    timeout=10
+                    timeout=10,
                 )
 
     def _hide_loading(self) -> None:
@@ -219,7 +219,7 @@ class OverlaysTab(Widget):
             return
 
         # Find the selected overlay using the row index from filtered overlays
-        row_index = int(event.row_key.value) #  type: ignore
+        row_index = int(event.row_key.value)  #  type: ignore
         if 0 <= row_index < len(self.filtered_overlays):
             self.selected_overlay = self.filtered_overlays[row_index]
         else:

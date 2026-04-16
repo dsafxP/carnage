@@ -5,19 +5,33 @@
 from carnage.core.args import APP_DESC, APP_NAME, config_path
 from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
+
 # GLSA management
 from carnage.core.portage.glsas import GLSA, fetch_glsas, fix_glsas
+
 # News management
-from carnage.core.portage.news import (News, get_news, mark_all_news_read,
-                                       mark_news_read, purge_read_news)
+from carnage.core.portage.news import (
+    News,
+    get_news,
+    mark_all_news_read,
+    mark_news_read,
+    purge_read_news,
+)
+
 # Overlay management
-from carnage.core.portage.overlays import (Overlay, OverlayQuality,
-                                           OverlayStatus, Owner, Source,
-                                           SourceType, clear_cache)
+from carnage.core.portage.overlays import (
+    Overlay,
+    OverlayQuality,
+    OverlayStatus,
+    Owner,
+    Source,
+    SourceType,
+    clear_cache,
+)
 from carnage.core.portage.overlays import fetch as fetch_overlays
 from carnage.core.portage.overlays import fetch_extra as fetch_overlays_extra
-from carnage.core.portage.overlays import \
-    get_installed as get_installed_overlays
+from carnage.core.portage.overlays import get_installed as get_installed_overlays
+
 # USE
 from carnage.core.portage.use import UseFlag, get_or_cache_useflags
 from carnage.core.privilege import detect_backend, run_privileged
@@ -38,6 +52,7 @@ __all__ = [
     "fetch_overlays",
     "fetch_overlays_extra",
     "get_installed_overlays",
+    "clear_cache",
     # GLSAs
     "GLSA",
     "fetch_glsas",
@@ -57,5 +72,5 @@ __all__ = [
     # args
     "config_path",
     "APP_NAME",
-    "APP_DESC"
+    "APP_DESC",
 ]

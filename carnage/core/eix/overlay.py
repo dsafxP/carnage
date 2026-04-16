@@ -8,6 +8,7 @@ from carnage.core.eix.eix import has_cache, has_remote_cache
 
 NO_CACHE_PACKAGE_COUNT = -3
 
+
 def get_package_count(overlay: str) -> int:
     """
     Get the number of packages in a specific overlay.
@@ -28,14 +29,10 @@ def get_package_count(overlay: str) -> int:
     elif has_cache():
         cmd = ["eix", "-Q*", "--format", "1", "--only-in-overlay", overlay]
     else:
-        return NO_CACHE_PACKAGE_COUNT # No cache available
+        return NO_CACHE_PACKAGE_COUNT  # No cache available
 
     try:
-        result: CompletedProcess[bytes] = subprocess.run(
-            cmd,
-            capture_output=True,
-            env=env
-        )
+        result: CompletedProcess[bytes] = subprocess.run(cmd, capture_output=True, env=env)
 
         if result.returncode == 0:
             return len(result.stdout)

@@ -1,7 +1,6 @@
 """Main screen with tabs for Carnage."""
 
 from textual.app import ComposeResult
-from textual.containers import Container, Horizontal
 from textual.screen import Screen
 from textual.widgets import Header, Input, TabbedContent, TabPane
 
@@ -27,9 +26,7 @@ class MainScreen(Screen):
         yield Header()
 
         # Search bar
-        yield Input(
-            id="search-input"
-        )
+        yield Input(id="search-input")
 
         # Tabbed content
         with TabbedContent(initial="news"):

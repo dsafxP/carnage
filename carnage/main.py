@@ -9,12 +9,14 @@ def main() -> None:
 
     if not lock.acquire():
         import sys
+
         sys.exit(0)
 
     try:
         app.run()
     finally:
         lock.release()
+
 
 if __name__ == "__main__":
     main()

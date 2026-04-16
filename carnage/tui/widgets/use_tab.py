@@ -1,6 +1,5 @@
 """USE flags tab widget for browsing Gentoo USE flags."""
 
-
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
@@ -84,9 +83,12 @@ class UseFlagsTab(Widget):
         query_lower: str = query.lower().strip()
 
         return [
-            useflag for useflag in useflags
-            if (query_lower in useflag.name.lower() or
-                (useflag.description and query_lower in useflag.description.lower()))
+            useflag
+            for useflag in useflags
+            if (
+                query_lower in useflag.name.lower()
+                or (useflag.description and query_lower in useflag.description.lower())
+            )
         ]
 
     def _clear_table(self) -> None:
@@ -111,11 +113,7 @@ class UseFlagsTab(Widget):
         for i, useflag in enumerate(self.filtered_useflags):
             description: str = useflag.description or "Unknown"
 
-            table.add_row(
-                f"[bold]{useflag.name}[/bold]",
-                description,
-                key=str(i)
-            )
+            table.add_row(f"[bold]{useflag.name}[/bold]", description, key=str(i))
 
         # Restore selection if there was a pending one
         if self._pending_selection is not None:

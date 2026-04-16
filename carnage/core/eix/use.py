@@ -3,12 +3,11 @@
 import os
 import subprocess
 from subprocess import CompletedProcess
-from typing import List
 
 from carnage.core.eix.eix import has_remote_cache
 
 
-def get_all_useflags() -> List[str]:
+def get_all_useflags() -> list[str]:
     """
     Get all available USE flags from eix.
 
@@ -26,20 +25,15 @@ def get_all_useflags() -> List[str]:
     else:
         cmd = ["eix", "--print-all-useflags"]
 
-    result: CompletedProcess[str] = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        check=True
-    )
+    result: CompletedProcess[str] = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     # Parse output - one USE flag per line
-    raw_useflags: List[str] = []
-    for line in result.stdout.strip().split('\n'):
+    raw_useflags: list[str] = []
+    for line in result.stdout.strip().split("\n"):
         raw_useflags.append(line)
 
     # Clean and filter USE flags
-    cleaned_useflags: List[str] = []
+    cleaned_useflags: list[str] = []
     seen_flags: set[str] = set()
 
     for flag in raw_useflags:
@@ -48,11 +42,11 @@ def get_all_useflags() -> List[str]:
         cleaned_flag: str = flag
 
         # Remove leading special characters
-        while cleaned_flag and cleaned_flag[0] in '+!?*':
+        while cleaned_flag and cleaned_flag[0] in "+!?*":
             cleaned_flag = cleaned_flag[1:]
 
         # Remove trailing special characters
-        while cleaned_flag and cleaned_flag[-1] in '+!?*':
+        while cleaned_flag and cleaned_flag[-1] in "+!?*":
             cleaned_flag = cleaned_flag[:-1]
 
         # Skip if nothing left after cleaning
@@ -92,11 +86,7 @@ def get_package_count_for_useflag(useflag: str) -> int:
         cmd = ["eix", "-Q*", "--format", "1", "--use", useflag]
 
     try:
-        result: CompletedProcess[bytes] = subprocess.run(
-            cmd,
-            capture_output=True,
-            env=env
-        )
+        result: CompletedProcess[bytes] = subprocess.run(cmd, capture_output=True, env=env)
 
         if result.returncode == 0:
             return len(result.stdout)

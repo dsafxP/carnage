@@ -22,7 +22,7 @@ class PortageContext:
         return trees[trees._target_eroot]
 
     @cached_property
-    def settings(self) -> portage.config: # type: ignore
+    def settings(self) -> portage.config:  # type: ignore
         """The portage config/settings for the current root."""
         return self._trees["vartree"].settings
 
@@ -43,7 +43,7 @@ class PortageContext:
             if repo.name == "gentoo":
                 return Path(repo.location)
 
-        return Path("/var/db/repos/gentoo") # fallback
+        return Path("/var/db/repos/gentoo")  # fallback
 
     @cached_property
     def repos_path(self) -> Path:

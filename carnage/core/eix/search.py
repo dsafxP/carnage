@@ -3,7 +3,6 @@
 import subprocess
 from dataclasses import dataclass, field
 from subprocess import CompletedProcess
-from typing import List
 
 from gentoolkit.cpv import CPV
 from lxml import etree
@@ -16,26 +15,27 @@ from carnage.core.gentoolkit.package import GentoolkitPackage
 @dataclass
 class PackageVersion:
     """Represents a specific version of a package."""
+
     id: str
     eapi: str | None
     repository: str | None
     virtual: bool
     installed: bool
     src_uri: str | None
-    iuse: List[str]
-    iuse_default: List[str]
+    iuse: list[str]
+    iuse_default: list[str]
     required_use: str | None
     depend: str | None
     rdepend: str | None
     bdepend: str | None
     pdepend: str | None
     idepend: str | None
-    masks: List[str]
-    unmasks: List[str]
-    properties: List[str]
-    restricts: List[str]
-    use_enabled: List[str]
-    use_disabled: List[str]
+    masks: list[str]
+    unmasks: list[str]
+    properties: list[str]
+    restricts: list[str]
+    use_enabled: list[str]
+    use_disabled: list[str]
 
     def to_gentoolkit(self, category: str, name: str) -> GentoolkitPackage:
         """
@@ -61,11 +61,15 @@ class PackageVersion:
         specs, and USE flag annotations are all stripped.
         """
         raw_parts: list[str | None] = [
-            self.depend, self.rdepend, self.bdepend,
-            self.pdepend, self.idepend,
+            self.depend,
+            self.rdepend,
+            self.bdepend,
+            self.pdepend,
+            self.idepend,
         ]
         combined: str = " ".join(p for p in raw_parts if p)
         return _parse_dep_string(combined)
+
 
 def _parse_dep_string(raw: str) -> list[str]:
     """
@@ -75,44 +79,46 @@ def _parse_dep_string(raw: str) -> list[str]:
     annotations, and HTML entities. Returns bare category/name strings.
     """
     import html
+
     text: str = html.unescape(raw)
 
     # Drop USE conditional tokens (flag? or !flag?)
     import re
-    text = re.sub(r'!?\w[\w.+-]*\?', '', text)
+
+    text = re.sub(r"!?\w[\w.+-]*\?", "", text)
 
     # Remove grouping parentheses
-    text = re.sub(r'[()]', ' ', text)
+    text = re.sub(r"[()]", " ", text)
 
     # Remove blocker operators
-    text = re.sub(r'!!?', '', text)
+    text = re.sub(r"!!?", "", text)
 
     atoms: list[str] = []
     seen: set[str] = set()
 
     for token in text.split():
         # Strip leading version operators
-        token = re.sub(r'^[><=~!]+', '', token)
+        token = re.sub(r"^[><=~!]+", "", token)
 
-        if '/' not in token:
+        if "/" not in token:
             continue
 
         # Strip slot and USE flag annotations
-        token = re.sub(r'[:\[].*$', '', token)
+        token = re.sub(r"[:\[].*$", "", token)
 
-        parts = token.split('/')
+        parts = token.split("/")
         if len(parts) != 2:
             continue
 
         category, pkg = parts
 
         # Strip version suffix (hyphen followed by a digit)
-        pkg = re.sub(r'-\d.*$', '', pkg)
+        pkg = re.sub(r"-\d.*$", "", pkg)
 
         # Validate both parts
-        if not re.match(r'^[a-zA-Z0-9_][a-zA-Z0-9_.+-]*$', category):
+        if not re.match(r"^[a-zA-Z0-9_][a-zA-Z0-9_.+-]*$", category):
             continue
-        if not re.match(r'^[a-zA-Z0-9_][a-zA-Z0-9_.+-]*$', pkg):
+        if not re.match(r"^[a-zA-Z0-9_][a-zA-Z0-9_.+-]*$", pkg):
             continue
 
         atom: str = f"{category}/{pkg}"
@@ -122,15 +128,17 @@ def _parse_dep_string(raw: str) -> list[str]:
 
     return atoms
 
+
 @dataclass
 class Package:
     """Represents a Gentoo package with all its versions."""
+
     category: str
     name: str
     description: str | None
     homepage: str | None
-    licenses: List[str]
-    versions: List[PackageVersion] = field(default_factory=list)
+    licenses: list[str]
+    versions: list[PackageVersion] = field(default_factory=list)
 
     @property
     def full_name(self) -> str:
@@ -178,10 +186,7 @@ class Package:
         """
         try:
             result: CompletedProcess[str] = subprocess.run(
-                ["eix", "--selected-file", "-0Qq", self.full_name],
-                capture_output=True,
-                text=True,
-                check=False
+                ["eix", "--selected-file", "-0Qq", self.full_name], capture_output=True, text=True, check=False
             )
             return result.returncode == 0
         except (subprocess.SubprocessError, FileNotFoundError):
@@ -196,10 +201,7 @@ class Package:
         """
         try:
             result: CompletedProcess[str] = subprocess.run(
-                ["eix", "--installed-deps", "-0Qq", self.full_name],
-                capture_output=True,
-                text=True,
-                check=False
+                ["eix", "--installed-deps", "-0Qq", self.full_name], capture_output=True, text=True, check=False
             )
             return result.returncode == 0
         except (subprocess.SubprocessError, FileNotFoundError):
@@ -210,8 +212,8 @@ def _parse_version(version_elem: etree._Element) -> PackageVersion:
     """Parse a version element from eix XML."""
     # Parse IUSE flags
     iuse_elems = version_elem.xpath("iuse")
-    iuse: List[str] = []
-    iuse_default: List[str] = []
+    iuse: list[str] = []
+    iuse_default: list[str] = []
 
     for iuse_elem in iuse_elems:
         flags = iuse_elem.text.split() if iuse_elem.text else []
@@ -265,7 +267,7 @@ def _parse_version(version_elem: etree._Element) -> PackageVersion:
         properties=properties,
         restricts=restricts,
         use_enabled=use_enabled,
-        use_disabled=use_disabled
+        use_disabled=use_disabled,
     )
 
 
@@ -278,7 +280,7 @@ def _parse_package(package_elem: etree._Element, category: str) -> Package:
     licenses_elem = package_elem.xpath("licenses")[0] if package_elem.xpath("licenses") else None
 
     # Parse licenses
-    licenses: List[str] = []
+    licenses: list[str] = []
     if licenses_elem is not None and licenses_elem.text:
         licenses = licenses_elem.text.split()
 
@@ -292,11 +294,11 @@ def _parse_package(package_elem: etree._Element, category: str) -> Package:
         description=desc_elem.text if desc_elem is not None else None,
         homepage=homepage_elem.text if homepage_elem is not None else None,
         licenses=licenses,
-        versions=versions
+        versions=versions,
     )
 
 
-def fetch_packages_by_query(query: List[str], append_cfg: bool = True) -> List[Package]:
+def fetch_packages_by_query(query: list[str], append_cfg: bool = True) -> list[Package]:
     """
     Fetch packages from eix using search query arguments.
 
@@ -328,17 +330,12 @@ def fetch_packages_by_query(query: List[str], append_cfg: bool = True) -> List[P
     # Append the search query arguments
     cmd.extend(query)
 
-    result: CompletedProcess[str] = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        check=True
-    )
+    result: CompletedProcess[str] = subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     parser = etree.XMLParser(recover=True, remove_comments=True)
-    root = etree.fromstring(result.stdout.encode('utf-8'), parser=parser)
+    root = etree.fromstring(result.stdout.encode("utf-8"), parser=parser)
 
-    packages: List[Package] = []
+    packages: list[Package] = []
 
     category_elems = root.xpath("//category")
     for category_elem in category_elems:
@@ -353,7 +350,7 @@ def fetch_packages_by_query(query: List[str], append_cfg: bool = True) -> List[P
     return packages
 
 
-def search_packages(query: str) -> List[Package]:
+def search_packages(query: str) -> list[Package]:
     """
     Search for packages using direct eix queries.
 
@@ -371,12 +368,12 @@ def search_packages(query: str) -> List[Package]:
         query_args: list[str] = query.split()
 
         # Check if any arguments are flags (start with - or --)
-        has_flags: bool = any(arg.startswith('-') for arg in query_args)
+        has_flags: bool = any(arg.startswith("-") for arg in query_args)
 
         # Only append config if no flags are present in the query
         append_cfg: bool = not has_flags
 
-        packages: List[Package] = fetch_packages_by_query(query_args, append_cfg=append_cfg)
+        packages: list[Package] = fetch_packages_by_query(query_args, append_cfg=append_cfg)
         return packages
     except (subprocess.CalledProcessError, etree.ParseError):
         # Return empty list on error rather than crashing
@@ -394,7 +391,7 @@ def get_package_by_atom(atom: str) -> Package | None:
         Package object if found, None otherwise
     """
     try:
-        packages: List[Package] = fetch_packages_by_query([atom])
+        packages: list[Package] = fetch_packages_by_query([atom])
         # Look for exact match
         for pkg in packages:
             if pkg.full_name == atom:

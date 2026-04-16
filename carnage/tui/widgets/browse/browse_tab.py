@@ -66,9 +66,7 @@ class BrowseTab(Widget):
                 self.app.call_from_thread(self._populate_table, packages)
         except Exception as e:
             if not self._cancel_search:
-                self.app.call_from_thread(
-                    self.notify, f"Search failed: {e}", severity="error"
-                )
+                self.app.call_from_thread(self.notify, f"Search failed: {e}", severity="error")
         finally:
             if not self._cancel_search:
                 self.app.call_from_thread(self._hide_loading)
@@ -92,9 +90,7 @@ class BrowseTab(Widget):
                 repo = package.versions[0].repository
                 if repo:
                     overlay = repo
-                    if repo != "gentoo" and any(
-                        v.repository == "gentoo" for v in package.versions[1:]
-                    ):
+                    if repo != "gentoo" and any(v.repository == "gentoo" for v in package.versions[1:]):
                         overlay = f"{repo} / gentoo"
 
             description: str = package.description or "No description"
@@ -105,8 +101,8 @@ class BrowseTab(Widget):
             installed: bool = package.is_installed()
             name_cell: str = (
                 f"[green]✓[/green] {package.category}/[bold]{package.name}[/bold]"
-                if installed else
-                f"  {package.category}/[bold]{package.name}[/bold]"
+                if installed
+                else f"  {package.category}/[bold]{package.name}[/bold]"
             )
 
             table.add_row(

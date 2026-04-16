@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
 from re import Match
-from typing import Any, Dict, List
+from typing import Any
 
 from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
@@ -19,6 +19,7 @@ CACHE_KEY_USEFLAGS = "useflags_data"
 @dataclass
 class UseFlag:
     """USE flag with description."""
+
     name: str
     description: str | None = None
 
@@ -30,18 +31,12 @@ class UseFlag:
 
     def to_dict(self) -> dict:
         """Convert to dictionary for caching."""
-        return {
-            'name': self.name,
-            'description': self.description
-        }
+        return {"name": self.name, "description": self.description}
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'UseFlag':
+    def from_dict(cls, data: dict) -> "UseFlag":
         """Create from dictionary after cache load."""
-        return cls(
-            name=data['name'],
-            description=data['description']
-        )
+        return cls(name=data["name"], description=data["description"])
 
 
 def _parse_flag_line(line: str) -> tuple[str | Any, ...] | None:
@@ -51,11 +46,11 @@ def _parse_flag_line(line: str) -> tuple[str | Any, ...] | None:
         Tuple of (flag, description) or None if line is invalid.
     """
     line = line.strip()
-    if not line or line.startswith('#'):
+    if not line or line.startswith("#"):
         return None
 
     # Format: "flag - Description"
-    match: Match[str] | None = re.match(r'^(\S+)\s+-\s+(.+)$', line)
+    match: Match[str] | None = re.match(r"^(\S+)\s+-\s+(.+)$", line)
     if match:
         return match.groups()
     return None
@@ -70,26 +65,26 @@ def _parse_local_flag_line(line: str) -> tuple[str | Any, ...] | None:
         Tuple of (flag, description) or None if line is invalid.
     """
     line = line.strip()
-    if not line or line.startswith('#'):
+    if not line or line.startswith("#"):
         return None
 
     # Format: "category/package:flag - Description" or "flag - Description"
-    if ':' in line:
-        match: Match[str] | None = re.match(r'^[^:]+:(\S+)\s+-\s+(.+)$', line)
+    if ":" in line:
+        match: Match[str] | None = re.match(r"^[^:]+:(\S+)\s+-\s+(.+)$", line)
     else:
-        match = re.match(r'^(\S+)\s+-\s+(.+)$', line)
+        match = re.match(r"^(\S+)\s+-\s+(.+)$", line)
 
     if match:
         return match.groups()
     return None
 
 
-def _parse_desc_file(file_path: Path, descriptions: Dict[str, str]) -> None:
+def _parse_desc_file(file_path: Path, descriptions: dict[str, str]) -> None:
     """Parse a use.desc file and update descriptions dict."""
     if not file_path.exists():
         return
 
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, encoding="utf-8") as f:
         for line in f:
             result = _parse_flag_line(line)
             if result:
@@ -98,12 +93,12 @@ def _parse_desc_file(file_path: Path, descriptions: Dict[str, str]) -> None:
                     descriptions[flag] = desc
 
 
-def _parse_local_desc_file(file_path: Path, descriptions: Dict[str, str]) -> None:
+def _parse_local_desc_file(file_path: Path, descriptions: dict[str, str]) -> None:
     """Parse a use.local.desc file and update descriptions dict."""
     if not file_path.exists():
         return
 
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, encoding="utf-8") as f:
         for line in f:
             result = _parse_local_flag_line(line)
             if result:
@@ -112,7 +107,7 @@ def _parse_local_desc_file(file_path: Path, descriptions: Dict[str, str]) -> Non
                     descriptions[flag] = desc
 
 
-def _parse_repo_useflags(repo_dir: Path, descriptions: Dict[str, str]) -> None:
+def _parse_repo_useflags(repo_dir: Path, descriptions: dict[str, str]) -> None:
     """Parse USE flags from a single repository."""
     profiles_dir: Path = repo_dir / "profiles"
 
@@ -120,9 +115,9 @@ def _parse_repo_useflags(repo_dir: Path, descriptions: Dict[str, str]) -> None:
     _parse_local_desc_file(profiles_dir / "use.local.desc", descriptions)
 
 
-def _parse_useflag_descriptions() -> Dict[str, str]:
+def _parse_useflag_descriptions() -> dict[str, str]:
     """Parse USE flag descriptions from profile files."""
-    descriptions: Dict[str, str] = {}
+    descriptions: dict[str, str] = {}
     repos_path: Path = ctx.repos_path
 
     if not repos_path.exists():
@@ -136,8 +131,7 @@ def _parse_useflag_descriptions() -> Dict[str, str]:
     return descriptions
 
 
-def get_or_cache_useflags(cache_manager: CacheManager,
-                          force_refresh: bool = False) -> List[UseFlag]:
+def get_or_cache_useflags(cache_manager: CacheManager, force_refresh: bool = False) -> list[UseFlag]:
     """
     Get USE flags with descriptions from cache or fetch fresh data.
 
@@ -165,19 +159,16 @@ def get_or_cache_useflags(cache_manager: CacheManager,
 
     for flag_name in useflag_names:
         # Skip flags that are only special characters
-        if re.match(r'^[^a-zA-Z0-9]+$', flag_name):
+        if re.match(r"^[^a-zA-Z0-9]+$", flag_name):
             continue
 
         # Clean flag name (remove leading + etc.)
-        clean_name: str = flag_name.lstrip('+')
+        clean_name: str = flag_name.lstrip("+")
 
         # Get description
         description: str | None = descriptions.get(clean_name) or descriptions.get(flag_name)
 
-        useflag = UseFlag(
-            name=clean_name,
-            description=description
-        )
+        useflag = UseFlag(name=clean_name, description=description)
         useflags.append(useflag)
 
     # Cache the results

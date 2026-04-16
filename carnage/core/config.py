@@ -3,7 +3,7 @@
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import tomlkit
 from tomlkit import TOMLDocument
@@ -29,12 +29,12 @@ class Configuration:
             config_path = Path(user_config_dir("carnage")) / "carnage.toml"
 
         self.config_path = config_path
-        self._config: Dict[str, Any] = {}
+        self._config: dict[str, Any] = {}
         self._toml_doc: TOMLDocument | None = None
         self._load_config()
 
     @staticmethod
-    def _get_default_config() -> Dict[str, Any]:
+    def _get_default_config() -> dict[str, Any]:
         """Get the default configuration."""
         return {
             "global": {
@@ -50,17 +50,14 @@ class Configuration:
                 "minimum_characters": 3,
                 "syntax_style": "github-dark",
                 "expand": True,
-                "depth": 1
+                "depth": 1,
             },
             "overlays": {
                 "skip_package_counting": True,
                 "cache_max_age": 72,
-                "overlay_source": "https://api.gentoo.org/overlays/repositories.xml"
+                "overlay_source": "https://api.gentoo.org/overlays/repositories.xml",
             },
-            "use": {
-                "minimum_characters": 3,
-                "cache_max_age": 96
-            }
+            "use": {"minimum_characters": 3, "cache_max_age": 96},
         }
 
     def _backup_config(self) -> None:
@@ -214,7 +211,7 @@ class Configuration:
             return
 
         try:
-            with open(self.config_path, "r", encoding="utf-8") as f:
+            with open(self.config_path, encoding="utf-8") as f:
                 self._toml_doc = tomlkit.parse(f.read())
                 # Convert to plain dict for easy access
                 self._config = self._toml_doc.unwrap()
@@ -240,7 +237,7 @@ class Configuration:
         with open(self.config_path, "w", encoding="utf-8") as f:
             f.write(tomlkit.dumps(self._toml_doc))
 
-    def _get_nested_value(self, keys: List[str], default: Any = None) -> Any:
+    def _get_nested_value(self, keys: list[str], default: Any = None) -> Any:
         """Get a nested value from the configuration."""
         current = self._config
         for key in keys:
@@ -250,7 +247,7 @@ class Configuration:
                 return default
         return current
 
-    def _set_nested_value(self, keys: List[str], value: Any) -> None:
+    def _set_nested_value(self, keys: list[str], value: Any) -> None:
         """Set a nested value in the configuration."""
         current = self._config
         for key in keys[:-1]:
@@ -259,14 +256,14 @@ class Configuration:
             current = current[key]
         current[keys[-1]] = value
 
-    def _set_nested_value_and_save(self, keys: List[str], value: Any) -> None:
+    def _set_nested_value_and_save(self, keys: list[str], value: Any) -> None:
         """Set a nested value, sync to the TOML document, and save."""
         self._set_nested_value(keys, value)
 
         if self._toml_doc:
             current = self._toml_doc
-            for key in keys[:-1]: # type: ignore
-                if key not in current: # type: ignore
+            for key in keys[:-1]:  # type: ignore
+                if key not in current:  # type: ignore
                     current[key] = {}
                 current = current[key]
             current[keys[-1]] = value  # type: ignore
@@ -310,12 +307,12 @@ class Configuration:
         return self._get_nested_value(["global", "ignore_warnings"], False)
 
     @property
-    def terminal(self) -> List[str]:
+    def terminal(self) -> list[str]:
         """Get terminal."""
         return self._get_nested_value(["global", "terminal"], [])
 
     @property
-    def search_flags(self) -> List[str]:
+    def search_flags(self) -> list[str]:
         """Get the search flags for package browsing."""
         return self._get_nested_value(["browse", "search_flags"], ["-f", "2"])
 
@@ -352,7 +349,9 @@ class Configuration:
     @property
     def overlay_source(self) -> str:
         """Get the overlay metadata source URL."""
-        return self._get_nested_value(["overlays", "overlay_source"], "https://api.gentoo.org/overlays/repositories.xml")
+        return self._get_nested_value(
+            ["overlays", "overlay_source"], "https://api.gentoo.org/overlays/repositories.xml"
+        )
 
     @property
     def use_minimum_characters(self) -> int:

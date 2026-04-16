@@ -19,12 +19,12 @@ dependencies = [
     "platformdirs>=4.9.6",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pyrefly>=0.50.0",
     "msgpack-types>=0.7.0",
     "textual-dev>=1.8.0",
-    "isort>=8.0.0"
+    "ruff>=0.15.10",
 ]
 
 [project.scripts]
@@ -33,3 +33,23 @@ carnage = "carnage.main:main"
 [tool.pyrefly]
 python-version = "3.14"
 python-interpreter = ".venv/bin/python3"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true

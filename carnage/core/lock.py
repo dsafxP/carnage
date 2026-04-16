@@ -7,8 +7,8 @@ instances. Additional instances send a signal and exit immediately.
 import atexit
 import socket
 import threading
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 _DEFAULT_SOCKET_PATH = Path("/tmp/carnage.lock")
 

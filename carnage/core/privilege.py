@@ -56,9 +56,7 @@ def get_configured_backend() -> str | None:
 
 
 def run_privileged(
-        cmd: list[str],
-        backend: str | None = None,
-        use_terminal: bool | None = None
+    cmd: list[str], backend: str | None = None, use_terminal: bool | None = None
 ) -> tuple[int, str, str]:
     """
     Run a command with privilege escalation.
@@ -93,13 +91,10 @@ def run_privileged(
     if use_terminal and terminal_cmd:
         full_cmd = terminal_cmd + full_cmd
 
-    result: CompletedProcess[str] = subprocess.run(
-        full_cmd,
-        capture_output=True,
-        text=True
-    )
+    result: CompletedProcess[str] = subprocess.run(full_cmd, capture_output=True, text=True)
 
     return result.returncode, result.stdout, result.stderr
+
 
 def system_privileged(cmd: str, backend: str | None = None) -> int:
     """
@@ -122,4 +117,5 @@ def system_privileged(cmd: str, backend: str | None = None) -> int:
         cmd = f"{BACKENDS[backend]} {cmd}"
 
     from os import system
+
     return system(cmd)

@@ -23,12 +23,14 @@ def toggle_compact_mode(screen: Screen) -> None:
 
     screen.set_class(compact, "compact")
 
+
 def clear_cache(app: App) -> None:
     """Clear carnage cache"""
 
     get_cache_manager().clear()
 
     app.notify("Cache cleared.")
+
 
 def eix_update(app: App) -> None:
     """Run eix-update and then restart carnage"""
@@ -43,6 +45,7 @@ def eix_update(app: App) -> None:
 
     app.bell()
 
+
 def eix_remote_update(app: App) -> None:
     """Run eix-remote update and then restart carnage"""
     with app.suspend():
@@ -52,11 +55,12 @@ def eix_remote_update(app: App) -> None:
         else:
             system_privileged("eix-remote update")
 
-    get_cache_manager().clear() # refresh to use new remote data
+    get_cache_manager().clear()  # refresh to use new remote data
 
     app.switch_screen(MainScreen())
 
     app.bell()
+
 
 @work(thread=True)
 async def _run_eclean_dist(app: App) -> None:
@@ -74,10 +78,12 @@ async def _run_eclean_dist(app: App) -> None:
 
     app.call_from_thread(app.bell)
 
+
 def run_eclean_dist(app: App) -> None:
     """Clean obsolete distfiles with eclean distfiles"""
     app.notify("Running eclean-dist...", severity="warning", timeout=15)
     _run_eclean_dist(app)
+
 
 @work(thread=True)
 async def _run_eclean_pkg(app: App) -> None:
@@ -95,10 +101,12 @@ async def _run_eclean_pkg(app: App) -> None:
 
     app.call_from_thread(app.bell)
 
+
 def run_eclean_pkg(app: App) -> None:
     """Clean obsolete binary packages with eclean packages"""
     app.notify("Running eclean-pkg...", severity="warning", timeout=15)
     _run_eclean_pkg(app)
+
 
 def sync(app: App) -> None:
     """Run emerge --sync and then restart carnage."""

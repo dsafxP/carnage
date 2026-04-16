@@ -1,6 +1,5 @@
 """GLSAs tab widget for displaying and managing Gentoo Linux Security Advisories."""
 
-
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
@@ -88,10 +87,7 @@ class GLSATab(Widget):
 
         # Find the selected GLSA item
         glsa_id: str | None = event.row_key.value
-        self.selected_glsa = next(
-            (g for g in self.glsa_items if g.id == glsa_id),
-            None
-        )
+        self.selected_glsa = next((g for g in self.glsa_items if g.id == glsa_id), None)
 
         if self.selected_glsa is None:
             return
@@ -111,7 +107,7 @@ class GLSATab(Widget):
         if self.selected_glsa.announced:
             header += f"[dim][b]Announced:[/] {self.selected_glsa.announced}[/]\n"
 
-        #if self.selected_glsa.revised:
+        # if self.selected_glsa.revised:
         #   header += f"[dim]Revised: {self.selected_glsa.revised} (revision {self.selected_glsa.revision_count})[/]\n"
 
         if self.selected_glsa.impact_type:
@@ -126,7 +122,7 @@ class GLSATab(Widget):
 
         # Render affected packages
         if self.selected_glsa.affected_packages:
-            details += f"[b]Affected Packages:[/]\n\n"
+            details += "[b]Affected Packages:[/]\n\n"
 
             for package in self.selected_glsa.affected_packages:
                 details += f"[dim][b]Package:[/] [r]{package.name}[/] on [b]{package.arch}[/][/dim]\n"
@@ -167,7 +163,7 @@ class GLSATab(Widget):
 
         # Render resolutions
         if self.selected_glsa.resolutions:
-            details += f"[b]Resolution:[/]\n"
+            details += "[b]Resolution:[/]\n"
 
             for i, resolution in enumerate(self.selected_glsa.resolutions, 1):
                 if resolution.text:
@@ -181,13 +177,13 @@ class GLSATab(Widget):
                     details += "\n"
 
         if self.selected_glsa.references:
-            details += f"[b]References:[/]\n"
+            details += "[b]References:[/]\n"
             for ref in self.selected_glsa.references:
                 details += f"  • {ref}\n"
             details += "\n"
 
         if self.selected_glsa.bugs:
-            details += f"[b]Bugzilla entries:[/]\n"
+            details += "[b]Bugzilla entries:[/]\n"
             for bug in self.selected_glsa.bugs:
                 details += f"  • [link='https://bugs.gentoo.org/{bug}']{bug}[/link]\n"
 
@@ -212,7 +208,9 @@ class GLSATab(Widget):
             self.notify("No GLSAs to fix", severity="warning")
             return
 
-        self.app.call_from_thread(self.notify, "Applying fixes... (don't close until finished!)", severity="warning", timeout=15)
+        self.app.call_from_thread(
+            self.notify, "Applying fixes... (don't close until finished!)", severity="warning", timeout=15
+        )
 
         fix_btn: Button = self.query_one("#fix-glsa-btn", Button)
         try:
@@ -243,13 +241,8 @@ class GLSATab(Widget):
             self._action_fix_glsas()
 
 
-__symbols: dict[str, str] = {
-    "lt": "<",
-    "le": "≤",
-    "eq": "=",
-    "ge": "≥",
-    "gt": ">"
-}
+__symbols: dict[str, str] = {"lt": "<", "le": "≤", "eq": "=", "ge": "≥", "gt": ">"}
+
 
 def _get_range_symbol(range_str: str) -> str:
     """Convert range operator to symbol."""

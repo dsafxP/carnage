@@ -1,11 +1,12 @@
 import argparse
 from pathlib import Path
-from typing import *
+from typing import Any
 
 import carnage
 
-APP_NAME="carnage"
-APP_DESC="TUI front-end for Portage and eix"
+APP_NAME = "carnage"
+APP_DESC = "TUI front-end for Portage and eix"
+
 
 class __ArgsInit:
     def __init__(self):
@@ -13,26 +14,20 @@ class __ArgsInit:
 
     @staticmethod
     def _parse_args() -> argparse.Namespace:
-        parser = argparse.ArgumentParser(
-            prog=APP_NAME,
-            description=APP_DESC
-        )
+        parser = argparse.ArgumentParser(prog=APP_NAME, description=APP_DESC)
 
         # Version argument
         parser.add_argument(
-            "-V", "--version",
+            "-V",
+            "--version",
             action="version",
             version=f"%(prog)s {carnage.__version__}",
-            help="Show version information and exit"
+            help="Show version information and exit",
         )
 
         # Config file path
         parser.add_argument(
-            "-c", "--config",
-            type=Path,
-            default=None,
-            help="Path to configuration file",
-            metavar="FILE"
+            "-c", "--config", type=Path, default=None, help="Path to configuration file", metavar="FILE"
         )
 
         # CSS file path
@@ -41,7 +36,7 @@ class __ArgsInit:
             type=Path,
             default=Path.home() / ".config/carnage/custom.tcss",
             help="Path to custom CSS file",
-            metavar="FILE"
+            metavar="FILE",
         )
 
         return parser.parse_args()

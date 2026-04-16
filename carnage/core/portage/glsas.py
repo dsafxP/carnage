@@ -4,8 +4,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from lxml import etree
-from portage.glsa import (Glsa, GlsaArgumentException, GlsaFormatException,
-                          GlsaTypeException, get_applied_glsas, get_glsa_list)
+from portage.glsa import (
+    Glsa,
+    GlsaArgumentException,
+    GlsaFormatException,
+    GlsaTypeException,
+    get_applied_glsas,
+    get_glsa_list,
+)
 
 from carnage.core.portage.portageq import ctx
 
@@ -13,6 +19,7 @@ from carnage.core.portage.portageq import ctx
 @dataclass
 class AffectedPackage:
     """Represents an affected package in a GLSA."""
+
     name: str
     auto: str
     arch: str
@@ -29,6 +36,7 @@ class AffectedPackage:
 @dataclass
 class Resolution:
     """Represents a resolution step with text and optional code."""
+
     text: str
     code: str | None = None
 
@@ -42,6 +50,7 @@ class Resolution:
 @dataclass
 class GLSA:
     """Represents a Gentoo Linux Security Advisory."""
+
     id: str
     title: str | None
     synopsis: str
@@ -77,30 +86,24 @@ def _parse_affected_packages(root: etree._Element) -> list[AffectedPackage]:
         arch = package_elem.get("arch", "*")
 
         unaffected_conditions = [
-            {
-                "range": elem.get("range", ""),
-                "slot": elem.get("slot", ""),
-                "value": elem.text or ""
-            }
+            {"range": elem.get("range", ""), "slot": elem.get("slot", ""), "value": elem.text or ""}
             for elem in package_elem.xpath("unaffected")
         ]
 
         vulnerable_conditions = [
-            {
-                "range": elem.get("range", ""),
-                "slot": elem.get("slot", ""),
-                "value": elem.text or ""
-            }
+            {"range": elem.get("range", ""), "slot": elem.get("slot", ""), "value": elem.text or ""}
             for elem in package_elem.xpath("vulnerable")
         ]
 
-        packages.append(AffectedPackage(
-            name=name,
-            auto=auto,
-            arch=arch,
-            unaffected_conditions=unaffected_conditions,
-            vulnerable_conditions=vulnerable_conditions,
-        ))
+        packages.append(
+            AffectedPackage(
+                name=name,
+                auto=auto,
+                arch=arch,
+                unaffected_conditions=unaffected_conditions,
+                vulnerable_conditions=vulnerable_conditions,
+            )
+        )
 
     return packages
 
@@ -135,10 +138,12 @@ def _parse_resolutions(root: etree._Element) -> list[Resolution]:
     for elem in resolution_elems[0].iter():
         if elem.tag == "p":
             if current_text.strip() or current_code.strip():
-                resolutions.append(Resolution(
-                    text=current_text.strip(),
-                    code=_clean_code_indentation(current_code) if current_code else None,
-                ))
+                resolutions.append(
+                    Resolution(
+                        text=current_text.strip(),
+                        code=_clean_code_indentation(current_code) if current_code else None,
+                    )
+                )
                 current_text = ""
                 current_code = ""
             if elem.text:
@@ -152,10 +157,12 @@ def _parse_resolutions(root: etree._Element) -> list[Resolution]:
             current_text = (current_text + " " + elem.tail.strip()).strip()
 
     if current_text.strip() or current_code.strip():
-        resolutions.append(Resolution(
-            text=current_text.strip(),
-            code=_clean_code_indentation(current_code) if current_code else None,
-        ))
+        resolutions.append(
+            Resolution(
+                text=current_text.strip(),
+                code=_clean_code_indentation(current_code) if current_code else None,
+            )
+        )
 
     return resolutions
 

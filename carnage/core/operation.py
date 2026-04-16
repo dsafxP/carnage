@@ -1,6 +1,5 @@
 """User operation execution with privilege escalation and logging."""
 
-from carnage.tui.app import CarnageApp
 import asyncio
 import logging
 import shlex
@@ -13,6 +12,7 @@ from pathlib import Path
 from platformdirs import user_log_path
 
 from carnage.core.config import Configuration, get_config
+from carnage.tui.app import CarnageApp
 
 # Privilege escalation backends in detection priority order
 _BACKENDS: list[str] = ["pkexec", "sudo", "doas"]
@@ -40,30 +40,12 @@ def _ensure_log_handler() -> None:
         backupCount=4,
         encoding="utf-8",
     )
-    handler.setFormatter(
-        logging.Formatter("%(asctime)s %(levelname)s %(message)s",
-                          datefmt="%Y-%m-%d %H:%M:%S")
-    )
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
 
     _log.setLevel(logging.DEBUG)
     _log.addHandler(handler)
 
     _handler_installed = True
-
-
-async def run_blocking_operation(
-    app: CarnageApp,
-    operation: Operation,
-) -> None:
-    if app.blocked:
-        raise RuntimeError("Another operation is already running")
-
-    app.blocked = True
-
-    try:
-        await operation.run()
-    finally:
-        app.blocked = False
 
 
 def detect_backend() -> str | None:
@@ -97,9 +79,7 @@ class OperationError(Exception):
     def __init__(self, cmd: list[str], returncode: int) -> None:
         self.cmd = cmd
         self.returncode = returncode
-        super().__init__(
-            f"Command {cmd[0]!r} exited with code {returncode}"
-        )
+        super().__init__(f"Command {cmd[0]!r} exited with code {returncode}")
 
 
 class Operation:
@@ -121,8 +101,7 @@ class Operation:
 
     Example::
 
-        op = Operation(["emerge", "app-editors/vim"],
-                       privilege=True)
+        op = Operation(["emerge", "app-editors/vim"], privilege=True)
         await op.run()
     """
 
@@ -177,7 +156,7 @@ class Operation:
         async for raw_line in process.stdout:
             line = raw_line.decode(errors="replace").rstrip()
 
-            #print(line)
+            # print(line)
             _log.debug("%s", line)
 
         await process.wait()
@@ -188,9 +167,22 @@ class Operation:
         if returncode == 0:
             _log.info("END %s | exit 0 | %.1fs", full_cmd[0], elapsed)
         else:
-            _log.warning(
-                "END %s | exit %d | %.1fs", full_cmd[0], returncode, elapsed
-            )
+            _log.warning("END %s | exit %d | %.1fs", full_cmd[0], returncode, elapsed)
             raise OperationError(full_cmd, returncode)
 
         return returncode
+
+
+async def run_blocking_operation(
+    app: CarnageApp,
+    operation: Operation,
+) -> None:
+    if app.blocked:
+        raise RuntimeError("Another operation is already running")
+
+    app.blocked = True
+
+    try:
+        await operation.run()
+    finally:
+        app.blocked = False

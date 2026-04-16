@@ -15,7 +15,6 @@ from textual.app import App
 
 from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
-from carnage.core.eix.eix import is_found
 from carnage.core.eix.overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
 from carnage.core.portage.portageq import ctx
 from carnage.core.privilege import run_privileged, system_privileged
@@ -26,20 +25,24 @@ CACHE_KEY = "overlays_data"
 # Special value to indicate package counting was skipped
 SKIPPED_PACKAGE_COUNT = -4
 
+
 class OverlayQuality(Enum):
     """Quality status of an overlay."""
+
     CORE = "core"
     EXPERIMENTAL = "experimental"
 
 
 class OverlayStatus(Enum):
     """Official status of an overlay."""
+
     OFFICIAL = "official"
     UNOFFICIAL = "unofficial"
 
 
 class SourceType(Enum):
     """Version control system type."""
+
     GIT = "git"
     MERCURIAL = "mercurial"
     RSYNC = "rsync"
@@ -49,6 +52,7 @@ class SourceType(Enum):
 @dataclass
 class Owner:
     """Owner information for an overlay."""
+
     name: str
     email: str
     owner_type: Literal["person", "project"]
@@ -57,6 +61,7 @@ class Owner:
 @dataclass
 class Source:
     """Source repository information."""
+
     source_type: SourceType
     url: str
 
@@ -64,6 +69,7 @@ class Source:
 @dataclass
 class Overlay:
     """Represents a Gentoo overlay repository."""
+
     name: str
     description: str | None
     homepage: str | None
@@ -164,49 +170,34 @@ class Overlay:
     def to_dict(self) -> dict:
         """Convert overlay to dictionary for serialization."""
         return {
-            'name': self.name,
-            'description': self.description,
-            'homepage': self.homepage,
-            'owner': {
-                'name': self.owner.name,
-                'email': self.owner.email,
-                'owner_type': self.owner.owner_type
-            },
-            'sources': [
-                {'source_type': s.source_type.value, 'url': s.url}
-                for s in self.sources
-            ],
-            'feeds': self.feeds,
-            'quality': self.quality.value,
-            'status': self.status.value,
-            'installed': self.installed,
-            'package_count': self.package_count
+            "name": self.name,
+            "description": self.description,
+            "homepage": self.homepage,
+            "owner": {"name": self.owner.name, "email": self.owner.email, "owner_type": self.owner.owner_type},
+            "sources": [{"source_type": s.source_type.value, "url": s.url} for s in self.sources],
+            "feeds": self.feeds,
+            "quality": self.quality.value,
+            "status": self.status.value,
+            "installed": self.installed,
+            "package_count": self.package_count,
         }
 
     @staticmethod
-    def from_dict(data: dict) -> 'Overlay':
+    def from_dict(data: dict) -> "Overlay":
         """Create overlay from dictionary after deserialization."""
         return Overlay(
-            name=data['name'],
-            description=data['description'],
-            homepage=data['homepage'],
+            name=data["name"],
+            description=data["description"],
+            homepage=data["homepage"],
             owner=Owner(
-                name=data['owner']['name'],
-                email=data['owner']['email'],
-                owner_type=data['owner']['owner_type']
+                name=data["owner"]["name"], email=data["owner"]["email"], owner_type=data["owner"]["owner_type"]
             ),
-            sources=[
-                Source(
-                    source_type=SourceType(s['source_type']),
-                    url=s['url']
-                )
-                for s in data['sources']
-            ],
-            feeds=data['feeds'],
-            quality=OverlayQuality(data['quality']),
-            status=OverlayStatus(data['status']),
-            installed=data.get('installed'),
-            package_count=data.get('package_count')
+            sources=[Source(source_type=SourceType(s["source_type"]), url=s["url"]) for s in data["sources"]],
+            feeds=data["feeds"],
+            quality=OverlayQuality(data["quality"]),
+            status=OverlayStatus(data["status"]),
+            installed=data.get("installed"),
+            package_count=data.get("package_count"),
         )
 
 
@@ -228,7 +219,7 @@ def _parse_owner(repo_elem: etree._Element) -> Owner | None:
     return Owner(
         name=name,
         email=email,
-        owner_type=owner_type  # type: ignore
+        owner_type=owner_type,  # type: ignore
     )
 
 
@@ -289,7 +280,7 @@ def _parse_overlay(repo_elem: etree._Element) -> Overlay | None:
         sources=sources,
         feeds=feeds,
         quality=quality,
-        status=status
+        status=status,
     )
 
 
@@ -341,11 +332,7 @@ def get_installed() -> list[str]:
     if not repos_path.exists():
         return []
 
-    return [
-        item.name
-        for item in repos_path.iterdir()
-        if item.is_dir()
-    ]
+    return [item.name for item in repos_path.iterdir() if item.is_dir()]
 
 
 def _get_overlay_package_count(overlay: Overlay) -> tuple[Overlay, int]:
@@ -367,10 +354,7 @@ def _populate_package_counts(overlays: list[Overlay]) -> None:
     # Use ThreadPoolExecutor for parallel execution
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all tasks
-        future_to_overlay = {
-            executor.submit(_get_overlay_package_count, overlay): overlay
-            for overlay in overlays
-        }
+        future_to_overlay = {executor.submit(_get_overlay_package_count, overlay): overlay for overlay in overlays}
 
         # Process completed tasks as they finish
         for future in concurrent.futures.as_completed(future_to_overlay):
@@ -419,9 +403,9 @@ def fetch_extra(source_url: str | None = None) -> list[Overlay]:
     return overlays
 
 
-def get_or_cache(cache_manager: CacheManager,
-                source_url: str | None = None,
-                force_refresh: bool = False) -> list[Overlay]:
+def get_or_cache(
+    cache_manager: CacheManager, source_url: str | None = None, force_refresh: bool = False
+) -> list[Overlay]:
     """
     Get overlays from cache or fetch fresh data if cache is stale/missing.
 
@@ -450,13 +434,11 @@ def get_or_cache(cache_manager: CacheManager,
                 else:
                     # If package counting is enabled, check if we have skipped counts
                     has_skipped_counts: bool = any(
-                        overlay.package_count == SKIPPED_PACKAGE_COUNT
-                        for overlay in cached_overlays
+                        overlay.package_count == SKIPPED_PACKAGE_COUNT for overlay in cached_overlays
                     )
 
                     has_non_cached: bool = any(
-                        overlay.package_count == NO_CACHE_PACKAGE_COUNT
-                        for overlay in cached_overlays
+                        overlay.package_count == NO_CACHE_PACKAGE_COUNT for overlay in cached_overlays
                     )
 
                     if not has_skipped_counts and not has_non_cached:

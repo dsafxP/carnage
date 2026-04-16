@@ -8,8 +8,7 @@ from textual.coordinate import Coordinate
 from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Rule, Static
 
-from carnage.core import (News, get_news, mark_all_news_read, mark_news_read,
-                          purge_read_news)
+from carnage.core import News, get_news, mark_all_news_read, mark_news_read, purge_read_news
 from carnage.tui.widgets.table import NavigableDataTable
 
 
@@ -133,10 +132,7 @@ class NewsTab(Widget):
 
         # Find the selected news item
         news_index = int(event.row_key.value)  # type: ignore
-        self.selected_news = next(
-            (n for n in self.news_items if n.index == news_index),
-            None
-        )
+        self.selected_news = next((n for n in self.news_items if n.index == news_index), None)
 
         if self.selected_news is None:
             return
@@ -169,8 +165,7 @@ class NewsTab(Widget):
         mark_all_btn.display = has_unread
 
         # Enable "Mark as Read" only if a news item is selected, unread, and no action in progress
-        can_mark_single: bool = (self.selected_news is not None and
-                               not self.selected_news.read)
+        can_mark_single: bool = self.selected_news is not None and not self.selected_news.read
         mark_read_btn.disabled = not can_mark_single
         mark_read_btn.display = can_mark_single
 

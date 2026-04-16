@@ -7,8 +7,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
-from textual.widgets import (Button, DataTable, SelectionList, Static,
-                             TabbedContent, TabPane, Tree)
+from textual.widgets import Button, DataTable, SelectionList, Static, TabbedContent, TabPane, Tree
 from textual.widgets._selection_list import Selection
 from textual.widgets._tree import TreeNode
 
@@ -17,8 +16,12 @@ from carnage.core.eix.search import Package, PackageVersion
 from carnage.core.gentoolkit.euse import euse_disable, euse_enable
 from carnage.core.gentoolkit.flag import get_all_cpv_usef
 from carnage.core.gentoolkit.package import GentoolkitPackage
-from carnage.core.portage.emerge import (emerge_deselect, emerge_install,
-                                         emerge_noreplace, emerge_uninstall)
+from carnage.core.portage.emerge import (
+    emerge_deselect,
+    emerge_install,
+    emerge_noreplace,
+    emerge_uninstall,
+)
 from carnage.tui.widgets.table import NavigableDataTable
 
 
@@ -83,7 +86,7 @@ def _build_file_tree(node: TreeNode[str], prefix: str, contents: dict) -> None:
     for path in sorted(contents):
         if not path.startswith(prefix + "/"):
             continue
-        remainder = path[len(prefix) + 1:]
+        remainder = path[len(prefix) + 1 :]
         child_name = remainder.split("/")[0]
         if child_name in seen:
             continue
@@ -91,9 +94,7 @@ def _build_file_tree(node: TreeNode[str], prefix: str, contents: dict) -> None:
 
         child_path: str = f"{prefix}/{child_name}"
         entry_type = contents.get(child_path, [None])[0]
-        is_dir = entry_type == "dir" or any(
-            p.startswith(child_path + "/") for p in contents
-        )
+        is_dir = entry_type == "dir" or any(p.startswith(child_path + "/") for p in contents)
 
         if is_dir:
             label = Text("📂 ", style="dim")
@@ -166,8 +167,7 @@ class PackageDetailWidget(Widget):
             with TabPane("Dependencies", id="tab-deps"):
                 yield Tree(f"{self.package.full_name}", id="pkg-deps-tree")
 
-            with TabPane("Installed Files", id="tab-files",
-                         disabled=not self.package.is_installed()):
+            with TabPane("Installed Files", id="tab-files", disabled=not self.package.is_installed()):
                 yield Tree("/", id="pkg-files-tree")
 
     def on_mount(self) -> None:
@@ -180,7 +180,6 @@ class PackageDetailWidget(Widget):
         # Buttons will be refreshed once world file status arrives; show
         # what we can immediately in the meantime.
         self._update_buttons()
-
 
     def _format_details(self) -> str:
         """Format the top-level package details block."""
@@ -211,15 +210,13 @@ class PackageDetailWidget(Widget):
             ebuild_widget.update(Text.from_markup("[red]No version selected.[/]"))
             return
 
-        gt_pkg: GentoolkitPackage = self.selected_version.to_gentoolkit(
-            self.package.category, self.package.name
-        )
+        gt_pkg: GentoolkitPackage = self.selected_version.to_gentoolkit(self.package.category, self.package.name)
         path_str: str | None = gt_pkg.ebuild_path()
 
         if not path_str:
-            ebuild_widget.update(Text.from_markup(
-                f"[red]{self.package.category}/{self.package.name} ebuild path not found.[/]"
-            ))
+            ebuild_widget.update(
+                Text.from_markup(f"[red]{self.package.category}/{self.package.name} ebuild path not found.[/]")
+            )
             return
 
         path = Path(path_str)
@@ -238,16 +235,7 @@ class PackageDetailWidget(Widget):
         config: Configuration = get_config()
 
         ebuild_widget.update(
-            Group(
-                header,
-                Syntax(
-                    content,
-                    "bash",
-                    theme=config.syntax_style,
-                    line_numbers=True,
-                    word_wrap=False
-                )
-            )
+            Group(header, Syntax(content, "bash", theme=config.syntax_style, line_numbers=True, word_wrap=False))
         )
 
     def _load_use_flags(self) -> None:
@@ -268,9 +256,7 @@ class PackageDetailWidget(Widget):
             use_list.disabled = True
             return
 
-        version_label.update(
-            f"[dim]{self.package.full_name}-{self.selected_version.id}[/dim]"
-        )
+        version_label.update(f"[dim]{self.package.full_name}-{self.selected_version.id}[/dim]")
 
         flags: set[str] = set(self.selected_version.iuse)
         if not flags:
@@ -299,9 +285,7 @@ class PackageDetailWidget(Widget):
             self._use_flag_originals[flag] = enabled
             use_list.add_option(Selection(flag, flag, initial_state=enabled))
 
-    def on_selection_list_selected_changed(
-        self, event: SelectionList.SelectedChanged
-    ) -> None:
+    def on_selection_list_selected_changed(self, event: SelectionList.SelectedChanged) -> None:
         """Show/hide the Apply button when the selection drifts from the original."""
         if event.selection_list.id != "pkg-use-list":
             return
@@ -310,15 +294,12 @@ class PackageDetailWidget(Widget):
 
         current_enabled: set[str] = set(event.selection_list.selected)
         changed: bool = any(
-            (flag in current_enabled) != original
-            for flag, original in self._use_flag_originals.items()
+            (flag in current_enabled) != original for flag, original in self._use_flag_originals.items()
         )
 
         apply_btn.disabled = not changed
 
-    def _commit_use_flag_changes(
-            self, to_enable: list[str], to_disable: list[str]
-    ) -> None:
+    def _commit_use_flag_changes(self, to_enable: list[str], to_disable: list[str]) -> None:
         """Update the baseline after a successful apply without re-querying portage."""
         for flag in to_enable:
             self._use_flag_originals[flag] = True
@@ -329,8 +310,7 @@ class PackageDetailWidget(Widget):
         use_list: SelectionList = self.query_one("#pkg-use-list", SelectionList)
         current_enabled: set[str] = set(use_list.selected)  # type: ignore[arg-type]
         changed: bool = any(
-            (flag in current_enabled) != original
-            for flag, original in self._use_flag_originals.items()
+            (flag in current_enabled) != original for flag, original in self._use_flag_originals.items()
         )
         self.query_one("#use-apply-btn", Button).disabled = not changed
 
@@ -428,9 +408,7 @@ class PackageDetailWidget(Widget):
             return
 
         version_id = event.row_key.value.rsplit("-", 1)[0]  # type: ignore
-        version = next(
-            (v for v in self.package.versions if v.id == version_id), None
-        )
+        version = next((v for v in self.package.versions if v.id == version_id), None)
         if version is None:
             return
 
@@ -440,9 +418,7 @@ class PackageDetailWidget(Widget):
         self._load_ebuild()
         self._update_buttons()
 
-        gt_pkg: GentoolkitPackage = version.to_gentoolkit(
-            self.package.category, self.package.name
-        )
+        gt_pkg: GentoolkitPackage = version.to_gentoolkit(self.package.category, self.package.name)
         if gt_pkg.available:
             self.notify(f"{self.package.full_name}-{version_id} selected")
         else:
@@ -451,13 +427,11 @@ class PackageDetailWidget(Widget):
                 severity="warning",
             )
 
-
     @work(exclusive=True, thread=True)
     def _load_world_file_status(self) -> None:
         """Check world file membership in a thread then refresh buttons."""
         self._in_world_file = self.package.is_in_world_file()
         self.app.call_from_thread(self._update_buttons)
-
 
     def _update_buttons(self) -> None:
         """Synchronise button visibility with selected_version and world file state."""
@@ -504,7 +478,7 @@ class PackageDetailWidget(Widget):
         for v in self.package.versions:
             v.installed = v.id == version_id
         self._load_world_file_status()
-        #self._update_buttons()
+        # self._update_buttons()
         self._load_installed_files()
         # Re-enable the files tab
         self.query_one("#tab-files").disabled = False
@@ -517,7 +491,6 @@ class PackageDetailWidget(Widget):
         self._update_buttons()
         # Disable the files tab since nothing is installed anymore
         self.query_one("#tab-files").disabled = True
-
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.disabled:
@@ -534,7 +507,6 @@ class PackageDetailWidget(Widget):
         elif event.button.id == "noreplace-btn":
             self._action_noreplace()
 
-
     @work(exclusive=True, thread=True)
     def _action_apply_use_flags(self) -> None:
         """Diff the checklist against originals and run euse for each change."""
@@ -548,14 +520,8 @@ class PackageDetailWidget(Widget):
 
         currently_enabled: set[str] = set(use_list.selected)
 
-        to_enable: list[str] = [
-            f for f, was in self._use_flag_originals.items()
-            if not was and f in currently_enabled
-        ]
-        to_disable: list[str] = [
-            f for f, was in self._use_flag_originals.items()
-            if was and f not in currently_enabled
-        ]
+        to_enable: list[str] = [f for f, was in self._use_flag_originals.items() if not was and f in currently_enabled]
+        to_disable: list[str] = [f for f, was in self._use_flag_originals.items() if was and f not in currently_enabled]
 
         errors: list[str] = []
 
@@ -573,9 +539,7 @@ class PackageDetailWidget(Widget):
                 if rc != 0:
                     errors.append(f"disable {to_disable}: {stderr.strip()}")
         except Exception as e:
-            self.app.call_from_thread(
-                self.notify, f"Error applying USE flags: {e}", severity="error"
-            )
+            self.app.call_from_thread(self.notify, f"Error applying USE flags: {e}", severity="error")
             return
         finally:
             apply_btn.disabled = False
@@ -624,13 +588,9 @@ class PackageDetailWidget(Widget):
 
                 self.app.call_from_thread(self._mark_installed, self.selected_version.id)
             else:
-                self.app.call_from_thread(
-                    self.notify, f"Failed to install: {stderr}", severity="error"
-                )
+                self.app.call_from_thread(self.notify, f"Failed to install: {stderr}", severity="error")
         except Exception as e:
-            self.app.call_from_thread(
-                self.notify, f"Error installing: {e}", severity="error"
-            )
+            self.app.call_from_thread(self.notify, f"Error installing: {e}", severity="error")
         finally:
             emerge_btn.disabled = False
 
@@ -664,13 +624,9 @@ class PackageDetailWidget(Widget):
 
                 self.app.call_from_thread(self._mark_uninstalled)
             else:
-                self.app.call_from_thread(
-                    self.notify, f"Failed to remove: {stderr}", severity="error"
-                )
+                self.app.call_from_thread(self.notify, f"Failed to remove: {stderr}", severity="error")
         except Exception as e:
-            self.app.call_from_thread(
-                self.notify, f"Error removing: {e}", severity="error"
-            )
+            self.app.call_from_thread(self.notify, f"Error removing: {e}", severity="error")
         finally:
             depclean_btn.disabled = False
 
@@ -699,9 +655,7 @@ class PackageDetailWidget(Widget):
             )
             returncode, _, stderr = emerge_deselect(atom)
             if returncode == 0:
-                self.app.call_from_thread(
-                    self.notify, f"Successfully removed {atom} from world file"
-                )
+                self.app.call_from_thread(self.notify, f"Successfully removed {atom} from world file")
                 self._load_world_file_status()
             else:
                 self.app.call_from_thread(
@@ -710,9 +664,7 @@ class PackageDetailWidget(Widget):
                     severity="error",
                 )
         except Exception as e:
-            self.app.call_from_thread(
-                self.notify, f"Error removing from world file: {e}", severity="error"
-            )
+            self.app.call_from_thread(self.notify, f"Error removing from world file: {e}", severity="error")
         finally:
             deselect_btn.disabled = False
 
@@ -741,9 +693,7 @@ class PackageDetailWidget(Widget):
             )
             returncode, _, stderr = emerge_noreplace(atom)
             if returncode == 0:
-                self.app.call_from_thread(
-                    self.notify, f"Successfully added {atom} to world file"
-                )
+                self.app.call_from_thread(self.notify, f"Successfully added {atom} to world file")
                 self._load_world_file_status()
             else:
                 self.app.call_from_thread(
@@ -752,9 +702,7 @@ class PackageDetailWidget(Widget):
                     severity="error",
                 )
         except Exception as e:
-            self.app.call_from_thread(
-                self.notify, f"Error adding to world file: {e}", severity="error"
-            )
+            self.app.call_from_thread(self.notify, f"Error adding to world file: {e}", severity="error")
         finally:
             noreplace_btn.disabled = False
 

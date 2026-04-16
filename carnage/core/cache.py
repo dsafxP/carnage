@@ -105,7 +105,7 @@ class CacheManager:
             return None
 
         try:
-            with open(meta_path, "r") as f:
+            with open(meta_path) as f:
                 timestamp = float(f.read().strip())
 
             cached_time: datetime = datetime.fromtimestamp(timestamp)
@@ -181,10 +181,8 @@ class CacheManager:
         Returns:
             List of cache key names.
         """
-        return [
-            path.stem
-            for path in self.cache_dir.glob("*.msgpack")
-        ]
+        return [path.stem for path in self.cache_dir.glob("*.msgpack")]
+
 
 _cache: CacheManager | None = None
 

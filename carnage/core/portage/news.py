@@ -18,6 +18,7 @@ _LANGUAGE_ID = "en"
 @dataclass
 class News:
     """Represents a Gentoo news item."""
+
     index: int
     date: str
     title: str
@@ -60,6 +61,7 @@ def _profile_path() -> str | None:
     NewsItem.isRelevant() expects (mirrors NewsManager._profile_path logic).
     """
     import os
+
     portdir: str | None = ctx.portdbapi.repositories.mainRepoLocation()
     if portdir is None:
         return None
@@ -69,7 +71,7 @@ def _profile_path() -> str | None:
         return None
     profile = os.path.realpath(profile)
     if profile.startswith(profiles_base):
-        return profile[len(profiles_base):]
+        return profile[len(profiles_base) :]
     return profile
 
 
@@ -159,18 +161,20 @@ def get_news() -> list[News]:
         metadata: dict[str, str] = _parse_news_file(news_file)
         date: str = item_name[:10] if len(item_name) >= 10 else item_name
 
-        news_items.append(News(
-            index=index,
-            date=date,
-            title=metadata.get("title", item_name),
-            read=item_name in read,
-            author=metadata.get("author"),
-            posted=metadata.get("posted"),
-            revision=metadata.get("revision"),
-            format_version=metadata.get("news_item_format"),
-            display_if_installed=metadata.get("display_if_installed"),
-            content=metadata.get("content"),
-        ))
+        news_items.append(
+            News(
+                index=index,
+                date=date,
+                title=metadata.get("title", item_name),
+                read=item_name in read,
+                author=metadata.get("author"),
+                posted=metadata.get("posted"),
+                revision=metadata.get("revision"),
+                format_version=metadata.get("news_item_format"),
+                display_if_installed=metadata.get("display_if_installed"),
+                content=metadata.get("content"),
+            )
+        )
         index += 1
 
     return news_items
@@ -187,27 +191,23 @@ def mark_news_read(news_index: int) -> tuple[int, str, str]:
         Tuple of (return_code, stdout, stderr)
     """
     result: CompletedProcess[str] = subprocess.run(
-        ["eselect", "news", "read", "--quiet", str(news_index)],
-        capture_output=True,
-        text=True
+        ["eselect", "news", "read", "--quiet", str(news_index)], capture_output=True, text=True
     )
-    
+
     return result.returncode, result.stdout, result.stderr
 
 
 def mark_all_news_read() -> tuple[int, str, str]:
     """
     Mark all news items as read.
-    
+
     Returns:
         Tuple of (return_code, stdout, stderr)
     """
     result: CompletedProcess[str] = subprocess.run(
-        ["eselect", "news", "read", "--quiet", "all"],
-        capture_output=True,
-        text=True
+        ["eselect", "news", "read", "--quiet", "all"], capture_output=True, text=True
     )
-    
+
     return result.returncode, result.stdout, result.stderr
 
 
@@ -221,10 +221,6 @@ def purge_read_news() -> tuple[int, str, str]:
     Returns:
         Tuple of (return_code, stdout, stderr)
     """
-    result: CompletedProcess[str] = subprocess.run(
-        ["eselect", "news", "purge"],
-        capture_output=True,
-        text=True
-    )
+    result: CompletedProcess[str] = subprocess.run(["eselect", "news", "purge"], capture_output=True, text=True)
 
     return result.returncode, result.stdout, result.stderr
