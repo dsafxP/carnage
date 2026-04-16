@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from pathlib import PurePath
 
 from textual.app import App, SystemCommand
+from textual.reactive import reactive
 from textual.screen import Screen
 
 from carnage.core.args import css_path as arg_custom_css_path
@@ -26,13 +27,14 @@ class CarnageApp(App):
 
     TITLE = "carnage"
 
-    blocked: bool
+    SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+
+    blocked: bool = reactive(False)  # type: ignore
     __config: Configuration
 
     def __init__(self) -> None:
         """Initialize the application."""
         self.__config: Configuration = get_config()
-        self.blocked = False
 
         css_paths: list[str | PurePath] = ["styles.tcss"]
 
@@ -41,14 +43,33 @@ class CarnageApp(App):
 
         super().__init__(css_path=css_paths)
 
+        self.blocked = False
+
+    def _tick(self) -> None:
+        if self.blocked:
+            self.sub_title = self.SPINNER[self._frame % len(self.SPINNER)]
+            self._frame += 1
+        else:
+            self.sub_title = ""
+            self._frame = 0
+
     def on_mount(self) -> None:
         """Initialize the application."""
         self.push_screen(MainScreen())
         self.theme = self.__config.theme
 
+        self._frame = 0
+        self.set_interval(0.4, self._tick)
+
     def watch_theme(self, theme: str) -> None:
         """Watch for theme changes."""
         self.__config.theme = theme
+
+    def watch_blocked(self, value: bool) -> None:
+        """Watch for block status changes."""
+        if not value:
+            self.sub_title = ""
+            self._frame = 0
 
     def get_system_commands(self, screen: Screen) -> Iterable[SystemCommand]:
         yield from super().get_system_commands(screen)
