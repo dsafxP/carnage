@@ -8,9 +8,7 @@ from textual.reactive import reactive
 from textual.screen import Screen
 
 from carnage.core.args import css_path as arg_custom_css_path
-from carnage.core.config import Configuration, get_config
-from carnage.core.eix.eix import is_found
-from carnage.tui.commands import (
+from carnage.core.commands import (
     clear_cache,
     eix_remote_update,
     eix_update,
@@ -19,6 +17,8 @@ from carnage.tui.commands import (
     sync,
     toggle_compact_mode,
 )
+from carnage.core.config import Configuration, get_config
+from carnage.core.eix.eix import is_found
 from carnage.tui.screens.main_screen import MainScreen
 
 
