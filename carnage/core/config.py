@@ -24,7 +24,9 @@ class Configuration:
             config_path: Path to config file. Defaults to ~/.config/carnage/carnage.toml
         """
         if config_path is None:
-            config_path = Path.home() / ".config/carnage/carnage.toml"
+            from platformdirs import user_config_dir
+
+            config_path = Path(user_config_dir("carnage")) / "carnage.toml"
 
         self.config_path = config_path
         self._config: Dict[str, Any] = {}

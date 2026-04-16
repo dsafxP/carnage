@@ -19,7 +19,9 @@ class CacheManager:
                       Defaults to ~/.cache/carnage/
         """
         if cache_dir is None:
-            cache_dir = Path.home() / ".cache/carnage"
+            from platformdirs import user_cache_path
+
+            cache_dir = user_cache_path("carnage")
 
         self.cache_dir = cache_dir
         self.cache_dir.mkdir(parents=True, exist_ok=True)
