@@ -4,8 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "carnage"
-authors = [{name = "dsafxP", email = "ghostyn678+git@gmail.com"}]
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -14,21 +13,18 @@ dependencies = [
     "lxml>=6.0.2",
     "msgpack>=1.1.2",
     "portage>=3.0.77",
-    "textual>=8.1.1",
+    "textual>=8.0.0",
     "tomlkit>=0.14.0",
     "gentoolkit @ git+https://codeberg.org/gentoo/gentoolkit.git@gentoolkit-0.7.1"
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pyrefly>=0.56.0",
+    "pyrefly>=0.50.0",
     "msgpack-types>=0.7.0",
     "textual-dev>=1.8.0",
-    "isort>=8.0.1"
+    "isort>=8.0.0"
 ]
-
-[project.urls]
-Source = "https://github.com/dsafxP/carnage"
 
 [project.scripts]
 carnage = "carnage.main:main"
