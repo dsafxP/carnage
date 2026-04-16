@@ -20,9 +20,13 @@ class CarnageApp(App):
 
     TITLE = "carnage"
 
+    blocked: bool
+    __config: Configuration
+
     def __init__(self) -> None:
         """Initialize the application."""
         self.__config: Configuration = get_config()
+        self.blocked = False
 
         css_paths: List[str | PurePath] = ["styles.tcss"]
 

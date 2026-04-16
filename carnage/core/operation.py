@@ -1,11 +1,13 @@
 """User operation execution with privilege escalation and logging."""
 
+from carnage.tui.app import CarnageApp
 import asyncio
 import logging
 import shlex
 import shutil
 from asyncio.subprocess import Process
 from datetime import datetime
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from platformdirs import user_log_path
@@ -15,7 +17,7 @@ from carnage.core.config import Configuration, get_config
 # Privilege escalation backends in detection priority order
 _BACKENDS: list[str] = ["pkexec", "sudo", "doas"]
 
-_log = logging.getLogger("carnage.operation")
+_log = logging.getLogger("carnage.ops")
 _log.propagate = False
 
 _handler_installed: bool = False
@@ -29,9 +31,15 @@ def _ensure_log_handler() -> None:
         return
 
     log_dir: Path = user_log_path("carnage", ensure_exists=True)
-    log_file: Path = log_dir / "carnage.log"
+    timestamp = datetime.now().strftime("%Y-%m")
+    log_file: Path = log_dir / f"carnage-ops-{timestamp}.log"
 
-    handler = logging.FileHandler(log_file, encoding="utf-8")
+    handler = RotatingFileHandler(
+        log_file,
+        maxBytes=4 * 1024 * 1024,  # 4 MiB
+        backupCount=4,
+        encoding="utf-8",
+    )
     handler.setFormatter(
         logging.Formatter("%(asctime)s %(levelname)s %(message)s",
                           datefmt="%Y-%m-%d %H:%M:%S")
@@ -41,6 +49,21 @@ def _ensure_log_handler() -> None:
     _log.addHandler(handler)
 
     _handler_installed = True
+
+
+async def run_blocking_operation(
+    app: CarnageApp,
+    operation: Operation,
+) -> None:
+    if app.blocked:
+        raise RuntimeError("Another operation is already running")
+
+    app.blocked = True
+
+    try:
+        await operation.run()
+    finally:
+        app.blocked = False
 
 
 def detect_backend() -> str | None:
