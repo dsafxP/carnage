@@ -39,7 +39,7 @@ class Configuration:
         return {
             "global": {
                 "theme": "textual-dark",
-                "privilege_backend": "auto",
+                "privilege_backend": "pkexec",
                 "initial_tab": "news",
                 "compact_mode": False,
                 "ignore_warnings": False,
@@ -131,8 +131,11 @@ class Configuration:
         global_section.add("theme", "textual-dark")
         global_section.add(tomlkit.nl())
         global_section.add(tomlkit.comment("Privilege escalation backend for administrative commands"))
-        global_section.add(tomlkit.comment("Options: auto, pkexec, sudo, doas, none"))
-        global_section.add("privilege_backend", "auto")
+        global_section.add(tomlkit.comment("Split then prepended to the command"))
+
+        from carnage.core.operation import generate_default_privilege_backend
+
+        global_section.add("privilege_backend", generate_default_privilege_backend())
         global_section.add(tomlkit.nl())
         global_section.add(tomlkit.comment("Initial tab selected"))
         global_section.add(tomlkit.comment("Options: news, glsas, browse, use, overlays"))
