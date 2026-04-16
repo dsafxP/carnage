@@ -1,5 +1,13 @@
 """User operation execution with privilege escalation and logging."""
 
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from carnage.tui.app import CarnageApp
+
 import asyncio
 import logging
 import shlex
@@ -12,19 +20,18 @@ from pathlib import Path
 from platformdirs import user_log_path
 
 from carnage.core.config import Configuration, get_config
-from carnage.tui.app import CarnageApp
 
 # Privilege escalation backends in detection priority order
 _BACKENDS: list[str] = ["pkexec", "sudo", "doas"]
 
-_log = logging.getLogger("carnage.ops")
+_log = logging.getLogger("carnage.exec")
 _log.propagate = False
 
 _handler_installed: bool = False
 
 
 def _ensure_log_handler() -> None:
-    """Install the file handler on the carnage.operation logger once."""
+    """Install the file handler on the carnage.exec logger once."""
     global _handler_installed
 
     if _handler_installed:
@@ -32,7 +39,7 @@ def _ensure_log_handler() -> None:
 
     log_dir: Path = user_log_path("carnage", ensure_exists=True)
     timestamp = datetime.now().strftime("%Y-%m")
-    log_file: Path = log_dir / f"carnage-ops-{timestamp}.log"
+    log_file: Path = log_dir / f"carnage-exec-{timestamp}.log"
 
     handler = RotatingFileHandler(
         log_file,
@@ -172,17 +179,36 @@ class Operation:
 
         return returncode
 
+    def start_in_app(self, app: CarnageApp, *, on_complete: Callable[[], None] | None = None) -> None:
+        """
+        Start this operation as a Textual worker.
 
-async def run_blocking_operation(
-    app: CarnageApp,
-    operation: Operation,
-) -> None:
-    if app.blocked:
-        raise RuntimeError("Another operation is already running")
+        - Prevents concurrent operations via app.blocked.
+        - Shows notifications on success/error.
+        - The worker runs exclusively (only one operation at a time).
 
-    app.blocked = True
+        Args:
+            app: The CarnageApp instance
+            on_complete: Optional callback when operation succeeds (runs before notification)
+        """
+        if app.blocked:
+            app.notify("An operation is already running.", severity="warning")
+            return
 
-    try:
-        await operation.run()
-    finally:
-        app.blocked = False
+        app.blocked = True
+
+        async def _worker() -> None:
+            try:
+                await self.run()
+                if on_complete:
+                    on_complete()
+                app.notify(f"Command finished successfully: {self.cmd[0]}", severity="information")
+            except OperationError as e:
+                app.notify(f"Command failed (exit {e.returncode}): {e.cmd[0]}", severity="error")
+            except Exception as e:
+                _log.exception("Unexpected error in operation worker")
+                app.notify(f"Internal error: {e}", severity="error")
+            finally:
+                app.blocked = False
+
+        app.run_worker(_worker(), exclusive=True)
