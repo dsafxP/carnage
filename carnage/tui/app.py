@@ -29,7 +29,7 @@ class CarnageApp(App):
 
     SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
-    blocked: bool = reactive(False)  # type: ignore
+    blocked: reactive[bool] = reactive(False)
     __config: Configuration
 
     def __init__(self) -> None:
