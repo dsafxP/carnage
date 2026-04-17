@@ -189,38 +189,36 @@ class Operation:
         # Check if the app has a blocked attribute
         has_blocked = hasattr(app, "blocked")
 
-        if has_blocked and app.blocked:  # type: ignore
-            if hasattr(app, "notify"):
-                app.notify("An operation is already running.", severity="warning")
-            return
-
         if has_blocked:
+            if app.blocked:  # type: ignore
+                if hasattr(app, "notify"):
+                    app.notify("An operation is already running.", severity="warning")
+                return
+
             app.blocked = True  # type: ignore
 
         async def _worker() -> None:
             success = False
+
             try:
                 await self.run()
                 success = True
-
-                if on_complete:
-                    on_complete(success)
-
-                app.notify(f"Command finished successfully: {self.cmd[0]}", severity="information")
             except OperationError as e:
-                if on_complete:
-                    on_complete(success)  # success is False
-
                 app.notify(f"Command failed (exit {e.returncode}): {e.cmd[0]}", severity="error")
             except Exception as e:
                 _log.exception("Unexpected error in operation worker")
 
-                if on_complete:
-                    on_complete(success)  # success is False
-
                 app.notify(f"Internal error: {e}", severity="error")
             finally:
+                # Unblock BEFORE calling on_complete and success notification
                 if has_blocked:
                     app.blocked = False  # type: ignore
+
+            # Now call the callback and success notification (if applicable)
+            if on_complete:
+                on_complete(success)
+
+            if success and hasattr(app, "notify"):
+                app.notify(f"Command finished successfully: {self.cmd[0]}", severity="information")
 
         app.run_worker(_worker(), exclusive=True)
