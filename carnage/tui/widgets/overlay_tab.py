@@ -10,7 +10,15 @@ from textual.widgets import Button, DataTable, LoadingIndicator, Static
 from carnage.core.cache import get_cache_manager
 from carnage.core.config import get_config
 from carnage.core.eix.eix import has_remote_cache, is_found
-from carnage.core.portage.overlays import Overlay, OverlayStatus, clear_cache, get_or_cache
+from carnage.core.portage.overlays import (
+    Overlay,
+    OverlayStatus,
+    clear_cache,
+    enable_and_sync_overlay,
+    get_or_cache,
+    remove_overlay,
+    sync_overlay,
+)
 from carnage.tui.widgets.table import NavigableDataTable
 
 
@@ -268,7 +276,7 @@ class OverlaysTab(Widget):
         self.update_button_states()
 
     def update_button_states(self) -> None:
-        """Update button visibility states."""
+        """Update button visibility and disabled states."""
         enable_btn: Button = self.query_one("#enable-sync-btn", Button)
         remove_btn: Button = self.query_one("#remove-btn", Button)
         sync_btn: Button = self.query_one("#sync-btn", Button)
@@ -288,121 +296,76 @@ class OverlaysTab(Widget):
             remove_btn.display = False
             sync_btn.display = False
 
-        # Sync button states
-        enable_btn.disabled = not enable_btn.display
-        remove_btn.disabled = not remove_btn.display
-        sync_btn.disabled = not sync_btn.display
+        is_blocked: bool = self.app.blocked  # type: ignore
+
+        enable_btn.disabled = not enable_btn.display or is_blocked
+        remove_btn.disabled = not remove_btn.display or is_blocked
+        sync_btn.disabled = not sync_btn.display or is_blocked
 
     def _action_enable_sync(self) -> None:
         """Enable and sync the selected overlay."""
         if self.selected_overlay is None or self.selected_overlay.installed:
             return
 
-        enable_btn: Button = self.query_one("#enable-sync-btn", Button)
+        overlay: Overlay = self.selected_overlay
 
-        if enable_btn.disabled:
-            return
-
-        try:
-            enable_btn.disabled = True
-
-            enable_btn.label = "Adding..."
-
-            overlay: Overlay = self.selected_overlay
-
-            returncode = overlay.enable_and_sync(self.app)
-
-            if returncode == 0:
-                self.notify(f"Successfully installed {overlay.name}")
-
+        def on_complete(success: bool) -> None:
+            if success:
                 self._pending_selection = overlay.name
-
-                # Update overlay status and refresh table
                 self._update_overlay_installation_status(overlay.name, True)
                 self._populate_table()
+                self.app.notify(f"Successfully installed {overlay.name}")
             else:
-                self.app.notify(f"Failed to enable and sync with code: {returncode}", severity="error")
-        except Exception as e:
-            self.app.notify(f"Error enabling and syncing: {e}", severity="error")
-        finally:
-            enable_btn.disabled = False
+                self.app.notify(f"Failed to install {overlay.name}", severity="error")
 
-            enable_btn.label = "Enable & Sync"
-
+            self.update_button_states()
             self.app.bell()
+
+        enable_and_sync_overlay(self.app, overlay.name, on_complete=on_complete)
+        self.update_button_states()
 
     def _action_sync(self) -> None:
         """Sync the selected overlay."""
         if self.selected_overlay is None or not self.selected_overlay.installed:
             return
 
-        sync_btn: Button = self.query_one("#sync-btn", Button)
+        overlay: Overlay = self.selected_overlay
 
-        if sync_btn.disabled:
-            return
-
-        try:
-            sync_btn.disabled = True
-
-            sync_btn.label = "Syncing..."
-
-            overlay: Overlay = self.selected_overlay
-
-            returncode = overlay.sync(self.app)
-
-            if returncode == 0:
-                self.notify(f"Successfully synchronized {overlay.name}")
-
+        def on_complete(success: bool) -> None:
+            if success:
                 self._pending_selection = overlay.name
+                self._populate_table()
+                self.app.notify(f"Successfully synchronized {overlay.name}")
             else:
-                self.app.notify(f"Failed to sync with code: {returncode}", severity="error")
-        except Exception as e:
-            self.app.notify(f"Error syncing: {e}", severity="error")
-        finally:
-            sync_btn.disabled = False
+                self.app.notify(f"Failed to sync {overlay.name}", severity="error")
 
-            sync_btn.label = "Sync"
-
+            self.update_button_states()
             self.app.bell()
 
-    @work(exclusive=True, thread=True)
-    async def _action_remove(self) -> None:
+        sync_overlay(self.app, overlay.name, on_complete=on_complete)
+        self.update_button_states()
+
+    def _action_remove(self) -> None:
         """Remove the selected overlay."""
         if self.selected_overlay is None or not self.selected_overlay.installed:
             return
 
-        remove_btn: Button = self.query_one("#remove-btn", Button)
+        overlay: Overlay = self.selected_overlay
 
-        if remove_btn.disabled:
-            return
-
-        try:
-            remove_btn.disabled = True
-
-            remove_btn.label = "Removing..."
-
-            overlay: Overlay = self.selected_overlay
-
-            returncode, stdout, stderr = overlay.remove()
-
-            if returncode == 0:
-                self.app.call_from_thread(self.notify, f"Successfully removed {overlay.name}")
-
+        def on_complete(success: bool) -> None:
+            if success:
                 self._pending_selection = overlay.name
-
-                # Update overlay status and refresh table
-                self.app.call_from_thread(self._update_overlay_installation_status, overlay.name, False)
-                self.app.call_from_thread(self._populate_table)
+                self._update_overlay_installation_status(overlay.name, False)
+                self._populate_table()
+                self.app.notify(f"Successfully removed {overlay.name}")
             else:
-                self.app.call_from_thread(self.notify, f"Failed to remove: {stderr}", severity="error")
-        except Exception as e:
-            self.app.call_from_thread(self.notify, f"Error removing: {e}", severity="error")
-        finally:
-            remove_btn.disabled = False
+                self.app.notify(f"Failed to remove {overlay.name}", severity="error")
 
-            remove_btn.label = "Remove"
-
+            self.update_button_states()
             self.app.bell()
+
+        remove_overlay(self.app, overlay.name, on_complete=on_complete)
+        self.update_button_states()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""

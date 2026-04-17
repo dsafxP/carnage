@@ -4,6 +4,7 @@ import concurrent.futures
 import os
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
@@ -16,8 +17,8 @@ from textual.app import App
 from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
+from carnage.core.operation import Operation
 from carnage.core.portage.portageq import ctx
-from carnage.core.privilege import run_privileged, system_privileged
 
 # Cache configuration
 CACHE_KEY = "overlays_data"
@@ -94,78 +95,7 @@ class Overlay:
         Returns:
             True if the overlay directory exists in the repository directory, False otherwise.
         """
-        return Overlay.is_overlay_installed(self.name)
-
-    @staticmethod
-    def is_overlay_installed(name: str) -> bool:
-        """
-        Check if an overlay is installed by name.
-
-        Args:
-            name: The name of the overlay to check.
-
-        Returns:
-            True if the overlay directory exists in the repository directory, False otherwise.
-        """
-        from pathlib import Path
-
-        overlay_path: Path = ctx.repos_path / name
-        return overlay_path.exists() and overlay_path.is_dir()
-
-    def enable(self) -> tuple[int, str, str]:
-        """
-        Enable this overlay using eselect.
-        Returns:
-            Tuple of (return_code, stdout, stderr)
-        """
-        return run_privileged(["eselect", "repository", "enable", self.name], use_terminal=False)
-
-    def sync(self, app: App | None = None) -> int:
-        """
-        Sync this overlay using emaint.
-        Returns:
-            Return code integer
-        """
-        cmd: str = f"emaint sync -r {self.name}"
-
-        if app:
-            with app.suspend():
-                return system_privileged(cmd)
-
-        return system_privileged(cmd)
-
-    def enable_and_sync(self, app: App | None = None) -> int:
-        """
-        Enable and sync this overlay in one operation.
-        Returns:
-            Return code integer
-            If enable fails, sync is not attempted.
-        """
-        cmd: str = f"sh -c 'eselect repository enable {self.name} && emaint sync -r {self.name}'"
-
-        if app:
-            with app.suspend():
-                return system_privileged(cmd)
-
-        return system_privileged(cmd)
-
-    def disable(self) -> tuple[int, str, str]:
-        """
-        Disable this overlay using eselect.
-
-        Returns:
-            Tuple of (return_code, stdout, stderr)
-        """
-        return run_privileged(["eselect", "repository", "disable", self.name], use_terminal=False)
-
-    def remove(self) -> tuple[int, str, str]:
-        """
-        Remove this overlay using eselect.
-
-        Returns:
-            Tuple of (return_code, stdout, stderr)
-        """
-        return run_privileged(["eselect", "repository", "remove", self.name], use_terminal=False)
+        return is_overlay_installed(self.name)
 
     def to_dict(self) -> dict:
         """Convert overlay to dictionary for serialization."""
@@ -199,6 +129,88 @@ class Overlay:
             installed=data.get("installed"),
             package_count=data.get("package_count"),
         )
+
+
+def is_overlay_installed(name: str) -> bool:
+    """
+    Check if an overlay is installed by name.
+
+    Args:
+        name: The name of the overlay to check.
+
+    Returns:
+        True if the overlay directory exists in the repository directory, False otherwise.
+    """
+    overlay_path: Path = ctx.repos_path / name
+    return overlay_path.exists() and overlay_path.is_dir()
+
+
+def enable_overlay(app: App, overlay_name: str, on_complete: Callable | None = None) -> None:
+    """
+    Enable an overlay using eselect repository enable.
+
+    Args:
+        app: The CarnageApp instance
+        overlay_name: Name of the overlay to enable
+        on_complete: Optional callback when operation succeeds
+    """
+    op = Operation(["eselect", "repository", "enable", overlay_name], privilege=True)
+    op.start_in_app(app, on_complete=on_complete)
+
+
+def disable_overlay(app: App, overlay_name: str, on_complete: Callable | None = None) -> None:
+    """
+    Disable an overlay using eselect repository disable.
+
+    Args:
+        app: The CarnageApp instance
+        overlay_name: Name of the overlay to disable
+        on_complete: Optional callback when operation succeeds
+    """
+    op = Operation(["eselect", "repository", "disable", overlay_name], privilege=True)
+    op.start_in_app(app, on_complete=on_complete)
+
+
+def remove_overlay(app: App, overlay_name: str, on_complete: Callable | None = None) -> None:
+    """
+    Remove an overlay using eselect repository remove.
+
+    Args:
+        app: The CarnageApp instance
+        overlay_name: Name of the overlay to remove
+        on_complete: Optional callback when operation succeeds
+    """
+    op = Operation(["eselect", "repository", "remove", overlay_name], privilege=True)
+    op.start_in_app(app, on_complete=on_complete)
+
+
+def sync_overlay(app: App, overlay_name: str, on_complete: Callable | None = None) -> None:
+    """
+    Sync an overlay using emaint sync.
+
+    Args:
+        app: The CarnageApp instance
+        overlay_name: Name of the overlay to sync
+        on_complete: Optional callback when operation succeeds
+    """
+    op = Operation(["emaint", "sync", "-r", overlay_name], privilege=True)
+    op.start_in_app(app, on_complete=on_complete)
+
+
+def enable_and_sync_overlay(app: App, overlay_name: str, on_complete: Callable | None = None) -> None:
+    """
+    Enable and sync an overlay in one operation.
+
+    Args:
+        app: The CarnageApp instance
+        overlay_name: Name of the overlay to enable and sync
+        on_complete: Optional callback when operation succeeds
+    """
+    # Chain two operations? Or use a shell command?
+    # Using a single shell command is more efficient
+    cmd = ["sh", "-c", f"eselect repository enable {overlay_name} && emaint sync -r {overlay_name}"]
+    op = Operation(cmd, privilege=True)
+    op.start_in_app(app, on_complete=on_complete)
 
 
 def _parse_owner(repo_elem: etree._Element) -> Owner | None:
@@ -340,7 +352,7 @@ def _get_overlay_package_count(overlay: Overlay) -> tuple[Overlay, int]:
     try:
         count: int = get_package_count(overlay.name)
         return overlay, count
-    except:
+    except Exception:
         return overlay, -1
 
 
@@ -361,7 +373,7 @@ def _populate_package_counts(overlays: list[Overlay]) -> None:
             try:
                 overlay, count = future.result()
                 overlay.package_count = count
-            except:
+            except Exception:
                 # If anything goes wrong with the future itself, set count to -1
                 overlay: Overlay = future_to_overlay[future]
                 overlay.package_count = -1
