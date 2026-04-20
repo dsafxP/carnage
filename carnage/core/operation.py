@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-import shlex
 import shutil
 from asyncio.subprocess import Process
 from collections.abc import Callable
@@ -123,13 +122,13 @@ class Operation:
             return self.cmd
 
         config: Configuration = get_config()
-        backend_str: str = config.privilege_backend.strip()
+        backend_cmd: list[str] = config.privilege_backend
 
-        if not backend_str:
-            # No backend configured — run without escalation.
+        if not backend_cmd:
+            # No backend configured
             return self.cmd
 
-        return [*shlex.split(backend_str), *self.cmd]
+        return [*backend_cmd, *self.cmd]
 
     async def run(self) -> int:
         """

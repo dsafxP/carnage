@@ -39,7 +39,7 @@ class Configuration:
         return {
             "global": {
                 "theme": "textual-dark",
-                "privilege_backend": "pkexec",
+                "privilege_backend": ["pkexec"],
                 "initial_tab": "news",
                 "compact_mode": False,
                 "ignore_warnings": False,
@@ -128,11 +128,10 @@ class Configuration:
         global_section.add("theme", "textual-dark")
         global_section.add(tomlkit.nl())
         global_section.add(tomlkit.comment("Privilege escalation backend for administrative commands"))
-        global_section.add(tomlkit.comment("Split then prepended to the command"))
 
         from carnage.core.operation import generate_default_privilege_backend
 
-        global_section.add("privilege_backend", generate_default_privilege_backend())
+        global_section.add("privilege_backend", tomlkit.array(f'["{generate_default_privilege_backend()}"]'))
         global_section.add(tomlkit.nl())
         global_section.add(tomlkit.comment("Initial tab selected"))
         global_section.add(tomlkit.comment("Options: news, glsas, browse, use, overlays"))
@@ -264,8 +263,8 @@ class Configuration:
             current = self._toml_doc
             for key in keys[:-1]:  # type: ignore
                 if key not in current:  # type: ignore
-                    current[key] = {}
-                current = current[key]
+                    current[key] = {}  # type: ignore
+                current = current[key]  # type: ignore
             current[keys[-1]] = value  # type: ignore
 
         self._save_config()
@@ -282,9 +281,9 @@ class Configuration:
         self._set_nested_value_and_save(["global", "theme"], value)
 
     @property
-    def privilege_backend(self) -> str:
+    def privilege_backend(self) -> list[str]:
         """Get the privilege escalation backend setting."""
-        return self._get_nested_value(["global", "privilege_backend"], "auto")
+        return self._get_nested_value(["global", "privilege_backend"], ["pkexec"])
 
     @property
     def initial_tab(self) -> str:
