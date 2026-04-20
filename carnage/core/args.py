@@ -2,6 +2,8 @@ import argparse
 from pathlib import Path
 from typing import Any
 
+from platformdirs import user_config_dir
+
 import carnage
 
 APP_NAME = "carnage"
@@ -34,7 +36,7 @@ class __ArgsInit:
         parser.add_argument(
             "--css",
             type=Path,
-            default=Path.home() / ".config/carnage/custom.tcss",
+            default=Path(user_config_dir("carnage")) / "custom.tcss",
             help="Path to custom CSS file",
             metavar="FILE",
         )
