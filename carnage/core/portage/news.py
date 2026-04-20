@@ -1,14 +1,15 @@
 """Utilities for managing Gentoo repository news."""
 
-import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from subprocess import CompletedProcess
 
 from portage.const import NEWS_LIB_PATH
 from portage.news import NewsItem
 from portage.util import grabfile
+from textual.app import App
 
+from carnage.core.operation import Operation
 from carnage.core.portage.portageq import ctx
 
 _NEWS_REPO_ID = "gentoo"
@@ -180,47 +181,53 @@ def get_news() -> list[News]:
     return news_items
 
 
-def mark_news_read(news_index: int) -> tuple[int, str, str]:
+def mark_news_read(app: App, news_index: int, on_complete: Callable[[bool], None] | None = None) -> None:
     """
     Mark a news item as read.
 
     Args:
-        news_index: 1-based index of the news item to mark as read.
-
-    Returns:
-        Tuple of (return_code, stdout, stderr)
+        app: The Textual App instance
+        news_index: 1-based index of the news item to mark as read
+        on_complete: Optional callback when operation finishes (receives success bool)
     """
-    result: CompletedProcess[str] = subprocess.run(
-        ["eselect", "news", "read", "--quiet", str(news_index)], capture_output=True, text=True
+    op = Operation(
+        ["eselect", "news", "read", str(news_index)],
+        privilege=False,
+        log_callback=app.screen.log_operation_output,  # type: ignore
     )
+    op.start_in_app(app, on_complete=on_complete)
 
-    return result.returncode, result.stdout, result.stderr
 
-
-def mark_all_news_read() -> tuple[int, str, str]:
+def mark_all_news_read(app: App, on_complete: Callable[[bool], None] | None = None) -> None:
     """
     Mark all news items as read.
 
-    Returns:
-        Tuple of (return_code, stdout, stderr)
+    Args:
+        app: The Textual App instance
+        on_complete: Optional callback when operation finishes (receives success bool)
     """
-    result: CompletedProcess[str] = subprocess.run(
-        ["eselect", "news", "read", "--quiet", "all"], capture_output=True, text=True
+    op = Operation(
+        ["eselect", "news", "read", "all"],
+        privilege=False,
+        log_callback=app.screen.log_operation_output,  # type: ignore
     )
+    op.start_in_app(app, on_complete=on_complete)
 
-    return result.returncode, result.stdout, result.stderr
 
-
-def purge_read_news() -> tuple[int, str, str]:
+def purge_read_news(app: App, on_complete: Callable[[bool], None] | None = None) -> None:
     """
     Purge all read news items.
 
     Purging clears the read tracking file, removing those items from view
     entirely. They will not reappear unless eselect re-adds them as unread.
 
-    Returns:
-        Tuple of (return_code, stdout, stderr)
+    Args:
+        app: The Textual App instance
+        on_complete: Optional callback when operation finishes (receives success bool)
     """
-    result: CompletedProcess[str] = subprocess.run(["eselect", "news", "purge"], capture_output=True, text=True)
-
-    return result.returncode, result.stdout, result.stderr
+    op = Operation(
+        ["eselect", "news", "purge"],
+        privilege=False,
+        log_callback=app.screen.log_operation_output,  # type: ignore
+    )
+    op.start_in_app(app, on_complete=on_complete)

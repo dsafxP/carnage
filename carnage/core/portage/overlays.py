@@ -150,7 +150,7 @@ def enable_overlay(app: App, overlay_name: str, on_complete: Callable | None = N
     Enable an overlay using eselect repository enable.
 
     Args:
-        app: The CarnageApp instance
+        app: The Textual App instance
         overlay_name: Name of the overlay to enable
         on_complete: Optional callback when operation succeeds
     """
@@ -167,7 +167,7 @@ def disable_overlay(app: App, overlay_name: str, on_complete: Callable | None = 
     Disable an overlay using eselect repository disable.
 
     Args:
-        app: The CarnageApp instance
+        app: The Textual App instance
         overlay_name: Name of the overlay to disable
         on_complete: Optional callback when operation succeeds
     """
@@ -184,7 +184,7 @@ def remove_overlay(app: App, overlay_name: str, on_complete: Callable | None = N
     Remove an overlay using eselect repository remove.
 
     Args:
-        app: The CarnageApp instance
+        app: The Textual App instance
         overlay_name: Name of the overlay to remove
         on_complete: Optional callback when operation succeeds
     """
@@ -201,7 +201,7 @@ def sync_overlay(app: App, overlay_name: str, on_complete: Callable | None = Non
     Sync an overlay using emaint sync.
 
     Args:
-        app: The CarnageApp instance
+        app: The Textual App instance
         overlay_name: Name of the overlay to sync
         on_complete: Optional callback when operation succeeds
     """
@@ -214,7 +214,7 @@ def enable_and_sync_overlay(app: App, overlay_name: str, on_complete: Callable |
     Enable and sync an overlay in one operation.
 
     Args:
-        app: The CarnageApp instance
+        app: The Textual App instance
         overlay_name: Name of the overlay to enable and sync
         on_complete: Optional callback when operation succeeds
     """

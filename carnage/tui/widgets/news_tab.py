@@ -159,129 +159,91 @@ class NewsTab(Widget):
         mark_all_btn: Button = self.query_one("#mark-all-read-btn", Button)
         purge_btn: Button = self.query_one("#purge-btn", Button)
 
-        # Enable "Mark all as Read" only if there are unread items and no action in progress
+        # Check if an operation is running
+        is_blocked = self.app.blocked  # type: ignore
+
+        # Enable "Mark all as Read" only if there are unread items and isn't blocked
         has_unread: bool = any(not n.read for n in self.news_items)
-        mark_all_btn.disabled = not has_unread
+        mark_all_btn.disabled = not has_unread or is_blocked
         mark_all_btn.display = has_unread
 
-        # Enable "Mark as Read" only if a news item is selected, unread, and no action in progress
+        # Enable "Mark as Read" only if a news item is selected, unread, and isn't blocked
         can_mark_single: bool = self.selected_news is not None and not self.selected_news.read
-        mark_read_btn.disabled = not can_mark_single
+        mark_read_btn.disabled = not can_mark_single or is_blocked
         mark_read_btn.display = can_mark_single
 
-        # Enable "Purge Read" only if there are read items and no action in progress
+        # Enable "Purge Read" only if there are read items and isn't blocked
         has_read: bool = any(n.read for n in self.news_items)
-        purge_btn.disabled = not has_read
+        purge_btn.disabled = not has_read or is_blocked
         purge_btn.display = has_read
 
-    @work(exclusive=True, thread=True)
     def _action_mark_read(self) -> None:
         """Mark the selected news item as read."""
         if self.selected_news is None or self.selected_news.read:
             return
 
-        mark_read_btn: Button = self.query_one("#mark-read-btn", Button)
-
-        if mark_read_btn.disabled:
-            return
-
         news_index: int = self.selected_news.index
 
-        try:
-            mark_read_btn.disabled = True
-
-            mark_read_btn.label = "Marking..."
-
-            returncode, _, stderr = mark_news_read(news_index)
-
-            if returncode == 0:
-                self.app.call_from_thread(self.notify, f"Marked news {news_index} as read")
-
-                # Update the data and refresh just that row
+        def on_complete(success: bool) -> None:
+            if success:
+                # Update the data
                 for news in self.news_items:
                     if news.index == news_index:
                         news.read = True
                         break
 
-                self.app.call_from_thread(self._update_single_row, news_index)
+                self._update_single_row(news_index)
+                self.notify(f"Marked news {news_index} as read")
             else:
-                self.app.call_from_thread(self.notify, f"Failed to mark as read: {stderr}", severity="error")
-        except Exception as e:
-            self.app.call_from_thread(self.notify, f"Error marking as read: {e}", severity="error")
-        finally:
-            mark_read_btn.disabled = False
+                self.notify(f"Failed to mark news {news_index} as read", severity="error")
 
-            mark_read_btn.label = "Mark as Read"
-
+            self.update_button_states()
             self.app.bell()
 
-    @work(exclusive=True, thread=True)
+        self.update_button_states()
+        mark_news_read(self.app, news_index, on_complete=on_complete)
+
     def _action_mark_all_read(self) -> None:
         """Mark all news items as read."""
         if not self.news_items:
             return
 
-        mark_all_btn: Button = self.query_one("#mark-all-read-btn", Button)
-
-        if mark_all_btn.disabled:
-            return
-
-        try:
-            mark_all_btn.disabled = True
-
-            mark_all_btn.label = "Marking..."
-
-            returncode, _, stderr = mark_all_news_read()
-
-            if returncode == 0:
-                self.app.call_from_thread(self.notify, "Marked all news as read")
-                # Update all items in data and refresh table
+        def on_complete(success: bool) -> None:
+            if success:
+                # Update all items
                 for news in self.news_items:
                     news.read = True
-                self.app.call_from_thread(self._populate_table, self.news_items)
+
+                self._populate_table(self.news_items)
+                self.notify("Marked all news as read")
             else:
-                self.app.call_from_thread(self.notify, f"Failed to mark all as read: {stderr}", severity="error")
-        except Exception as e:
-            self.app.call_from_thread(self.notify, f"Error marking all as read: {e}", severity="error")
-        finally:
-            mark_all_btn.disabled = False
+                self.notify("Failed to mark all news as read", severity="error")
 
-            mark_all_btn.label = "Mark all as Read"
-
+            self.update_button_states()
             self.app.bell()
 
-    @work(exclusive=True, thread=True)
+        self.update_button_states()
+        mark_all_news_read(self.app, on_complete=on_complete)
+
     def _action_purge(self) -> None:
         """Purge all read news items."""
         if not self.news_items:
             return
 
-        purge_btn: Button = self.query_one("#purge-btn", Button)
-
-        if purge_btn.disabled:
-            return
-
-        try:
-            purge_btn.disabled = True
-
-            purge_btn.label = "Purging..."
-
-            returncode, _, stderr = purge_read_news()
-
-            if returncode == 0:
-                self.app.call_from_thread(self.notify, "Purged all read news.")
-                # Just remove read items from our data and table
-                self.app.call_from_thread(self._remove_read_rows)
+        def on_complete(success: bool) -> None:
+            if success:
+                # Remove read items from our data
+                self.news_items = [news for news in self.news_items if not news.read]
+                self._populate_table(self.news_items)
+                self.notify("Purged all read news")
             else:
-                self.app.call_from_thread(self.notify, f"Failed to purge: {stderr}", severity="error")
-        except Exception as e:
-            self.app.call_from_thread(self.notify, f"Error purging: {e}", severity="error")
-        finally:
-            purge_btn.disabled = False
+                self.notify("Failed to purge read news", severity="error")
 
-            purge_btn.label = "Purge Read"
-
+            self.update_button_states()
             self.app.bell()
+
+        self.update_button_states()
+        purge_read_news(self.app, on_complete=on_complete)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
