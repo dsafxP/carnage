@@ -1,8 +1,10 @@
 """Main screen with tabs for Carnage."""
 
 from textual.app import ComposeResult
+from textual.binding import Binding
+from textual.containers import Horizontal
 from textual.screen import Screen
-from textual.widgets import Header, Input, TabbedContent, TabPane
+from textual.widgets import Header, Input, RichLog, TabbedContent, TabPane
 
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.eix import has_cache, is_found
@@ -15,6 +17,8 @@ from carnage.tui.widgets.use_tab import UseFlagsTab
 
 class MainScreen(Screen):
     """Main screen with search bar and tabbed content."""
+
+    BINDINGS = [Binding("ctrl+l", "toggle_operation_log", "Toggle log view pane", show=True)]
 
     def __init__(self) -> None:
         super().__init__()
@@ -29,21 +33,26 @@ class MainScreen(Screen):
         yield Input(id="search-input")
 
         # Tabbed content
-        with TabbedContent(initial="news"):
-            with TabPane("News", id="news"):
-                yield NewsTab()
+        with Horizontal(id="main-content"):
+            # Tabbed content on the left (takes most space)
+            with TabbedContent(initial="news", id="tabs"):
+                with TabPane("News", id="news"):
+                    yield NewsTab()
 
-            with TabPane("GLSAs", id="glsas"):
-                yield GLSATab()
+                with TabPane("GLSAs", id="glsas"):
+                    yield GLSATab()
 
-            with TabPane("Browse", id="browse", disabled=True):
-                yield BrowseTab()
+                with TabPane("Browse", id="browse", disabled=True):
+                    yield BrowseTab()
 
-            with TabPane("USE", id="use", disabled=True):
-                yield UseFlagsTab()
+                with TabPane("USE", id="use", disabled=True):
+                    yield UseFlagsTab()
 
-            with TabPane("Overlays", id="overlays"):
-                yield OverlaysTab()
+                with TabPane("Overlays", id="overlays"):
+                    yield OverlaysTab()
+
+            # Operation log on the right
+            yield RichLog(id="operation-log", markup=True, highlight=True, wrap=True)
 
     def on_mount(self) -> None:
         """Check eix availability when screen is mounted."""
@@ -70,7 +79,31 @@ class MainScreen(Screen):
             else "news"
         )
 
-    def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
+        log_pane: RichLog = self.query_one("#operation-log", RichLog)
+
+        # Hide by default
+        log_pane.display = False
+
+    def log_operation_output(self, raw_line: bytes) -> None:
+        """Add raw output (with ANSI codes) to the RichLog widget."""
+        log_pane: RichLog = self.query_one("#operation-log", RichLog)
+        config: Configuration = get_config()
+
+        if not log_pane.display and config.automatic_pane:
+            # Optionally auto-show log when operation starts
+            log_pane.display = True
+
+        # RichLog automatically handles ANSI color codes
+        # Decode as latin-1 to preserve all bytes, then log
+        try:
+            line = raw_line.decode("utf-8", errors="replace").rstrip()
+        except Exception:
+            line = raw_line.decode("latin-1", errors="replace").rstrip()
+
+        # Write to RichLog - it will parse ANSI codes
+        log_pane.write(line)
+
+    def _on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
         """Handle tab changes to update search bar."""
         search_input: Input = self.query_one("#search-input", Input)
         tab_id: str | None = event.tab.id
@@ -97,7 +130,7 @@ class MainScreen(Screen):
                 search_input.placeholder = "Search a package ..."
                 search_input.disabled = False
 
-    def on_input_changed(self, event: Input.Changed) -> None:
+    def _on_input_changed(self, event: Input.Changed) -> None:
         """Handle search input changes."""
         if event.input.id != "search-input":
             return
@@ -127,7 +160,7 @@ class MainScreen(Screen):
             # Switch to Browse tab and trigger search there
             tabbed_content.active = "browse"
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:
+    def _on_input_submitted(self, event: Input.Submitted) -> None:
         if event.input.id != "search-input":
             return
 
@@ -144,3 +177,8 @@ class MainScreen(Screen):
         elif active_tab_id == "use":
             use_tab: UseFlagsTab = tabbed_content.query_one("#use", TabPane).query_one(UseFlagsTab)
             use_tab.focus()
+
+    def _action_toggle_operation_log(self) -> None:
+        """Toggle the operation log pane visibility."""
+        log_pane = self.query_one("#operation-log", RichLog)
+        log_pane.display = not log_pane.display

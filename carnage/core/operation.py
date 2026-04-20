@@ -105,9 +105,12 @@ class Operation:
         await op.run()
     """
 
-    def __init__(self, cmd: list[str], *, privilege: bool = False) -> None:
+    def __init__(
+        self, cmd: list[str], *, privilege: bool = False, log_callback: Callable[[bytes], None] | None = None
+    ) -> None:
         self.cmd = cmd
         self.privilege = privilege
+        self._log_callback = log_callback
 
         _ensure_log_handler()
 
@@ -145,6 +148,13 @@ class Operation:
 
         _log.info("START %s", " ".join(full_cmd))
 
+        # Send command header to log callback
+        if self._log_callback:
+            cmd_str = " ".join(full_cmd)
+            # Wrap in ANSI grey/dim codes
+            grey_cmd = f"[dim]$ {cmd_str}[/]\n"
+            self._log_callback(grey_cmd.encode())
+
         process: Process = await asyncio.create_subprocess_exec(
             *full_cmd,
             stdout=asyncio.subprocess.PIPE,
@@ -159,10 +169,18 @@ class Operation:
             # print(line)
             _log.debug("%s", line)
 
+            if self._log_callback:
+                self._log_callback(raw_line)
+
         await process.wait()
 
         elapsed = (datetime.now() - start).total_seconds()
         returncode: int = process.returncode  # type: ignore[assignment]
+
+        # Send exit code footer to log callback
+        if self._log_callback:
+            exit_msg = f"\n[{'dim' if returncode == 0 else 'red'}]Exited with code: {returncode}[/]\n"
+            self._log_callback(exit_msg.encode())
 
         if returncode == 0:
             _log.info("END %s | exit 0 | %.1fs", full_cmd[0], elapsed)

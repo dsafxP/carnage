@@ -28,7 +28,7 @@ def clear_cache(app: App) -> None:
 
 def eix_update(app: App) -> None:
     """Run eix-update and reload the main screen."""
-    op = Operation(["eix-update"], privilege=not has_cache())
+    op = Operation(["eix-update"], privilege=not has_cache(), log_callback=app.screen.log_operation_output)  # type: ignore
 
     def on_complete(success: bool) -> None:
         if success:
@@ -41,7 +41,11 @@ def eix_update(app: App) -> None:
 
 def eix_remote_update(app: App) -> None:
     """Run eix-remote update and reload the main screen."""
-    op = Operation(["eix-remote", "update"], privilege=not has_remote_cache())
+    op = Operation(
+        ["eix-remote", "update"],
+        privilege=not has_remote_cache(),
+        log_callback=app.screen.log_operation_output,  # type: ignore
+    )  # type: ignore
 
     def on_complete(success: bool) -> None:
         if success:
@@ -57,7 +61,7 @@ def run_eclean_dist(app: App) -> None:
     """Clean obsolete distfiles with eclean-dist."""
     app.notify("Running eclean-dist...", severity="warning", timeout=15)
 
-    op = Operation(["eclean-dist"], privilege=True)
+    op = Operation(["eclean-dist"], privilege=True, log_callback=app.screen.log_operation_output)  # type: ignore
 
     def on_complete(success: bool) -> None:
         app.bell()
@@ -69,7 +73,7 @@ def run_eclean_pkg(app: App) -> None:
     """Clean obsolete binary packages with eclean-pkg."""
     app.notify("Running eclean-pkg...", severity="warning", timeout=15)
 
-    op = Operation(["eclean-pkg"], privilege=True)
+    op = Operation(["eclean-pkg"], privilege=True, log_callback=app.screen.log_operation_output)  # type: ignore
 
     def on_complete(success: bool) -> None:
         app.bell()
@@ -79,7 +83,7 @@ def run_eclean_pkg(app: App) -> None:
 
 def sync(app: App) -> None:
     """Run emerge --sync and reload the main screen."""
-    op = Operation(["emerge", "--sync"], privilege=True)
+    op = Operation(["emerge", "--sync"], privilege=True, log_callback=app.screen.log_operation_output)  # type: ignore
 
     def on_complete(success: bool) -> None:
         if success:

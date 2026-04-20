@@ -1,5 +1,10 @@
 /* Carnage TUI Styles */
 
+/* Main content */
+#main-content {
+    height: 1fr;
+}
+
 /*  Search  */
 
 #search-container {
@@ -31,6 +36,12 @@ TabbedContent {
 Tabs {
     width: 100%;
     background: $surface;
+}
+
+/* Tabbed content takes remaining space, allows shrinking */
+#tabs {
+    width: 1fr;
+    min-width: 40;
 }
 
 Tab {
@@ -65,6 +76,17 @@ ContentSwitcher {
 TabPane {
     width: 100%;
     height: 1fr;
+}
+
+/* Logs */
+#operation-log {
+    height: 1fr;
+    overflow-y: auto;
+    border: solid $primary;
+
+    &:focus {
+        border: none;
+    }
 }
 
 /*  Header and Footer  */
@@ -385,10 +407,6 @@ PackageDetailWidget {
 /* Compact mode overrides */
 
 .compact {
-    #main-container {
-        padding: 0;
-    }
-
     #search-input {
         border: none;
         background: $surface;
@@ -562,5 +580,9 @@ PackageDetailWidget {
     #pkg-detail-actions,
     #pkg-use-actions {
         padding: 0;
+    }
+
+    #operation-log {
+        border: none;
     }
 }

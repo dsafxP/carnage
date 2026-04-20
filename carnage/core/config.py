@@ -58,6 +58,9 @@ class Configuration:
                 "overlay_source": "https://api.gentoo.org/overlays/repositories.xml",
             },
             "use": {"minimum_characters": 3, "cache_max_age": 96},
+            "logging": {
+                "automatic_pane": False,
+            },
         }
 
     def _backup_config(self) -> None:
@@ -195,6 +198,12 @@ class Configuration:
         use_section.add(tomlkit.comment("USE flag data will be refreshed after this time"))
         use_section.add("cache_max_age", 96)
         doc.add("use", use_section)
+
+        # Logging section
+        logging_section: Table = tomlkit.table()
+        logging_section.add(tomlkit.comment("Automatically open the logging output pane when executing a operation"))
+        logging_section.add("automatic_pane", False)
+        doc.add("logging", logging_section)
 
         # Write to file
         with open(self.config_path, "w", encoding="utf-8") as f:
@@ -361,6 +370,11 @@ class Configuration:
     def use_cache_max_age(self) -> int:
         """Get the cache max age for USE flags in hours."""
         return self._get_nested_value(["use", "cache_max_age"], 96)
+
+    @property
+    def automatic_pane(self) -> bool:
+        """Get whether to automatically open the logging pane."""
+        return self._get_nested_value(["logging", "automatic_pane"], False)
 
     def reload(self) -> None:
         """Reload configuration from file."""

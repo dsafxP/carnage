@@ -93,3 +93,10 @@ class CarnageApp(App):
             yield SystemCommand("eix update", eix_update.__doc__ or "", lambda: eix_update(self))
             # eix-remote update
             yield SystemCommand("eix remote update", eix_remote_update.__doc__ or "", lambda: eix_remote_update(self))
+
+        # Toggle log pane
+        yield SystemCommand(
+            "Toggle log view pane",
+            "Display or hide the logging output view pane",
+            lambda: self.screen._action_toggle_operation_log(),  # type: ignore
+        )
