@@ -106,10 +106,16 @@ class Operation:
     """
 
     def __init__(
-        self, cmd: list[str], *, privilege: bool = False, log_callback: Callable[[bytes], None] | None = None
+        self,
+        cmd: list[str],
+        *,
+        privilege: bool = False,
+        env: dict[str, str] | None = None,
+        log_callback: Callable[[bytes], None] | None = None,
     ) -> None:
         self.cmd = cmd
         self.privilege = privilege
+        self.env = env
         self._log_callback = log_callback
 
         _ensure_log_handler()
@@ -130,6 +136,13 @@ class Operation:
         if not backend_cmd:
             # No backend configured
             return self.cmd
+
+        # If we have custom environment variables, insert env between backend and command
+        if self.env:
+            env_args = []
+            for k, v in self.env.items():
+                env_args.extend([f"{k}={v}"])
+            return [*backend_cmd, "env", *env_args, *self.cmd]
 
         return [*backend_cmd, *self.cmd]
 
@@ -159,6 +172,7 @@ class Operation:
             *full_cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,  # merge stderr into stdout
+            env=self.env,  # Pass environment
         )
 
         # Stream output lines as they arrive rather than buffering.
