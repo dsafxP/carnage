@@ -258,8 +258,7 @@ class Operation:
             if on_complete:
                 on_complete(success)
 
-            config: Configuration = get_config()
-            can_notify: bool = HAS_NOTIFICATIONS and config.desktop_notifications and not app.app_focus
+            can_notify: bool = HAS_NOTIFICATIONS and not app.app_focus
 
             if can_notify:
                 notifier: DesktopNotifier = get_notifier()  # type: ignore
