@@ -4,6 +4,7 @@ from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
+from textual.coordinate import Coordinate
 from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
@@ -37,7 +38,6 @@ class OverlaysTab(Widget):
         self.filtered_overlays: list[Overlay] = []
         self.selected_overlay: Overlay | None = None
         self.cache_manager = get_cache_manager()
-        self._pending_selection: str | None = None
         self._current_filter: str = ""
         self._config = get_config()
         self.should_skip_pkg_count = self._config.skip_package_counting or not is_found()
@@ -118,20 +118,6 @@ class OverlaysTab(Widget):
                     key=str(i),
                 )
 
-        # Restore selection if there was a pending one and it exists in filtered results
-        if self._pending_selection is not None:
-            selected_name: str = self._pending_selection
-
-            for i, overlay in enumerate(self.filtered_overlays):
-                if overlay.name == selected_name:
-                    # Trigger the selection event to update the UI
-                    self.selected_overlay = None
-                    table.move_cursor(row=i)
-                    break
-
-            # Clear the pending selection
-            self._pending_selection = None
-
         self.update_button_states()
 
     @work(exclusive=True, thread=True)
@@ -193,15 +179,17 @@ class OverlaysTab(Widget):
 
     def _reload_overlays(self) -> None:
         """Trigger an overlay reload with cache refresh."""
-        # Save the currently selected overlay name before reloading
-        selected_name: str | None = self.selected_overlay.name if self.selected_overlay else None
+        # Save cursor position before reload
+        table: DataTable = self.query_one("#overlays-table", DataTable)
+        cursor_row = table.cursor_row
 
         # Force refresh by clearing cache and reloading
         clear_cache(self.cache_manager)
         self.load_overlays()
 
-        # After reload, we'll need to restore selection in _populate_table
-        self._pending_selection = selected_name
+        # Restore cursor position after reload
+        if cursor_row is not None and cursor_row < len(self.filtered_overlays):
+            table.move_cursor(row=cursor_row)
 
     def _update_overlay_installation_status(self, overlay_name: str, installed: bool) -> None:
         """Update the installation status of an overlay locally and in cache."""
@@ -220,6 +208,32 @@ class OverlaysTab(Widget):
         # Update cache
         cache_data = [overlay.to_dict() for overlay in self.overlays]
         self.cache_manager.set("overlays_data", cache_data)
+
+    def _update_overlay_row(self, overlay_name: str, installed: bool) -> None:
+        """Update a single row in the table without full refresh."""
+        table: DataTable = self.query_one("#overlays-table", DataTable)
+
+        # Find the row index for this overlay
+        row_index = None
+        for i, overlay in enumerate(self.filtered_overlays):
+            if overlay.name == overlay_name:
+                row_index = i
+                break
+
+        if row_index is None:
+            return
+
+        # Get the overlay and format the new label
+        overlay = self.filtered_overlays[row_index]
+        name: str = f"[italic]{overlay.name}[/]" if overlay.status == OverlayStatus.OFFICIAL else overlay.name
+        label: str = f"{'[green]✓[/]' if installed else ' '} {name}"
+
+        # Update the first column
+        try:
+            table.update_cell_at(Coordinate(row_index, 0), label)
+        except Exception:
+            # Fall back to full refresh if update fails
+            self._populate_table()
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection in the overlays table."""
@@ -312,18 +326,25 @@ class OverlaysTab(Widget):
         enable_btn.label = "Adding..."
 
         overlay: Overlay = self.selected_overlay
+        table: DataTable = self.query_one("#overlays-table", DataTable)
+        cursor_row = table.cursor_row
 
         def on_complete(success: bool) -> None:
             if success:
-                self._pending_selection = overlay.name
                 self._update_overlay_installation_status(overlay.name, True)
-                self._populate_table()
+                self._update_overlay_row(overlay.name, True)
                 self.app.notify(f"Successfully installed {overlay.name}")
+
+                # Restore selection
+                if cursor_row is not None and cursor_row < len(self.filtered_overlays):
+                    try:
+                        table.move_cursor(row=cursor_row)
+                    except Exception:
+                        pass
             else:
                 self.app.notify(f"Failed to install {overlay.name}", severity="error")
 
             enable_btn.label = "Enable & Sync"
-
             self.update_button_states()
             self.app.bell()
 
@@ -343,14 +364,11 @@ class OverlaysTab(Widget):
 
         def on_complete(success: bool) -> None:
             if success:
-                self._pending_selection = overlay.name
-                self._populate_table()
                 self.app.notify(f"Successfully synchronized {overlay.name}")
             else:
                 self.app.notify(f"Failed to sync {overlay.name}", severity="error")
 
             sync_btn.label = "Sync"
-
             self.update_button_states()
             self.app.bell()
 
@@ -367,18 +385,25 @@ class OverlaysTab(Widget):
         remove_btn.label = "Removing..."
 
         overlay: Overlay = self.selected_overlay
+        table: DataTable = self.query_one("#overlays-table", DataTable)
+        cursor_row = table.cursor_row
 
         def on_complete(success: bool) -> None:
             if success:
-                self._pending_selection = overlay.name
                 self._update_overlay_installation_status(overlay.name, False)
-                self._populate_table()
+                self._update_overlay_row(overlay.name, False)
                 self.app.notify(f"Successfully removed {overlay.name}")
+
+                # Restore selection (row might shift if it was removed)
+                if cursor_row is not None and cursor_row < len(self.filtered_overlays):
+                    try:
+                        table.move_cursor(row=cursor_row)
+                    except Exception:
+                        pass
             else:
                 self.app.notify(f"Failed to remove {overlay.name}", severity="error")
 
             remove_btn.label = "Remove"
-
             self.update_button_states()
             self.app.bell()
 
