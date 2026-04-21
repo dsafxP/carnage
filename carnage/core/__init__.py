@@ -2,7 +2,7 @@
 
 # Expose main classes and functions
 # args
-from carnage.core.args import APP_DESC, APP_NAME, config_path
+from carnage.core.args import config_path
 from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
 
@@ -67,6 +67,4 @@ __all__ = [
     "Configuration",
     # args
     "config_path",
-    "APP_NAME",
-    "APP_DESC",
 ]

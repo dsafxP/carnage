@@ -6,9 +6,6 @@ from platformdirs import user_config_dir
 
 import carnage
 
-APP_NAME = "carnage"
-APP_DESC = "TUI front-end for Portage and eix"
-
 
 class __ArgsInit:
     def __init__(self):
@@ -16,7 +13,7 @@ class __ArgsInit:
 
     @staticmethod
     def _parse_args() -> argparse.Namespace:
-        parser = argparse.ArgumentParser(prog=APP_NAME, description=APP_DESC)
+        parser = argparse.ArgumentParser(prog=carnage.__name__, description=carnage.__doc__)
 
         # Version argument
         parser.add_argument(
