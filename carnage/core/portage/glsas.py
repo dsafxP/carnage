@@ -1,5 +1,7 @@
 """Utilities for managing Gentoo Linux Security Advisories (GLSAs)."""
 
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -12,7 +14,10 @@ from portage.glsa import (
     get_applied_glsas,
     get_glsa_list,
 )
+from textual import work
+from textual.app import App
 
+from carnage.core.operation import Operation
 from carnage.core.portage.portageq import ctx
 
 
@@ -208,11 +213,15 @@ def _parse_glsa_xml(glsa_id: str, xml_path: Path) -> GLSA | None:
         return None
 
 
+# Create a thread pool executor for blocking Portage calls
+_executor = ThreadPoolExecutor(max_workers=1)
+
+
 def _is_vulnerable(glsa_id: str) -> bool:
     """Check whether this GLSA affects the current system via the portage API."""
     try:
-        glsa = Glsa(glsa_id, ctx.settings, ctx.vardbapi, ctx.portdbapi)
-        return glsa.isVulnerable()
+        future = _executor.submit(lambda: Glsa(glsa_id, ctx.settings, ctx.vardbapi, ctx.portdbapi).isVulnerable())
+        return future.result(timeout=30)
     except (GlsaArgumentException, GlsaFormatException, GlsaTypeException):
         return False
 
@@ -248,17 +257,15 @@ def fetch_glsas() -> list[GLSA]:
     return glsas
 
 
-def fix_glsas() -> tuple[int, str, str]:
+@work(thread=True, exclusive=True)
+def get_vulnerable_glsas_async(app: App, on_result: Callable[[list[str]], None]) -> None:
     """
-    Fix all GLSAs affecting the system.
+    Get vulnerable GLSAs in a worker thread without blocking UI.
 
-    Wraps: glsa-check -f <glsa_ids>
-
-    Returns:
-        Tuple of (return_code, stdout, stderr)
+    Args:
+        app: The Textual App instance
+        on_result: Callback with the list of vulnerable GLSA IDs
     """
-    from carnage.core import run_privileged
-
     applied = set(get_applied_glsas(ctx.settings))
     vulnerable_ids: list[str] = []
 
@@ -268,7 +275,30 @@ def fix_glsas() -> tuple[int, str, str]:
         if _is_vulnerable(glsa_id):
             vulnerable_ids.append(glsa_id)
 
-    if not vulnerable_ids:
-        return 0, "No GLSAs affecting the system.", ""
+    app.call_from_thread(on_result, vulnerable_ids)
 
-    return run_privileged(["glsa-check", "-f"] + vulnerable_ids)
+
+def fix_glsas(app: App, on_complete: Callable[[bool], None] | None = None) -> None:
+    """
+    Fix all GLSAs affecting the system.
+
+    Wraps: glsa-check -f <glsa_ids>
+
+    Args:
+        app: The Textual App instance
+        on_complete: Optional callback when operation finishes (receives success bool)
+    """
+
+    def on_vulnerable_ids(vulnerable_ids: list[str]) -> None:
+        """Called when vulnerable GLSA IDs are ready."""
+        if not vulnerable_ids:
+            return
+
+        op = Operation(
+            ["glsa-check", "-f"] + vulnerable_ids,
+            privilege=True,
+            log_callback=app.screen.log_operation_output,  # type: ignore
+        )
+        op.start_in_app(app, on_complete=on_complete)
+
+    get_vulnerable_glsas_async(app, on_vulnerable_ids)

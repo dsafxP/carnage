@@ -196,44 +196,45 @@ class GLSATab(Widget):
         """Update button visibility states."""
         fix_btn: Button = self.query_one("#fix-glsa-btn", Button)
 
-        # Enable "Apply fixes" only if there are GLSAs affecting the system
+        is_blocked = self.app.blocked  # type: ignore
+
+        # Enable "Apply fixes" only if there are GLSAs affecting the system and no operation running
         has_glsas: bool = len(self.glsa_items) > 0
-        fix_btn.disabled = not has_glsas
+        fix_btn.disabled = not has_glsas or is_blocked
         fix_btn.display = has_glsas
 
-    @work(exclusive=True, thread=True)
     def _action_fix_glsas(self) -> None:
         """Apply fixes for all GLSAs affecting the system."""
         if not self.glsa_items:
             self.notify("No GLSAs to fix", severity="warning")
             return
 
-        self.app.call_from_thread(
-            self.notify, "Applying fixes... (don't close until finished!)", severity="warning", timeout=15
-        )
+        self.notify("Applying fixes... (don't close until finished!)", severity="warning", timeout=15)
 
         fix_btn: Button = self.query_one("#fix-glsa-btn", Button)
-        try:
-            fix_btn.disabled = True
 
-            fix_btn.label = "Applying..."
+        if fix_btn.disabled:
+            return
 
-            returncode, stdout, stderr = fix_glsas()
+        fix_btn.disabled = True
 
-            if returncode == 0:
-                self.app.call_from_thread(self.notify, "Successfully applied GLSA fixes")
+        fix_btn.label = "Applying..."
+
+        def on_complete(success: bool) -> None:
+            if success:
+                self.notify("Successfully applied GLSA fixes")
                 # Refresh the GLSA list after fixes are applied
-                self.app.call_from_thread(self._reload_glsas)
+                self._reload_glsas()
             else:
-                self.app.call_from_thread(self.notify, f"Failed to apply fixes: {stderr}", severity="error")
-        except Exception as e:
-            self.app.call_from_thread(self.notify, f"Error applying fixes: {e}", severity="error")
-        finally:
-            fix_btn.disabled = False
+                self.notify("Failed to apply GLSA fixes", severity="error")
 
             fix_btn.label = "Apply fixes"
 
+            self.update_button_states()
             self.app.bell()
+
+        fix_glsas(self.app, on_complete=on_complete)
+        # self.update_button_states()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
@@ -241,7 +242,17 @@ class GLSATab(Widget):
             self._action_fix_glsas()
 
 
-__symbols: dict[str, str] = {"lt": "<", "le": "≤", "eq": "=", "ge": "≥", "gt": ">"}
+__symbols: dict[str, str] = {
+    "lt": "<",
+    "le": "≤",
+    "eq": "=",
+    "ge": "≥",
+    "gt": ">",
+    "rge": "≳",
+    "rle": "≲",
+    "rgt": ">~",
+    "rlt": "<~",
+}
 
 
 def _get_range_symbol(range_str: str) -> str:
