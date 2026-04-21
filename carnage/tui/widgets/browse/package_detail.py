@@ -329,7 +329,7 @@ class PackageDetailWidget(Widget):
 
         try:
             results = dep.graph_depends(max_depth=config.depth)
-        except:
+        except Exception:
             results = []
 
         if not results:
@@ -368,7 +368,7 @@ class PackageDetailWidget(Widget):
 
         try:
             contents: dict = gt_pkg.parsed_contents()
-        except:
+        except Exception:
             contents = {}
 
         if not contents:
@@ -440,12 +440,14 @@ class PackageDetailWidget(Widget):
         deselect_btn: Button = self.query_one("#deselect-btn", Button)
         noreplace_btn: Button = self.query_one("#noreplace-btn", Button)
 
+        is_blocked = self.app.blocked  # type: ignore
+
         is_installed: bool = self.package.is_installed()
 
         if is_installed:
             emerge_btn.display = False
             depclean_btn.display = True
-            # World file buttons depend on async status — hide until known
+            # World file buttons depend on async status - hide until known
             if self._in_world_file:
                 deselect_btn.display = True
                 noreplace_btn.display = False
@@ -468,10 +470,10 @@ class PackageDetailWidget(Widget):
             deselect_btn.display = False
             noreplace_btn.display = False
 
-        emerge_btn.disabled = not emerge_btn.display
-        depclean_btn.disabled = not depclean_btn.display
-        deselect_btn.disabled = not deselect_btn.display
-        noreplace_btn.disabled = not noreplace_btn.display
+        emerge_btn.disabled = not emerge_btn.display or is_blocked
+        depclean_btn.disabled = not depclean_btn.display or is_blocked
+        deselect_btn.disabled = not deselect_btn.display or is_blocked
+        noreplace_btn.disabled = not noreplace_btn.display or is_blocked
 
     def _mark_installed(self, version_id: str) -> None:
         """Update the Package instance to reflect a successful emerge."""
@@ -492,22 +494,6 @@ class PackageDetailWidget(Widget):
         # Disable the files tab since nothing is installed anymore
         self.query_one("#tab-files").disabled = True
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.disabled:
-            return
-
-        if event.button.id == "use-apply-btn":
-            self._action_apply_use_flags()
-        elif event.button.id == "emerge-btn":
-            self._action_emerge()
-        elif event.button.id == "depclean-btn":
-            self._action_depclean()
-        elif event.button.id == "deselect-btn":
-            self._action_deselect()
-        elif event.button.id == "noreplace-btn":
-            self._action_noreplace()
-
-    @work(exclusive=True, thread=True)
     def _action_apply_use_flags(self) -> None:
         """Diff the checklist against originals and run euse for each change."""
         apply_btn: Button = self.query_one("#use-apply-btn", Button)
@@ -523,189 +509,179 @@ class PackageDetailWidget(Widget):
         to_enable: list[str] = [f for f, was in self._use_flag_originals.items() if not was and f in currently_enabled]
         to_disable: list[str] = [f for f, was in self._use_flag_originals.items() if was and f not in currently_enabled]
 
+        if not to_enable and not to_disable:
+            self.notify("No changes to apply", severity="information")
+            return
+
         errors: list[str] = []
 
-        try:
-            apply_btn.disabled = True
-
-            apply_btn.label = "Applying..."
-
-            if to_enable:
-                rc, _, stderr = euse_enable(to_enable, atom)
-                if rc != 0:
-                    errors.append(f"enable {to_enable}: {stderr.strip()}")
-            if to_disable:
-                rc, _, stderr = euse_disable(to_disable, atom)
-                if rc != 0:
-                    errors.append(f"disable {to_disable}: {stderr.strip()}")
-        except Exception as e:
-            self.app.call_from_thread(self.notify, f"Error applying USE flags: {e}", severity="error")
-            return
-        finally:
-            apply_btn.disabled = False
+        def on_complete(success: bool) -> None:
+            if success:
+                self._commit_use_flag_changes(to_enable, to_disable)
+                self.notify(f"USE flags updated for {atom}")
+            else:
+                self.notify("Failed to apply some USE flags", severity="error")
 
             apply_btn.label = "Apply changes"
 
+            self._update_buttons()
             self.app.bell()
 
-        if errors:
-            self.app.call_from_thread(
-                self.notify,
-                "Some flags failed:\n" + "\n".join(errors),
-                severity="error",
-                timeout=10,
-            )
-        else:
-            self.app.call_from_thread(
-                self.notify,
-                f"USE flags updated for {atom}",
-            )
-            self.app.call_from_thread(self._commit_use_flag_changes, to_enable, to_disable)
+        # Disable button and start operations
+        apply_btn.disabled = True
+        apply_btn.label = "Applying..."
 
-    @work(exclusive=True, thread=True)
+        # We need to chain operations or run them sequentially
+        def run_next_operation(idx: int = 0) -> None:
+            if idx >= len(operations):
+                on_complete(True)
+                return
+
+            op_type, flags = operations[idx]
+
+            def op_callback(success: bool) -> None:
+                if not success:
+                    errors.append(f"{op_type} {flags}: operation failed")
+                    on_complete(False)
+                else:
+                    run_next_operation(idx + 1)
+
+            if op_type == "enable":
+                euse_enable(self.app, flags, atom, on_complete=op_callback)
+            else:
+                euse_disable(self.app, flags, atom, on_complete=op_callback)
+
+        operations = []
+        if to_enable:
+            operations.append(("enable", to_enable))
+        if to_disable:
+            operations.append(("disable", to_disable))
+
+        run_next_operation()
+
     def _action_emerge(self) -> None:
+        """Install the selected package version."""
         emerge_btn: Button = self.query_one("#emerge-btn", Button)
 
         if self.selected_version is None or self.package.is_installed() or emerge_btn.disabled:
             return
 
+        emerge_btn.label = "Emerging..."
+
         atom: str = f"={self.package.full_name}-{self.selected_version.id}"
 
-        try:
-            emerge_btn.disabled = True
+        self.notify(f"Installing {atom}... (don't close until finished!)", severity="warning", timeout=15)
 
-            emerge_btn.label = "Emerging..."
-
-            self.app.call_from_thread(
-                self.notify,
-                f"Installing {atom}... (don't close until finished!)",
-                severity="warning",
-                timeout=15,
-            )
-            returncode, _, stderr = emerge_install(atom)
-            if returncode == 0:
-                self.app.call_from_thread(self.notify, f"Successfully installed {atom}")
-
-                self.app.call_from_thread(self._mark_installed, self.selected_version.id)
+        def on_complete(success: bool) -> None:
+            if success:
+                self.notify(f"Successfully installed {atom}")
+                self._mark_installed(self.selected_version.id)
             else:
-                self.app.call_from_thread(self.notify, f"Failed to install: {stderr}", severity="error")
-        except Exception as e:
-            self.app.call_from_thread(self.notify, f"Error installing: {e}", severity="error")
-        finally:
-            emerge_btn.disabled = False
+                self.notify(f"Failed to install {atom}", severity="error")
 
             emerge_btn.label = "Emerge"
 
+            self._update_buttons()
             self.app.bell()
 
-    @work(exclusive=True, thread=True)
+        emerge_install(self.app, atom, on_complete=on_complete)
+        self._update_buttons()
+
     def _action_depclean(self) -> None:
+        """Uninstall the selected package."""
         depclean_btn: Button = self.query_one("#depclean-btn", Button)
 
         if not self.package.is_installed() or depclean_btn.disabled:
             return
 
+        depclean_btn.label = "Cleaning..."
+
         atom: str = self.package.full_name
 
-        try:
-            depclean_btn.disabled = True
+        self.notify(f"Removing {atom}... (don't close until finished!)", severity="warning", timeout=15)
 
-            depclean_btn.label = "Cleaning..."
-
-            self.app.call_from_thread(
-                self.notify,
-                f"Removing {atom}... (don't close until finished!)",
-                severity="warning",
-                timeout=15,
-            )
-            returncode, _, stderr = emerge_uninstall(atom)
-            if returncode == 0:
-                self.app.call_from_thread(self.notify, f"Successfully removed {atom}")
-
-                self.app.call_from_thread(self._mark_uninstalled)
+        def on_complete(success: bool) -> None:
+            if success:
+                self.notify(f"Successfully removed {atom}")
+                self._mark_uninstalled()
             else:
-                self.app.call_from_thread(self.notify, f"Failed to remove: {stderr}", severity="error")
-        except Exception as e:
-            self.app.call_from_thread(self.notify, f"Error removing: {e}", severity="error")
-        finally:
-            depclean_btn.disabled = False
+                self.notify(f"Failed to remove {atom}", severity="error")
 
             depclean_btn.label = "Depclean"
 
+            self._update_buttons()
             self.app.bell()
 
-    @work(exclusive=True, thread=True)
+        emerge_uninstall(self.app, atom, on_complete=on_complete)
+        self._update_buttons()
+
     def _action_deselect(self) -> None:
+        """Remove package from world file."""
         deselect_btn: Button = self.query_one("#deselect-btn", Button)
+
         if deselect_btn.disabled:
             return
 
+        deselect_btn.label = "Deselecting..."
+
         atom: str = self.package.full_name
 
-        try:
-            deselect_btn.disabled = True
+        self.notify(f"Removing {atom} from world file...", severity="warning", timeout=10)
 
-            deselect_btn.label = "Deselecting..."
-
-            self.app.call_from_thread(
-                self.notify,
-                f"Removing {atom} from world file...",
-                severity="warning",
-                timeout=10,
-            )
-            returncode, _, stderr = emerge_deselect(atom)
-            if returncode == 0:
-                self.app.call_from_thread(self.notify, f"Successfully removed {atom} from world file")
+        def on_complete(success: bool) -> None:
+            if success:
+                self.notify(f"Successfully removed {atom} from world file")
                 self._load_world_file_status()
             else:
-                self.app.call_from_thread(
-                    self.notify,
-                    f"Failed to remove from world file: {stderr}",
-                    severity="error",
-                )
-        except Exception as e:
-            self.app.call_from_thread(self.notify, f"Error removing from world file: {e}", severity="error")
-        finally:
-            deselect_btn.disabled = False
+                self.notify(f"Failed to remove from world file: {atom}", severity="error")
 
             deselect_btn.label = "Deselect"
 
+            self._update_buttons()
             self.app.bell()
 
-    @work(exclusive=True, thread=True)
+        emerge_deselect(self.app, atom, on_complete=on_complete)
+        self._update_buttons()
+
     def _action_noreplace(self) -> None:
+        """Add package to world file."""
         noreplace_btn: Button = self.query_one("#noreplace-btn", Button)
+
         if noreplace_btn.disabled:
             return
 
+        noreplace_btn.label = "Noreplacing..."
+
         atom: str = self.package.full_name
 
-        try:
-            noreplace_btn.disabled = True
+        self.notify(f"Adding {atom} to world file...", severity="warning", timeout=10)
 
-            noreplace_btn.label = "Noreplacing..."
-
-            self.app.call_from_thread(
-                self.notify,
-                f"Adding {atom} to world file...",
-                severity="warning",
-                timeout=10,
-            )
-            returncode, _, stderr = emerge_noreplace(atom)
-            if returncode == 0:
-                self.app.call_from_thread(self.notify, f"Successfully added {atom} to world file")
+        def on_complete(success: bool) -> None:
+            if success:
+                self.notify(f"Successfully added {atom} to world file")
                 self._load_world_file_status()
             else:
-                self.app.call_from_thread(
-                    self.notify,
-                    f"Failed to add to world file: {stderr}",
-                    severity="error",
-                )
-        except Exception as e:
-            self.app.call_from_thread(self.notify, f"Error adding to world file: {e}", severity="error")
-        finally:
-            noreplace_btn.disabled = False
+                self.notify(f"Failed to add to world file: {atom}", severity="error")
 
             noreplace_btn.label = "Noreplace"
 
+            self._update_buttons()
             self.app.bell()
+
+        emerge_noreplace(self.app, atom, on_complete=on_complete)
+        self._update_buttons()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.disabled:
+            return
+
+        if event.button.id == "use-apply-btn":
+            self._action_apply_use_flags()
+        elif event.button.id == "emerge-btn":
+            self._action_emerge()
+        elif event.button.id == "depclean-btn":
+            self._action_depclean()
+        elif event.button.id == "deselect-btn":
+            self._action_deselect()
+        elif event.button.id == "noreplace-btn":
+            self._action_noreplace()
