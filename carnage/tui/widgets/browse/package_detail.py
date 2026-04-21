@@ -489,6 +489,7 @@ class PackageDetailWidget(Widget):
         self._load_world_file_status()
         # self._update_buttons()
         self._load_installed_files()
+        self._populate_versions_table()
         # Re-enable the files tab
         self.query_one("#tab-files").disabled = False
 
@@ -498,6 +499,7 @@ class PackageDetailWidget(Widget):
             v.installed = False
         self._in_world_file = None
         self._update_buttons()
+        self._populate_versions_table()
         # Disable the files tab since nothing is installed anymore
         self.query_one("#tab-files").disabled = True
 
