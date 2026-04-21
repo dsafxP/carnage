@@ -9,7 +9,8 @@ from textual.widgets import DataTable, LoadingIndicator
 
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.search import Package, search_packages
-from carnage.tui.widgets.browse.package_detail import PackageDetailWidget
+from carnage.core.gentoolkit.package import GentoolkitPackage
+from carnage.tui.widgets.browse.package_detail import PackageDetailWidget, default_version
 from carnage.tui.widgets.table import NavigableDataTable
 
 
@@ -99,10 +100,16 @@ class BrowseTab(Widget):
                 description = description[:77] + "..."
 
             installed: bool = package.is_installed()
+            gt_pkg: GentoolkitPackage = default_version(package).to_gentoolkit(package.category, package.name)
+
             name_cell: str = (
                 f"[green]✓[/green] {package.category}/[bold]{package.name}[/bold]"
                 if installed
-                else f"  {package.category}/[bold]{package.name}[/bold]"
+                else (
+                    f"[red]✗[/red] {package.category}/[bold]{package.name}[/bold]"
+                    if not gt_pkg.exists_f
+                    else f"  {package.category}/[bold]{package.name}[/bold]"
+                )
             )
 
             table.add_row(

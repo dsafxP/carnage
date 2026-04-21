@@ -27,7 +27,7 @@ from carnage.core.portage.emerge import (
 from carnage.tui.widgets.table import NavigableDataTable
 
 
-def _default_version(package: Package) -> PackageVersion | None:
+def default_version(package: Package) -> PackageVersion | None:
     """
     Select the default version to highlight for a package.
 
@@ -131,7 +131,7 @@ class PackageDetailWidget(Widget):
     def __init__(self, package: Package) -> None:
         super().__init__()
         self.package = package
-        self.selected_version: PackageVersion | None = _default_version(package)
+        self.selected_version: PackageVersion | None = default_version(package)
         self._in_world_file: bool | None = None  # None = not yet loaded
         self._use_flag_originals: dict[str, bool] = {}  # flag -> enabled at load time
 
