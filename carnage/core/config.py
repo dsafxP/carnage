@@ -43,7 +43,6 @@ class Configuration:
                 "initial_tab": "news",
                 "compact_mode": False,
                 "ignore_warnings": False,
-                "terminal": [],
             },
             "browse": {
                 "search_flags": ["-f", "2"],
@@ -59,7 +58,7 @@ class Configuration:
             },
             "use": {"minimum_characters": 3, "cache_max_age": 96},
             "logging": {
-                "automatic_pane": False,
+                "automatic_pane": True,
             },
         }
 
@@ -147,9 +146,6 @@ class Configuration:
         global_section.add(tomlkit.comment("Ignore all warnings"))
         global_section.add("ignore_warnings", False)
         global_section.add(tomlkit.nl())
-        global_section.add(tomlkit.comment("Terminal to execute actions with. Leave empty to execute as a subprocess"))
-        global_section.add(tomlkit.comment('Example: ["xterm", "-e"]'))
-        global_section.add("terminal", tomlkit.array())
         doc.add("global", global_section)
 
         # Browse section
@@ -201,8 +197,8 @@ class Configuration:
 
         # Logging section
         logging_section: Table = tomlkit.table()
-        logging_section.add(tomlkit.comment("Automatically open the logging output pane when executing a operation"))
-        logging_section.add("automatic_pane", False)
+        logging_section.add(tomlkit.comment("Automatically open the logging output pane when executing a command"))
+        logging_section.add("automatic_pane", True)
         doc.add("logging", logging_section)
 
         # Write to file
@@ -315,11 +311,6 @@ class Configuration:
         return self._get_nested_value(["global", "ignore_warnings"], False)
 
     @property
-    def terminal(self) -> list[str]:
-        """Get terminal."""
-        return self._get_nested_value(["global", "terminal"], [])
-
-    @property
     def search_flags(self) -> list[str]:
         """Get the search flags for package browsing."""
         return self._get_nested_value(["browse", "search_flags"], ["-f", "2"])
@@ -374,7 +365,7 @@ class Configuration:
     @property
     def automatic_pane(self) -> bool:
         """Get whether to automatically open the logging pane."""
-        return self._get_nested_value(["logging", "automatic_pane"], False)
+        return self._get_nested_value(["logging", "automatic_pane"], True)
 
     def reload(self) -> None:
         """Reload configuration from file."""
