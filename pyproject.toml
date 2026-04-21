@@ -31,6 +31,11 @@ dev = [
 [project.scripts]
 carnage = "carnage.main:main"
 
+[project.optional-dependencies]
+notifications = [
+    "desktop-notifier>=6.1.0",
+]
+
 [tool.pyrefly]
 python-version = "3.14"
 python-interpreter = ".venv/bin/python3"
