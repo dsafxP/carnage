@@ -3,9 +3,11 @@
 from pathlib import Path
 
 from textual import work
+from textual._context import NoActiveAppError
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
+from textual.css.query import NoMatches
 from textual.widget import Widget
 from textual.widgets import Button, DataTable, SelectionList, Static, TabbedContent, TabPane, Tree
 from textual.widgets._selection_list import Selection
@@ -431,7 +433,12 @@ class PackageDetailWidget(Widget):
     def _load_world_file_status(self) -> None:
         """Check world file membership in a thread then refresh buttons."""
         self._in_world_file = self.package.is_in_world_file()
-        self.app.call_from_thread(self._update_buttons)
+
+        try:
+            self.app.call_from_thread(self._update_buttons)
+        except NoActiveAppError:
+            # App is no longer active, widget detached
+            pass
 
     def _update_buttons(self) -> None:
         """Synchronise button visibility with selected_version and world file state."""
@@ -575,13 +582,21 @@ class PackageDetailWidget(Widget):
         def on_complete(success: bool) -> None:
             if success:
                 self.notify(f"Successfully installed {atom}")
-                self._mark_installed(self.selected_version.id)
+                try:
+                    self._mark_installed(self.selected_version.id)
+                except NoMatches:
+                    # Selected version no longer exists in the updated package data
+                    pass
             else:
                 self.notify(f"Failed to install {atom}", severity="error")
 
-            emerge_btn.label = "Emerge"
+            try:
+                emerge_btn.label = "Emerge"
+                self._update_buttons()
+            except NoMatches:
+                # Widget state changed or package no longer exists
+                pass
 
-            self._update_buttons()
             self.app.bell()
 
         emerge_install(self.app, atom, on_complete=on_complete)
@@ -603,13 +618,21 @@ class PackageDetailWidget(Widget):
         def on_complete(success: bool) -> None:
             if success:
                 self.notify(f"Successfully removed {atom}")
-                self._mark_uninstalled()
+                try:
+                    self._mark_uninstalled()
+                except NoMatches:
+                    # Selected version no longer exists in the updated package data
+                    pass
             else:
                 self.notify(f"Failed to remove {atom}", severity="error")
 
-            depclean_btn.label = "Depclean"
+            try:
+                depclean_btn.label = "Depclean"
+                self._update_buttons()
+            except NoMatches:
+                # Widget state changed or package no longer exists
+                pass
 
-            self._update_buttons()
             self.app.bell()
 
         emerge_uninstall(self.app, atom, on_complete=on_complete)
