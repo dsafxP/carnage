@@ -205,16 +205,12 @@ class GLSATab(Widget):
 
     def _action_fix_glsas(self) -> None:
         """Apply fixes for all GLSAs affecting the system."""
-        if not self.glsa_items:
-            self.notify("No GLSAs to fix", severity="warning")
+        fix_btn: Button = self.query_one("#fix-glsa-btn", Button)
+
+        if not self.glsa_items or fix_btn.disabled:
             return
 
         self.notify("Applying fixes... (don't close until finished!)", severity="warning", timeout=15)
-
-        fix_btn: Button = self.query_one("#fix-glsa-btn", Button)
-
-        if fix_btn.disabled:
-            return
 
         fix_btn.disabled = True
 

@@ -179,12 +179,9 @@ class NewsTab(Widget):
 
     def _action_mark_read(self) -> None:
         """Mark the selected news item as read."""
-        if self.selected_news is None or self.selected_news.read:
-            return
-
         mark_read_btn: Button = self.query_one("#mark-read-btn", Button)
 
-        if mark_read_btn.disabled:
+        if self.selected_news is None or self.selected_news.read or mark_read_btn.disabled:
             return
 
         news_index: int = self.selected_news.index
@@ -214,12 +211,9 @@ class NewsTab(Widget):
 
     def _action_mark_all_read(self) -> None:
         """Mark all news items as read."""
-        if not self.news_items:
-            return
-
         mark_all_btn: Button = self.query_one("#mark-all-read-btn", Button)
 
-        if mark_all_btn.disabled:
+        if not self.news_items or mark_all_btn.disabled:
             return
 
         mark_all_btn.label = "Marking..."
@@ -245,12 +239,9 @@ class NewsTab(Widget):
 
     def _action_purge(self) -> None:
         """Purge all read news items."""
-        if not self.news_items:
-            return
-
         purge_btn: Button = self.query_one("#purge-btn", Button)
 
-        if purge_btn.disabled:
+        if not self.news_items or purge_btn.disabled:
             return
 
         purge_btn.label = "Purging..."

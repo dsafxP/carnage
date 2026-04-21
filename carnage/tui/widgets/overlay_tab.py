@@ -304,12 +304,9 @@ class OverlaysTab(Widget):
 
     def _action_enable_sync(self) -> None:
         """Enable and sync the selected overlay."""
-        if self.selected_overlay is None or self.selected_overlay.installed:
-            return
-
         enable_btn: Button = self.query_one("#enable-sync-btn", Button)
 
-        if enable_btn.disabled:
+        if self.selected_overlay is None or self.selected_overlay.installed or enable_btn.disabled:
             return
 
         enable_btn.label = "Adding..."
@@ -335,12 +332,9 @@ class OverlaysTab(Widget):
 
     def _action_sync(self) -> None:
         """Sync the selected overlay."""
-        if self.selected_overlay is None or not self.selected_overlay.installed:
-            return
-
         sync_btn: Button = self.query_one("#sync-btn", Button)
 
-        if sync_btn.disabled:
+        if self.selected_overlay is None or not self.selected_overlay.installed or sync_btn.disabled:
             return
 
         sync_btn.label = "Syncing..."
@@ -365,12 +359,9 @@ class OverlaysTab(Widget):
 
     def _action_remove(self) -> None:
         """Remove the selected overlay."""
-        if self.selected_overlay is None or not self.selected_overlay.installed:
-            return
-
         remove_btn: Button = self.query_one("#remove-btn", Button)
 
-        if remove_btn.disabled:
+        if self.selected_overlay is None or not self.selected_overlay.installed or remove_btn.disabled:
             return
 
         remove_btn.label = "Removing..."
