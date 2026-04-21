@@ -191,7 +191,7 @@ def mark_news_read(app: App, news_index: int, on_complete: Callable[[bool], None
         on_complete: Optional callback when operation finishes (receives success bool)
     """
     op = Operation(
-        ["eselect", "news", "read", str(news_index)],
+        ["eselect", "news", "read", "--quiet", str(news_index)],
         privilege=False,
         log_callback=app.screen.log_operation_output,  # type: ignore
     )
@@ -207,7 +207,7 @@ def mark_all_news_read(app: App, on_complete: Callable[[bool], None] | None = No
         on_complete: Optional callback when operation finishes (receives success bool)
     """
     op = Operation(
-        ["eselect", "news", "read", "all"],
+        ["eselect", "news", "read", "--quiet", "all"],
         privilege=False,
         log_callback=app.screen.log_operation_output,  # type: ignore
     )
