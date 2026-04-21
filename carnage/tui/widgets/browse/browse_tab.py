@@ -142,3 +142,37 @@ class BrowseTab(Widget):
             return
 
         self._mount_detail_widget(package)
+
+    def update_package_installation_status(self, package_name: str, installed: bool) -> None:
+        """Update the installation status of a package by searching for its name."""
+        # Find current row for this package
+        row_key = None
+        for i, pkg in enumerate(self.packages):
+            if pkg.full_name == package_name:
+                row_key = i
+                break
+
+        if row_key is None:
+            return
+
+        # Now update using the found row
+        table = self.query_one("#browse-table", DataTable)
+        package = self.packages[row_key]
+
+        # Update the package's installed status
+        installed_version = package.installed_version()
+        for v in package.versions:
+            v.installed = v.id == installed_version.id if installed_version and installed else False
+
+        name_cell = (
+            f"[green]✓[/green] {package.category}/[bold]{package.name}[/bold]"
+            if installed
+            else f"  {package.category}/[bold]{package.name}[/bold]"
+        )
+
+        try:
+            from textual.coordinate import Coordinate
+
+            table.update_cell_at(Coordinate(row_key, 0), name_cell)
+        except Exception:
+            self._populate_table(self.packages)

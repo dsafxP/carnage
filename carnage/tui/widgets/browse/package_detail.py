@@ -482,8 +482,13 @@ class PackageDetailWidget(Widget):
         deselect_btn.disabled = not deselect_btn.display or is_blocked
         noreplace_btn.disabled = not noreplace_btn.display or is_blocked
 
-    def _mark_installed(self, version_id: str) -> None:
+    def _mark_installed(self, version_id: str, saved_package_name: str) -> None:
         """Update the Package instance to reflect a successful emerge."""
+        # Notify the browse tab to update the checkmark
+        browse_tab = self.app.screen.query_one("BrowseTab")
+
+        browse_tab.update_package_installation_status(saved_package_name, True)  # type: ignore
+
         for v in self.package.versions:
             v.installed = v.id == version_id
         self._load_world_file_status()
@@ -493,8 +498,13 @@ class PackageDetailWidget(Widget):
         # Re-enable the files tab
         self.query_one("#tab-files").disabled = False
 
-    def _mark_uninstalled(self) -> None:
+    def _mark_uninstalled(self, saved_package_name: str) -> None:
         """Update the Package instance to reflect a successful depclean."""
+        # Notify the browse tab to update the checkmark
+        browse_tab = self.app.screen.query_one("BrowseTab")
+
+        browse_tab.update_package_installation_status(saved_package_name, False)  # type: ignore
+
         for v in self.package.versions:
             v.installed = False
         self._in_world_file = None
@@ -579,13 +589,15 @@ class PackageDetailWidget(Widget):
 
         atom: str = f"={self.package.full_name}-{self.selected_version.id}"
 
+        saved_package_name = self.package.full_name
+
         self.notify(f"Installing {atom}... (don't close until finished!)", severity="warning", timeout=15)
 
         def on_complete(success: bool) -> None:
             if success:
                 self.notify(f"Successfully installed {atom}")
                 try:
-                    self._mark_installed(self.selected_version.id)
+                    self._mark_installed(self.selected_version.id, saved_package_name)
                 except NoMatches:
                     # Selected version no longer exists in the updated package data
                     pass
@@ -615,13 +627,15 @@ class PackageDetailWidget(Widget):
 
         atom: str = self.package.full_name
 
+        saved_package_name = self.package.full_name
+
         self.notify(f"Removing {atom}... (don't close until finished!)", severity="warning", timeout=15)
 
         def on_complete(success: bool) -> None:
             if success:
                 self.notify(f"Successfully removed {atom}")
                 try:
-                    self._mark_uninstalled()
+                    self._mark_uninstalled(saved_package_name)
                 except NoMatches:
                     # Selected version no longer exists in the updated package data
                     pass
