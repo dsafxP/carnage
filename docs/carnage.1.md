@@ -1,7 +1,7 @@
 % CARNAGE(1) | User Commands
 
 # NAME
-carnage - TUI front-end for Portage and eix
+**carnage** - TUI front-end for Portage and eix
 
 # SYNOPSIS
 **carnage** [*OPTIONS*]
@@ -20,15 +20,15 @@ eix is not strictly necessary, and carnage can function without it for every oth
 Since eix is used for several operations internally, having a remote cache is important to have all options available. Optimizing eix will accelerate carnage at the same time.
 
 # OPTIONS
-| Option              | Description                                                                |
-|---------------------|----------------------------------------------------------------------------|
-| -h, \-\-help        | Show help message and exit.                                                |
-| -V, \-\-version     | Show version information and exit.                                         |
-| -c, \-\-config FILE | Path to configuration file.                                                |
-| -\-css              | Path to custom Textual CSS file. Defaults to ~/.config/carnage/custom.tcss |
+| Option              | Description                                                                  |
+|---------------------|------------------------------------------------------------------------------|
+| -h, \-\-help        | Show help message and exit.                                                  |
+| -V, \-\-version     | Show version information and exit.                                           |
+| -c, \-\-config FILE | Path to configuration file.                                                  |
+| -\-css FILE         | Path to custom Textual CSS file. Defaults to `~/.config/carnage/custom.tcss` |
 
 # CONFIGURATION
-A default configuration file is automatically generated at: ~/.config/carnage/carnage.toml
+A default configuration file is automatically generated at: `~/.config/carnage/carnage.toml`
 
 It is automatically reset to default when a key is missing or is unparseable.
 
@@ -36,14 +36,13 @@ The file uses the [TOML](https://toml.io/) format and contains the following sec
 
 ## [global]
 
-| Key               | Type   | Description                                                                                                            | Default        |
-|-------------------|--------|------------------------------------------------------------------------------------------------------------------------|----------------|
-| theme             | string | User interface theme name. Recommended to change through the UI.                                                       | "textual-dark" |
-| privilege_backend | string | Backend for privilege escalation when administrative commands are needed. **Options:** auto, pkexec, sudo, doas, none. | "auto"         |
-| initial_tab       | string | Tab selected when starting Carnage. **Options:** news, glsas, browse, use, overlays.                                   | "news"         |
-| compact_mode      | bool   | Reduce visual spacing for higher density.                                                                              | false          |
-| ignore_warnings   | bool   | Suppress warnings.                                                                                                     | false          |
-| terminal          | array  | Terminal to execute actions with. Useful to check output. Leave empty to execute as a subprocess.                      | []             |
+| Key               | Type   | Description                                                                          | Default        |
+|-------------------|--------|--------------------------------------------------------------------------------------|----------------|
+| theme             | string | User interface theme name. Recommended to change through the UI.                     | "textual-dark" |
+| privilege_backend | array  | Backend for privilege escalation when administrative commands are needed.            | Automatic      |
+| initial_tab       | string | Tab selected when starting Carnage. **Options:** news, glsas, browse, use, overlays. | "news"         |
+| compact_mode      | bool   | Reduce visual spacing for higher density.                                            | false          |
+| ignore_warnings   | bool   | Suppress warnings.                                                                   | false          |
 
 ## [browse]
 
@@ -73,8 +72,22 @@ For example, searching for \-\-installed will display all installed packages, ig
 | minimum_characters | int  | Minimum characters before USE flag search starts. | 3       |
 | cache_max\_age     | int  | Maximum USE flag cache age (hours).               | 96      |
 
+## [logging]
+
+| Key            | Type | Description                                                          | Default |
+|----------------|------|----------------------------------------------------------------------|---------|
+| automatic_pane | bool | Automatically open the logging output pane when executing a command. | true    |
+
+All user-facing commands logs are stored at: `~/.local/state/carnage/log/`
+
 # BINDINGS
 Bindings are available for each button in a tab.
+
+## Global
+
+| Key    | Description           |
+|--------|-----------------------|
+| ctrl+l | Toggle log view pane. |
 
 ## News
 
