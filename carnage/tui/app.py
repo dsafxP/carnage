@@ -22,7 +22,7 @@ from carnage.core.eix.eix import is_found
 from carnage.tui.screens.main_screen import MainScreen
 
 
-class CarnageApp(App):
+class CarnageApp(App[None]):
     """TUI front-end for Portage and eix"""
 
     TITLE = "carnage"

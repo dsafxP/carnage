@@ -1,5 +1,15 @@
 """User operation execution with privilege escalation and logging."""
 
+try:
+    from desktop_notifier import DesktopNotifier
+    from desktop_notifier.common import Urgency
+
+    from carnage.core.notifications import get_notifier
+
+    HAS_NOTIFICATIONS = True
+except ImportError:
+    HAS_NOTIFICATIONS = False
+
 import asyncio
 import logging
 import shutil
@@ -247,6 +257,18 @@ class Operation:
             # Now call the callback and success notification (if applicable)
             if on_complete:
                 on_complete(success)
+
+            config: Configuration = get_config()
+            can_notify: bool = HAS_NOTIFICATIONS and config.desktop_notifications and not app.app_focus
+
+            if can_notify:
+                notifier: DesktopNotifier = get_notifier()  # type: ignore
+
+                await notifier.send(
+                    title="Operation completed!",
+                    message=f"Command finished: {' '.join(self.cmd)}",
+                    urgency=Urgency.Normal if success else Urgency.Critical,
+                )
 
             # if success:
             #    app.notify(f"Command finished successfully: {self.cmd[0]}", severity="information")
