@@ -34,14 +34,10 @@ from carnage.core.portage.overlays import get_installed as get_installed_overlay
 
 # USE
 from carnage.core.portage.use import UseFlag, get_or_cache_useflags
-from carnage.core.privilege import detect_backend, run_privileged
 
 __all__ = [
     # Cache
     "CacheManager",
-    # Privilege
-    "detect_backend",
-    "run_privileged",
     # Overlays
     "Overlay",
     "OverlayQuality",
