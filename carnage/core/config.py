@@ -43,6 +43,7 @@ class Configuration:
                 "initial_tab": "news",
                 "compact_mode": False,
                 "ignore_warnings": False,
+                "desktop_notifications": True,
             },
             "browse": {
                 "search_flags": ["-f", "2"],
@@ -145,6 +146,10 @@ class Configuration:
         global_section.add(tomlkit.nl())
         global_section.add(tomlkit.comment("Ignore all warnings"))
         global_section.add("ignore_warnings", False)
+        global_section.add(tomlkit.nl())
+        global_section.add(tomlkit.comment("Send useful desktop notifications when Carnage is not focused"))
+        global_section.add(tomlkit.comment("dev-python/desktop-notifier must be installed"))
+        global_section.add("desktop_notifications", True)
         global_section.add(tomlkit.nl())
         doc.add("global", global_section)
 
@@ -309,6 +314,11 @@ class Configuration:
     def ignore_warnings(self) -> bool:
         """Get whether to ignore warnings system-wide."""
         return self._get_nested_value(["global", "ignore_warnings"], False)
+
+    @property
+    def desktop_notifications(self) -> bool:
+        """Get whether to use desktop notifications."""
+        return self._get_nested_value(["global", "desktop_notifications"], True)
 
     @property
     def search_flags(self) -> list[str]:
