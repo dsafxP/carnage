@@ -307,6 +307,13 @@ class OverlaysTab(Widget):
         if self.selected_overlay is None or self.selected_overlay.installed:
             return
 
+        enable_btn: Button = self.query_one("#enable-sync-btn", Button)
+
+        if enable_btn.disabled:
+            return
+
+        enable_btn.label = "Adding..."
+
         overlay: Overlay = self.selected_overlay
 
         def on_complete(success: bool) -> None:
@@ -317,6 +324,8 @@ class OverlaysTab(Widget):
                 self.app.notify(f"Successfully installed {overlay.name}")
             else:
                 self.app.notify(f"Failed to install {overlay.name}", severity="error")
+
+            enable_btn.label = "Enable & Sync"
 
             self.update_button_states()
             self.app.bell()
@@ -329,6 +338,13 @@ class OverlaysTab(Widget):
         if self.selected_overlay is None or not self.selected_overlay.installed:
             return
 
+        sync_btn: Button = self.query_one("#sync-btn", Button)
+
+        if sync_btn.disabled:
+            return
+
+        sync_btn.label = "Syncing..."
+
         overlay: Overlay = self.selected_overlay
 
         def on_complete(success: bool) -> None:
@@ -338,6 +354,8 @@ class OverlaysTab(Widget):
                 self.app.notify(f"Successfully synchronized {overlay.name}")
             else:
                 self.app.notify(f"Failed to sync {overlay.name}", severity="error")
+
+            sync_btn.label = "Sync"
 
             self.update_button_states()
             self.app.bell()
@@ -350,6 +368,13 @@ class OverlaysTab(Widget):
         if self.selected_overlay is None or not self.selected_overlay.installed:
             return
 
+        remove_btn: Button = self.query_one("#remove-btn", Button)
+
+        if remove_btn.disabled:
+            return
+
+        remove_btn.label = "Removing..."
+
         overlay: Overlay = self.selected_overlay
 
         def on_complete(success: bool) -> None:
@@ -360,6 +385,8 @@ class OverlaysTab(Widget):
                 self.app.notify(f"Successfully removed {overlay.name}")
             else:
                 self.app.notify(f"Failed to remove {overlay.name}", severity="error")
+
+            remove_btn.label = "Remove"
 
             self.update_button_states()
             self.app.bell()
