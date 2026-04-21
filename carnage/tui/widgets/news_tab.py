@@ -182,7 +182,14 @@ class NewsTab(Widget):
         if self.selected_news is None or self.selected_news.read:
             return
 
+        mark_read_btn: Button = self.query_one("#mark-read-btn", Button)
+
+        if mark_read_btn.disabled:
+            return
+
         news_index: int = self.selected_news.index
+
+        mark_read_btn.label = "Marking..."
 
         def on_complete(success: bool) -> None:
             if success:
@@ -197,16 +204,25 @@ class NewsTab(Widget):
             else:
                 self.notify(f"Failed to mark news {news_index} as read", severity="error")
 
+            mark_read_btn.label = "Mark as Read"
+
             self.update_button_states()
             self.app.bell()
 
-        self.update_button_states()
         mark_news_read(self.app, news_index, on_complete=on_complete)
+        self.update_button_states()
 
     def _action_mark_all_read(self) -> None:
         """Mark all news items as read."""
         if not self.news_items:
             return
+
+        mark_all_btn: Button = self.query_one("#mark-all-read-btn", Button)
+
+        if mark_all_btn.disabled:
+            return
+
+        mark_all_btn.label = "Marking..."
 
         def on_complete(success: bool) -> None:
             if success:
@@ -219,16 +235,25 @@ class NewsTab(Widget):
             else:
                 self.notify("Failed to mark all news as read", severity="error")
 
+            mark_all_btn.label = "Mark all as Read"
+
             self.update_button_states()
             self.app.bell()
 
-        self.update_button_states()
         mark_all_news_read(self.app, on_complete=on_complete)
+        self.update_button_states()
 
     def _action_purge(self) -> None:
         """Purge all read news items."""
         if not self.news_items:
             return
+
+        purge_btn: Button = self.query_one("#purge-btn", Button)
+
+        if purge_btn.disabled:
+            return
+
+        purge_btn.label = "Purging..."
 
         def on_complete(success: bool) -> None:
             if success:
@@ -239,11 +264,13 @@ class NewsTab(Widget):
             else:
                 self.notify("Failed to purge read news", severity="error")
 
+            purge_btn.label = "Purge Read"
+
             self.update_button_states()
             self.app.bell()
 
-        self.update_button_states()
         purge_read_news(self.app, on_complete=on_complete)
+        self.update_button_states()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
