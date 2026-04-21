@@ -222,8 +222,7 @@ class Operation:
 
         if has_blocked:
             if app.blocked:  # type: ignore
-                if hasattr(app, "notify"):
-                    app.notify("An operation is already running.", severity="warning")
+                app.notify("An operation is already running.", severity="warning")
                 return
 
             app.blocked = True  # type: ignore
@@ -249,7 +248,7 @@ class Operation:
             if on_complete:
                 on_complete(success)
 
-            if success and hasattr(app, "notify"):
-                app.notify(f"Command finished successfully: {self.cmd[0]}", severity="information")
+            # if success:
+            #    app.notify(f"Command finished successfully: {self.cmd[0]}", severity="information")
 
         app.run_worker(_worker(), exclusive=True)
