@@ -4,8 +4,9 @@ from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widget import Widget
-from textual.widgets import Button, DataTable, LoadingIndicator, Rule, Static
+from textual.widgets import Button, DataTable, LoadingIndicator, Rule, Static, TabbedContent
 
+from carnage.core.config import Configuration, get_config
 from carnage.core.portage.glsas import GLSA, fetch_glsas, fix_glsas
 from carnage.tui.widgets.table import NavigableDataTable
 
@@ -48,6 +49,18 @@ class GLSATab(Widget):
 
         try:
             glsa_items: list[GLSA] = fetch_glsas()
+
+            if glsa_items:
+                tabbed_content: TabbedContent = self.screen.query_one(TabbedContent)
+                config: Configuration = get_config()
+
+                if tabbed_content.active != "glsas" and not config.ignore_warnings:
+                    self.app.call_from_thread(
+                        self.notify,
+                        "Found security advisories that affect the system. Please review ASAP!",
+                        severity="warning",
+                    )
+                    self.app.bell()
 
             self.app.call_from_thread(self._populate_table, glsa_items)
         except Exception as e:
