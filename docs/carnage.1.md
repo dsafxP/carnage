@@ -39,7 +39,6 @@ The file uses the [TOML](https://toml.io/) format and contains the following sec
 | Key                   | Type   | Description                                                                          | Default        |
 |-----------------------|--------|--------------------------------------------------------------------------------------|----------------|
 | theme                 | string | User interface theme name. Recommended to change through the UI.                     | "textual-dark" |
-| privilege_backend     | array  | Backend for privilege escalation when administrative commands are needed.            | Automatic      |
 | initial_tab           | string | Tab selected when starting Carnage. **Options:** news, glsas, browse, use, overlays. | "news"         |
 | compact_mode          | bool   | Reduce visual spacing for higher density.                                            | false          |
 | ignore_warnings       | bool   | Suppress warnings.                                                                   | false          |

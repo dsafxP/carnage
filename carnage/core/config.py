@@ -16,7 +16,6 @@ from carnage.core.args import config_path as arg_cfg_path
 _DEFAULT_CONFIG: Final[dict[str, Any]] = {
     "global": {
         "theme": "textual-dark",
-        "privilege_backend": ["pkexec"],
         "initial_tab": "news",
         "compact_mode": False,
         "ignore_warnings": False,
@@ -123,12 +122,6 @@ class Configuration:
         global_section.add(tomlkit.comment("User interface theme"))
         global_section.add(tomlkit.comment("Preferred to be set directly through Carnage"))
         global_section.add("theme", "textual-dark")
-        global_section.add(tomlkit.nl())
-        global_section.add(tomlkit.comment("Privilege escalation backend for administrative commands"))
-
-        from carnage.core.operation import generate_default_privilege_backend
-
-        global_section.add("privilege_backend", tomlkit.array(f'["{generate_default_privilege_backend()}"]'))
         global_section.add(tomlkit.nl())
         global_section.add(tomlkit.comment("Initial tab selected"))
         global_section.add(tomlkit.comment("Options: news, glsas, browse, use, overlays"))
@@ -275,11 +268,6 @@ class Configuration:
     def theme(self, value: str) -> None:
         """Set the theme setting."""
         self._set_nested_value_and_save(["global", "theme"], value)
-
-    @property
-    def privilege_backend(self) -> list[str]:
-        """Get the privilege escalation backend setting."""
-        return self._get_nested_value(["global", "privilege_backend"], _DEFAULT_CONFIG["global"]["privilege_backend"])
 
     @property
     def initial_tab(self) -> str:
