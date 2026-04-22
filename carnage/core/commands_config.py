@@ -111,7 +111,7 @@ privilege_backend = []
             "command": ["-f", "3"],
         },
         "eix.update": {
-            "command": ["eix-update"],
+            "command": ["eix-update", "-v"],
         },
         "eix.remote-update": {
             "command": ["eix-remote", "update"],
@@ -134,15 +134,15 @@ privilege_backend = []
             "environment": {"CLEAN_DELAY": "0"},
         },
         "emerge.deselect": {
-            "command": ["emerge", "--deselect", "$1"],
+            "command": ["emerge", "-W", "$1"],
             "privilege": True,
         },
         "euse.enable": {
-            "command": ["euse", "-E", "$2"],
+            "command": ["euse", "-p", "$1", "-E", "$2"],
             "privilege": True,
         },
         "euse.disable": {
-            "command": ["euse", "-D", "$2"],
+            "command": ["euse", "-p", "$1", "-D", "$2"],
             "privilege": True,
         },
         "eclean.dist": {
@@ -154,15 +154,11 @@ privilege_backend = []
             "privilege": True,
         },
         "glsa.fix": {
-            "command": ["glsa-check", "-f", "$1"],
+            "command": ["glsa-check", "-vf", "$1"],
             "privilege": True,
         },
         "news.read": {
-            "command": ["eselect", "news", "read", "$1"],
-            "privilege": False,
-        },
-        "news.read_all": {
-            "command": ["eselect", "news", "read", "all"],
+            "command": ["eselect", "news", "read", "--quiet", "$1"],
             "privilege": False,
         },
         "news.purge": {
