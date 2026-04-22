@@ -3,7 +3,7 @@
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import tomlkit
 from tomlkit import TOMLDocument
@@ -11,6 +11,33 @@ from tomlkit.exceptions import TOMLKitError
 from tomlkit.items import Table
 
 from carnage.core.args import config_path as arg_cfg_path
+
+# Default configuration as a constant
+_DEFAULT_CONFIG: Final[dict[str, Any]] = {
+    "global": {
+        "theme": "textual-dark",
+        "privilege_backend": ["pkexec"],
+        "initial_tab": "news",
+        "compact_mode": False,
+        "ignore_warnings": False,
+    },
+    "browse": {
+        "search_flags": ["-f", "3"],
+        "minimum_characters": 3,
+        "syntax_style": "github-dark",
+        "expand": True,
+        "depth": 1,
+    },
+    "overlays": {
+        "skip_package_counting": True,
+        "cache_max_age": 72,
+        "overlay_source": "https://api.gentoo.org/overlays/repositories.xml",
+    },
+    "use": {"minimum_characters": 3, "cache_max_age": 96},
+    "logging": {
+        "automatic_pane": True,
+    },
+}
 
 
 class Configuration:
@@ -32,35 +59,6 @@ class Configuration:
         self._config: dict[str, Any] = {}
         self._toml_doc: TOMLDocument | None = None
         self._load_config()
-
-    @staticmethod
-    def _get_default_config() -> dict[str, Any]:
-        """Get the default configuration."""
-        return {
-            "global": {
-                "theme": "textual-dark",
-                "privilege_backend": ["pkexec"],
-                "initial_tab": "news",
-                "compact_mode": False,
-                "ignore_warnings": False,
-            },
-            "browse": {
-                "search_flags": ["-f", "2"],
-                "minimum_characters": 3,
-                "syntax_style": "github-dark",
-                "expand": True,
-                "depth": 1,
-            },
-            "overlays": {
-                "skip_package_counting": True,
-                "cache_max_age": 72,
-                "overlay_source": "https://api.gentoo.org/overlays/repositories.xml",
-            },
-            "use": {"minimum_characters": 3, "cache_max_age": 96},
-            "logging": {
-                "automatic_pane": True,
-            },
-        }
 
     def _backup_config(self) -> None:
         """Backup current config file with .old prefix and timestamp."""
@@ -92,15 +90,13 @@ class Configuration:
         Returns:
             True if config is valid, False if migration is needed
         """
-        default_config = self._get_default_config()
-
         # Check if all main sections exist
-        for section in default_config.keys():
+        for section in _DEFAULT_CONFIG.keys():
             if section not in self._config:
                 return False
 
         # Check if all expected options exist in each section
-        for section, options in default_config.items():
+        for section, options in _DEFAULT_CONFIG.items():
             if section not in self._config:
                 return False
 
@@ -152,7 +148,7 @@ class Configuration:
         browse_section: Table = tomlkit.table()
         browse_section.add(tomlkit.comment("Default flags for package search with eix"))
         browse_section.add(tomlkit.comment("These are passed to eix commands"))
-        browse_section.add("search_flags", tomlkit.array('["-f", "2"]'))
+        browse_section.add("search_flags", tomlkit.array('["-f", "3"]'))
         browse_section.add(tomlkit.nl())
         browse_section.add(tomlkit.comment("Minimum characters required before starting search"))
         browse_section.add(tomlkit.comment("Lower values may hinder performance"))
@@ -278,7 +274,7 @@ class Configuration:
     @property
     def theme(self) -> str:
         """Get the theme setting."""
-        return self._get_nested_value(["global", "theme"], "textual-dark")
+        return self._get_nested_value(["global", "theme"], _DEFAULT_CONFIG["global"]["theme"])
 
     @theme.setter
     def theme(self, value: str) -> None:
@@ -288,17 +284,17 @@ class Configuration:
     @property
     def privilege_backend(self) -> list[str]:
         """Get the privilege escalation backend setting."""
-        return self._get_nested_value(["global", "privilege_backend"], ["pkexec"])
+        return self._get_nested_value(["global", "privilege_backend"], _DEFAULT_CONFIG["global"]["privilege_backend"])
 
     @property
     def initial_tab(self) -> str:
         """Get the initial tab selected."""
-        return self._get_nested_value(["global", "initial_tab"], "news")
+        return self._get_nested_value(["global", "initial_tab"], _DEFAULT_CONFIG["global"]["initial_tab"])
 
     @property
     def compact_mode(self) -> bool:
         """Get the compact mode setting."""
-        return self._get_nested_value(["global", "compact_mode"], False)
+        return self._get_nested_value(["global", "compact_mode"], _DEFAULT_CONFIG["global"]["compact_mode"])
 
     @compact_mode.setter
     def compact_mode(self, value: bool) -> None:
@@ -308,64 +304,64 @@ class Configuration:
     @property
     def ignore_warnings(self) -> bool:
         """Get whether to ignore warnings system-wide."""
-        return self._get_nested_value(["global", "ignore_warnings"], False)
+        return self._get_nested_value(["global", "ignore_warnings"], _DEFAULT_CONFIG["global"]["ignore_warnings"])
 
     @property
     def search_flags(self) -> list[str]:
         """Get the search flags for package browsing."""
-        return self._get_nested_value(["browse", "search_flags"], ["-f", "2"])
+        return self._get_nested_value(["browse", "search_flags"], _DEFAULT_CONFIG["browse"]["search_flags"])
 
     @property
     def browse_minimum_characters(self) -> int:
         """Get the minimum characters for browse search."""
-        return self._get_nested_value(["browse", "minimum_characters"], 3)
+        return self._get_nested_value(["browse", "minimum_characters"], _DEFAULT_CONFIG["browse"]["minimum_characters"])
 
     @property
     def syntax_style(self) -> str:
         """Get the syntax highlighting style."""
-        return self._get_nested_value(["browse", "syntax_style"], "github-dark")
+        return self._get_nested_value(["browse", "syntax_style"], _DEFAULT_CONFIG["browse"]["syntax_style"])
 
     @property
     def expand(self) -> bool:
         """Get whether to expand nodes or not."""
-        return self._get_nested_value(["browse", "expand"], True)
+        return self._get_nested_value(["browse", "expand"], _DEFAULT_CONFIG["browse"]["expand"])
 
     @property
     def depth(self) -> int:
         """Get dependency tree's maximum depth."""
-        return self._get_nested_value(["browse", "depth"], 1)
+        return self._get_nested_value(["browse", "depth"], _DEFAULT_CONFIG["browse"]["depth"])
 
     @property
     def skip_package_counting(self) -> bool:
         """Get whether to skip package counting for overlays."""
-        return self._get_nested_value(["overlays", "skip_package_counting"], True)
+        return self._get_nested_value(
+            ["overlays", "skip_package_counting"], _DEFAULT_CONFIG["overlays"]["skip_package_counting"]
+        )
 
     @property
     def overlays_cache_max_age(self) -> int:
         """Get the cache max age for overlays in hours."""
-        return self._get_nested_value(["overlays", "cache_max_age"], 72)
+        return self._get_nested_value(["overlays", "cache_max_age"], _DEFAULT_CONFIG["overlays"]["cache_max_age"])
 
     @property
     def overlay_source(self) -> str:
         """Get the overlay metadata source URL."""
-        return self._get_nested_value(
-            ["overlays", "overlay_source"], "https://api.gentoo.org/overlays/repositories.xml"
-        )
+        return self._get_nested_value(["overlays", "overlay_source"], _DEFAULT_CONFIG["overlays"]["overlay_source"])
 
     @property
     def use_minimum_characters(self) -> int:
         """Get the minimum characters for USE flag search."""
-        return self._get_nested_value(["use", "minimum_characters"], 3)
+        return self._get_nested_value(["use", "minimum_characters"], _DEFAULT_CONFIG["use"]["minimum_characters"])
 
     @property
     def use_cache_max_age(self) -> int:
         """Get the cache max age for USE flags in hours."""
-        return self._get_nested_value(["use", "cache_max_age"], 96)
+        return self._get_nested_value(["use", "cache_max_age"], _DEFAULT_CONFIG["use"]["cache_max_age"])
 
     @property
     def automatic_pane(self) -> bool:
         """Get whether to automatically open the logging pane."""
-        return self._get_nested_value(["logging", "automatic_pane"], True)
+        return self._get_nested_value(["logging", "automatic_pane"], _DEFAULT_CONFIG["logging"]["automatic_pane"])
 
     def reload(self) -> None:
         """Reload configuration from file."""
