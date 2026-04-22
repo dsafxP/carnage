@@ -9,6 +9,7 @@ from portage.news import NewsItem
 from portage.util import grabfile
 from textual.app import App
 
+from carnage.core.commands_config import get_commands_config
 from carnage.core.operation import Operation
 from carnage.core.portage.portageq import ctx
 
@@ -190,9 +191,12 @@ def mark_news_read(app: App, news_index: int, on_complete: Callable[[bool], None
         news_index: 1-based index of the news item to mark as read
         on_complete: Optional callback when operation finishes (receives success bool)
     """
+    cmd_config = get_commands_config()
+    command = cmd_config.get_command("news.read", args=[str(news_index)], default_privilege=False)
+
     op = Operation(
-        ["eselect", "news", "read", "--quiet", str(news_index)],
-        privilege=False,
+        command.full_cmd,
+        env=command.env,
         log_callback=app.screen.log_operation_output,  # type: ignore
     )
     op.start_in_app(app, on_complete=on_complete)
@@ -206,9 +210,12 @@ def mark_all_news_read(app: App, on_complete: Callable[[bool], None] | None = No
         app: The Textual App instance
         on_complete: Optional callback when operation finishes (receives success bool)
     """
+    cmd_config = get_commands_config()
+    command = cmd_config.get_command("news.read", args=["all"], default_privilege=False)
+
     op = Operation(
-        ["eselect", "news", "read", "--quiet", "all"],
-        privilege=False,
+        command.full_cmd,
+        env=command.env,
         log_callback=app.screen.log_operation_output,  # type: ignore
     )
     op.start_in_app(app, on_complete=on_complete)
@@ -225,9 +232,12 @@ def purge_read_news(app: App, on_complete: Callable[[bool], None] | None = None)
         app: The Textual App instance
         on_complete: Optional callback when operation finishes (receives success bool)
     """
+    cmd_config = get_commands_config()
+    command = cmd_config.get_command("news.purge", default_privilege=False)
+
     op = Operation(
-        ["eselect", "news", "purge"],
-        privilege=False,
+        command.full_cmd,
+        env=command.env,
         log_callback=app.screen.log_operation_output,  # type: ignore
     )
     op.start_in_app(app, on_complete=on_complete)
