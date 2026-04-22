@@ -17,6 +17,7 @@ from carnage.core.commands import (
     sync,
     toggle_compact_mode,
 )
+from carnage.core.commands_config import get_commands_config
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.eix import is_found
 from carnage.tui.screens.main_screen import MainScreen
@@ -35,6 +36,8 @@ class CarnageApp(App[None]):
     def __init__(self) -> None:
         """Initialize the application."""
         self.__config: Configuration = get_config()
+
+        _ = get_commands_config()  # Create default config.
 
         css_paths: list[str | PurePath] = ["styles.tcss"]
 
