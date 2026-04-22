@@ -15,6 +15,7 @@ from lxml import etree
 from textual.app import App
 
 from carnage.core.cache import CacheManager
+from carnage.core.commands_config import get_commands_config
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
 from carnage.core.operation import Operation
@@ -145,40 +146,6 @@ def is_overlay_installed(name: str) -> bool:
     return overlay_path.exists() and overlay_path.is_dir()
 
 
-def enable_overlay(app: App, overlay_name: str, on_complete: Callable | None = None) -> None:
-    """
-    Enable an overlay using eselect repository enable.
-
-    Args:
-        app: The Textual App instance
-        overlay_name: Name of the overlay to enable
-        on_complete: Optional callback when operation succeeds
-    """
-    op = Operation(
-        ["eselect", "repository", "enable", overlay_name],
-        privilege=True,
-        log_callback=app.screen.log_operation_output,  # type: ignore
-    )
-    op.start_in_app(app, on_complete=on_complete)
-
-
-def disable_overlay(app: App, overlay_name: str, on_complete: Callable | None = None) -> None:
-    """
-    Disable an overlay using eselect repository disable.
-
-    Args:
-        app: The Textual App instance
-        overlay_name: Name of the overlay to disable
-        on_complete: Optional callback when operation succeeds
-    """
-    op = Operation(
-        ["eselect", "repository", "disable", overlay_name],
-        privilege=True,
-        log_callback=app.screen.log_operation_output,  # type: ignore
-    )
-    op.start_in_app(app, on_complete=on_complete)
-
-
 def remove_overlay(app: App, overlay_name: str, on_complete: Callable | None = None) -> None:
     """
     Remove an overlay using eselect repository remove.
@@ -188,9 +155,12 @@ def remove_overlay(app: App, overlay_name: str, on_complete: Callable | None = N
         overlay_name: Name of the overlay to remove
         on_complete: Optional callback when operation succeeds
     """
+    cmd_config = get_commands_config()
+    command = cmd_config.get_command("overlays.remove", args=[overlay_name], default_privilege=True)
+
     op = Operation(
-        ["eselect", "repository", "remove", overlay_name],
-        privilege=True,
+        command.full_cmd,
+        env=command.env,
         log_callback=app.screen.log_operation_output,  # type: ignore
     )
     op.start_in_app(app, on_complete=on_complete)
@@ -205,7 +175,14 @@ def sync_overlay(app: App, overlay_name: str, on_complete: Callable | None = Non
         overlay_name: Name of the overlay to sync
         on_complete: Optional callback when operation succeeds
     """
-    op = Operation(["emaint", "sync", "-r", overlay_name], privilege=True, log_callback=app.screen.log_operation_output)  # type: ignore
+    cmd_config = get_commands_config()
+    command = cmd_config.get_command("overlays.sync", args=[overlay_name], default_privilege=True)
+
+    op = Operation(
+        command.full_cmd,
+        env=command.env,
+        log_callback=app.screen.log_operation_output,  # type: ignore
+    )
     op.start_in_app(app, on_complete=on_complete)
 
 
@@ -218,10 +195,14 @@ def enable_and_sync_overlay(app: App, overlay_name: str, on_complete: Callable |
         overlay_name: Name of the overlay to enable and sync
         on_complete: Optional callback when operation succeeds
     """
-    # Chain two operations? Or use a shell command?
-    # Using a single shell command is more efficient
-    cmd = ["sh", "-c", f"eselect repository enable {overlay_name} && emaint sync -r {overlay_name}"]
-    op = Operation(cmd, privilege=True, log_callback=app.screen.log_operation_output)  # type: ignore
+    cmd_config = get_commands_config()
+    command = cmd_config.get_command("overlays.add", args=[overlay_name], default_privilege=True)
+
+    op = Operation(
+        command.full_cmd,
+        env=command.env,
+        log_callback=app.screen.log_operation_output,  # type: ignore
+    )
     op.start_in_app(app, on_complete=on_complete)
 
 
