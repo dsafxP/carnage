@@ -32,7 +32,15 @@ A default configuration file is automatically generated at: `~/.config/carnage/c
 
 It is automatically reset to default when a key is missing or is unparseable.
 
-The file uses the [TOML](https://toml.io/) format and contains the following sections and options:
+Additionally, a empty command override configuration file is automatically generated at: `~/.config/carnage/commands.toml`
+
+It allows advanced users to override the exact commands executed for various operations, including adding custom flags, changing environment variables, or even replacing the underlying tools entirely.
+
+Variables `$1`, `$2`, etc. are replaced with arguments passed by carnage. The `privilege` field controls whether the command needs escalation (uses `privilege_backend` when `true`). The `environment` field sets additional environment variables for that command only.
+
+This file is intended for advanced users only; incorrect configurations may cause operations to fail in unexpected ways.
+
+The main configuration file uses the [TOML](https://toml.io/) format and contains the following sections and options:
 
 ## [global]
 
