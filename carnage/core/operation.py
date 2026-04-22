@@ -22,8 +22,6 @@ from pathlib import Path
 from platformdirs import user_log_path
 from textual.app import App
 
-from carnage.core.config import Configuration, get_config
-
 # Privilege escalation backends in detection priority order
 _BACKENDS: list[str] = ["pkexec", "sudo", "doas"]
 
@@ -94,24 +92,19 @@ class OperationError(Exception):
 
 class Operation:
     """
-    An async user-facing operation with optional privilege escalation
-    and logging to the carnage log file.
+    An async user-facing operation with logging to the carnage log file.
 
-    Intended for all user-initiated Portage and eix state-modifying
-    commands (emerge, depclean, eix-update, overlay sync, etc.).
-    Not intended for app-internal queries such as eix searches.
+    The full command (including privilege escalation and environment) should be
+    built by CommandsConfiguration before being passed here.
 
     Args:
-        cmd:       Command and arguments to execute.
-        privilege: Whether to prepend the configured privilege backend.
-                   Defaults to False.
-
-    Raises:
-        OperationError: If the process exits with a non-zero return code.
+        cmd: Full command and arguments to execute (already includes privilege and env)
+        env: Environment variables to pass to the subprocess
+        log_callback: Optional callback for streaming output
 
     Example::
-
-        op = Operation(["emerge", "app-editors/vim"], privilege=True)
+        cmd = commands_config.get_command("emerge.install", args=["app-editors/vim"]).full_cmd
+        op = Operation(cmd)
         await op.run()
     """
 
@@ -119,42 +112,14 @@ class Operation:
         self,
         cmd: list[str],
         *,
-        privilege: bool = False,
         env: dict[str, str] | None = None,
         log_callback: Callable[[bytes], None] | None = None,
     ) -> None:
         self.cmd = cmd
-        self.privilege = privilege
         self.env = env
         self._log_callback = log_callback
 
         _ensure_log_handler()
-
-    def _build_cmd(self) -> list[str]:
-        """
-        Resolve the full argv, prepending the privilege backend if requested.
-
-        Returns:
-            Full command as an argv list.
-        """
-        if not self.privilege:
-            return self.cmd
-
-        config: Configuration = get_config()
-        backend_cmd: list[str] = config.privilege_backend
-
-        if not backend_cmd:
-            # No backend configured
-            return self.cmd
-
-        # If we have custom environment variables, insert env between backend and command
-        if self.env:
-            env_args = []
-            for k, v in self.env.items():
-                env_args.extend([f"{k}={v}"])
-            return [*backend_cmd, "env", *env_args, *self.cmd]
-
-        return [*backend_cmd, *self.cmd]
 
     async def run(self) -> int:
         """
@@ -166,20 +131,19 @@ class Operation:
         Raises:
             OperationError: If the process exits with a non-zero return code.
         """
-        full_cmd = self._build_cmd()
         start = datetime.now()
 
-        _log.info("START %s", " ".join(full_cmd))
+        _log.info("START %s", " ".join(self.cmd))
 
         # Send command header to log callback
         if self._log_callback:
-            cmd_str = " ".join(full_cmd)
             # Wrap in ANSI grey/dim codes
+            cmd_str = " ".join(self.cmd)
             grey_cmd = f"[dim]$ {cmd_str}[/]\n"
             self._log_callback(grey_cmd.encode())
 
         process: Process = await asyncio.create_subprocess_exec(
-            *full_cmd,
+            *self.cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,  # merge stderr into stdout
             env=self.env,  # Pass environment
@@ -207,10 +171,10 @@ class Operation:
             self._log_callback(exit_msg.encode())
 
         if returncode == 0:
-            _log.info("END %s | exit 0 | %.1fs", full_cmd[0], elapsed)
+            _log.info("END %s | exit 0 | %.1fs", self.cmd[0], elapsed)
         else:
-            _log.warning("END %s | exit %d | %.1fs", full_cmd[0], returncode, elapsed)
-            raise OperationError(full_cmd, returncode)
+            _log.warning("END %s | exit %d | %.1fs", self.cmd[0], returncode, elapsed)
+            raise OperationError(self.cmd, returncode)
 
         return returncode
 
