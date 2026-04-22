@@ -5,6 +5,7 @@ from textual.screen import Screen
 
 from carnage.core import Configuration, get_config
 from carnage.core.cache import get_cache_manager
+from carnage.core.commands_config import get_commands_config
 from carnage.core.eix.eix import has_cache, has_remote_cache
 from carnage.core.operation import Operation
 from carnage.tui.screens.main_screen import MainScreen
@@ -28,7 +29,14 @@ def clear_cache(app: App) -> None:
 
 def eix_update(app: App) -> None:
     """Run eix-update and reload the main screen."""
-    op = Operation(["eix-update"], privilege=not has_cache(), log_callback=app.screen.log_operation_output)  # type: ignore
+    cmd_config = get_commands_config()
+    command = cmd_config.get_command("eix.update", default_privilege=not has_cache())
+
+    op = Operation(
+        command.full_cmd,
+        env=command.env,
+        log_callback=app.screen.log_operation_output,  # type: ignore
+    )
 
     def on_complete(success: bool) -> None:
         if success:
@@ -41,11 +49,14 @@ def eix_update(app: App) -> None:
 
 def eix_remote_update(app: App) -> None:
     """Run eix-remote update and reload the main screen."""
+    cmd_config = get_commands_config()
+    command = cmd_config.get_command("eix.remote-update", default_privilege=not has_remote_cache())
+
     op = Operation(
-        ["eix-remote", "update"],
-        privilege=not has_remote_cache(),
+        command.full_cmd,
+        env=command.env,
         log_callback=app.screen.log_operation_output,  # type: ignore
-    )  # type: ignore
+    )
 
     def on_complete(success: bool) -> None:
         if success:
@@ -61,7 +72,14 @@ def run_eclean_dist(app: App) -> None:
     """Clean obsolete distfiles with eclean-dist."""
     app.notify("Running eclean-dist...", severity="warning", timeout=15)
 
-    op = Operation(["eclean-dist"], privilege=True, log_callback=app.screen.log_operation_output)  # type: ignore
+    cmd_config = get_commands_config()
+    command = cmd_config.get_command("eclean.dist", default_privilege=True)
+
+    op = Operation(
+        command.full_cmd,
+        env=command.env,
+        log_callback=app.screen.log_operation_output,  # type: ignore
+    )
 
     def on_complete(success: bool) -> None:
         app.bell()
@@ -73,7 +91,14 @@ def run_eclean_pkg(app: App) -> None:
     """Clean obsolete binary packages with eclean-pkg."""
     app.notify("Running eclean-pkg...", severity="warning", timeout=15)
 
-    op = Operation(["eclean-pkg"], privilege=True, log_callback=app.screen.log_operation_output)  # type: ignore
+    cmd_config = get_commands_config()
+    command = cmd_config.get_command("eclean.pkg", default_privilege=True)
+
+    op = Operation(
+        command.full_cmd,
+        env=command.env,
+        log_callback=app.screen.log_operation_output,  # type: ignore
+    )
 
     def on_complete(success: bool) -> None:
         app.bell()
@@ -83,7 +108,14 @@ def run_eclean_pkg(app: App) -> None:
 
 def sync(app: App) -> None:
     """Run emerge --sync and reload the main screen."""
-    op = Operation(["emerge", "--sync"], privilege=True, log_callback=app.screen.log_operation_output)  # type: ignore
+    cmd_config = get_commands_config()
+    command = cmd_config.get_command("emerge.sync", default_privilege=True)
+
+    op = Operation(
+        command.full_cmd,
+        env=command.env,
+        log_callback=app.screen.log_operation_output,  # type: ignore
+    )
 
     def on_complete(success: bool) -> None:
         if success:
