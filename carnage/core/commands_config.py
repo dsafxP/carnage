@@ -29,7 +29,7 @@ class CommandsConfiguration:
     # Default configuration as a string
     DEFAULT_CONFIG = """# Carnage command overrides
 # This file is optional and completely user-managed
-# It can be risky to override entire commands as the program might not be suited to work with unexpected results
+# It can be risky to override entire commands as Carnage might not be suited to work with unexpected results
 # Missing values are ignored - the app will use internal defaults
 
 # Privilege escalation backend for administrative commands
@@ -93,6 +93,7 @@ privilege_backend = []
 # command = ["eselect", "news", "purge"]
 
 # [overlays.add]
+# Carnage expects for the repository to be enabled and synchronized in a single call
 # command = ["sh", "-c", "eselect repository enable $1 && emaint sync -r $1"]
 # privilege = true
 
