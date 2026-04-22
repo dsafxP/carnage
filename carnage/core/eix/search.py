@@ -7,7 +7,7 @@ from subprocess import CompletedProcess
 from gentoolkit.cpv import CPV
 from lxml import etree
 
-from carnage.core.config import Configuration, get_config
+from carnage.core.commands_config import CommandsConfiguration, get_commands_config
 from carnage.core.eix.eix import has_remote_cache
 from carnage.core.gentoolkit.package import GentoolkitPackage
 
@@ -322,10 +322,10 @@ def fetch_packages_by_query(query: list[str], append_cfg: bool = True) -> list[P
         cmd = ["eix", "-Q", "--xml"]
 
     if append_cfg:
-        config: Configuration = get_config()
+        cmd_config: CommandsConfiguration = get_commands_config()
 
         # Append search flags from configuration
-        cmd.extend(config.search_flags)
+        cmd.extend(cmd_config.eix_search_flags)
 
     # Append the search query arguments
     cmd.extend(query)

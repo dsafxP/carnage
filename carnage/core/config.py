@@ -22,7 +22,6 @@ _DEFAULT_CONFIG: Final[dict[str, Any]] = {
         "ignore_warnings": False,
     },
     "browse": {
-        "search_flags": ["-f", "3"],
         "minimum_characters": 3,
         "syntax_style": "github-dark",
         "expand": True,
@@ -146,10 +145,6 @@ class Configuration:
 
         # Browse section
         browse_section: Table = tomlkit.table()
-        browse_section.add(tomlkit.comment("Default flags for package search with eix"))
-        browse_section.add(tomlkit.comment("These are passed to eix commands"))
-        browse_section.add("search_flags", tomlkit.array('["-f", "3"]'))
-        browse_section.add(tomlkit.nl())
         browse_section.add(tomlkit.comment("Minimum characters required before starting search"))
         browse_section.add(tomlkit.comment("Lower values may hinder performance"))
         browse_section.add("minimum_characters", 3)
@@ -305,11 +300,6 @@ class Configuration:
     def ignore_warnings(self) -> bool:
         """Get whether to ignore warnings system-wide."""
         return self._get_nested_value(["global", "ignore_warnings"], _DEFAULT_CONFIG["global"]["ignore_warnings"])
-
-    @property
-    def search_flags(self) -> list[str]:
-        """Get the search flags for package browsing."""
-        return self._get_nested_value(["browse", "search_flags"], _DEFAULT_CONFIG["browse"]["search_flags"])
 
     @property
     def browse_minimum_characters(self) -> int:

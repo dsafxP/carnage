@@ -49,7 +49,6 @@ The file uses the [TOML](https://toml.io/) format and contains the following sec
 
 | Key                | Type   | Description                                                             | Default       |
 |--------------------|--------|-------------------------------------------------------------------------|---------------|
-| search_flags       | array  | Default flags passed to eix during package search.                      | ["-f", "2"]   |
 | minimum_characters | int    | Minimum number of characters before initiating search.                  | 3             |
 | syntax_style       | string | Pygments style to use for ebuild syntax highlighting.                   | "github-dark" |
 | expand             | bool   | Expand all tree nodes automatically in dependencies or installed files. | true          |
