@@ -7,7 +7,7 @@
 **carnage** [*OPTIONS*]
 
 # DESCRIPTION
-**carnage** is a text-based user interface (TUI) front-end for **Portage** and **eix**.
+**carnage** is a terminal user interface (TUI) front-end for **Portage** and **eix**.
 Its goal is to centralize common Gentoo package management tasks in a unified, efficient, and user-friendly interface.
 
 carnage is not meant to compete in feature completeness with the command line.
