@@ -7,13 +7,13 @@
 **carnage** [*OPTIONS*]
 
 # DESCRIPTION
-**carnage** is a text-based user interface (TUI) front-end for **Portage** and **eix**.  
+**carnage** is a text-based user interface (TUI) front-end for **Portage** and **eix**.
 Its goal is to centralize common Gentoo package management tasks in a unified, efficient, and user-friendly interface.
 
-**carnage** is not meant to compete in feature completeness with the command line.  
+carnage is not meant to compete in feature completeness with the command line.
 It is dedicated to providing an intuitive browsing and inspection environment rather than replacing emerge or eix directly.
 
-Internally, **carnage** integrates with Portage and eix, adding a backend for extended functionality and caching beyond what the command line provides.
+Internally, carnage integrates with Portage and eix, adding a backend for extended functionality and caching beyond what the command line provides.
 
 eix is not strictly necessary, and carnage can function without it for every other feature unrelated to packages.
 
@@ -61,7 +61,7 @@ The main configuration file uses the [TOML](https://toml.io/) format and contain
 | expand             | bool   | Expand all tree nodes automatically in dependencies or installed files. | true          |
 | depth              | int    | Dependency tree depth limit.                                            | 1             |
 
-**Package search in the "Browse" tab supports searching flags directly.**  
+**Package search in the "Browse" tab supports searching flags directly.**
 For example, searching for \-\-installed will display all installed packages, ignoring search_flags defined in the configuration.
 
 ## [overlays]
