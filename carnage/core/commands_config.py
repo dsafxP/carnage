@@ -119,64 +119,49 @@ privilege_backend = []
         },
         "emerge.sync": {
             "command": ["emerge", "--sync"],
-            "privilege": True,
         },
         "emerge.install": {
             "command": ["emerge", "-v", "--nospinner", "$1"],
-            "privilege": True,
         },
         "emerge.noreplace": {
             "command": ["emerge", "-vn", "--nospinner", "$1"],
-            "privilege": True,
         },
         "emerge.uninstall": {
             "command": ["emerge", "-vc", "--nospinner", "$1"],
-            "privilege": True,
             "environment": {"CLEAN_DELAY": "0"},
         },
         "emerge.deselect": {
             "command": ["emerge", "-W", "$1"],
-            "privilege": True,
         },
         "euse.enable": {
             "command": ["euse", "-p", "$1", "-E", "$2"],
-            "privilege": True,
         },
         "euse.disable": {
             "command": ["euse", "-p", "$1", "-D", "$2"],
-            "privilege": True,
         },
         "eclean.dist": {
             "command": ["eclean-dist"],
-            "privilege": True,
         },
         "eclean.pkg": {
             "command": ["eclean-pkg"],
-            "privilege": True,
         },
         "glsa.fix": {
             "command": ["glsa-check", "-vf", "$1"],
-            "privilege": True,
         },
         "news.read": {
             "command": ["eselect", "news", "read", "--quiet", "$1"],
-            "privilege": False,
         },
         "news.purge": {
             "command": ["eselect", "news", "purge"],
-            "privilege": False,
         },
         "overlays.add": {
             "command": ["sh", "-c", "eselect repository enable $1 && emaint sync -r $1"],
-            "privilege": True,
         },
         "overlays.sync": {
             "command": ["emaint", "sync", "-r", "$1"],
-            "privilege": True,
         },
         "overlays.remove": {
             "command": ["eselect", "repository", "remove", "$1"],
-            "privilege": True,
         },
     }
 
