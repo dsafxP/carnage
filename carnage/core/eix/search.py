@@ -317,9 +317,9 @@ def fetch_packages_by_query(query: list[str], append_cfg: bool = True) -> list[P
     """
     # Build base command based on remote cache availability
     if has_remote_cache():
-        cmd: list[str] = ["eix", "-RQ", "--xml"]
+        cmd: list[str] = ["eix", "-R", "--xml"]
     else:
-        cmd = ["eix", "-Q", "--xml"]
+        cmd = ["eix", "--xml"]
 
     if append_cfg:
         cmd_config: CommandsConfiguration = get_commands_config()

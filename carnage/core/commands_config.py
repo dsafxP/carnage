@@ -37,7 +37,7 @@ privilege_backend = []
 
 # [eix.search]
 # Default flags for package search with eix
-# command = ["-f", "3"]
+# command = ["-Qf", "3"]
 
 # [eix.update]
 # command = ["eix-update", "-v"]
@@ -109,7 +109,7 @@ privilege_backend = []
     # Internal default commands for fallback
     _DEFAULT_COMMANDS: dict[str, dict[str, Any]] = {
         "eix.search": {
-            "command": ["-f", "3"],
+            "command": ["-Qf", "3"],
         },
         "eix.update": {
             "command": ["eix-update", "-v"],
