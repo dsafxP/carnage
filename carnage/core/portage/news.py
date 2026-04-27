@@ -12,6 +12,7 @@ from textual.app import App
 from carnage.core.commands_config import get_commands_config
 from carnage.core.operation import Operation
 from carnage.core.portage.portageq import ctx
+from carnage.core.unix import current_user_in_group
 
 _NEWS_REPO_ID = "gentoo"
 _LANGUAGE_ID = "en"
@@ -192,7 +193,9 @@ def mark_news_read(app: App, news_index: int, on_complete: Callable[[bool], None
         on_complete: Optional callback when operation finishes (receives success bool)
     """
     cmd_config = get_commands_config()
-    command = cmd_config.get_command("news.read", args=[str(news_index)], default_privilege=False)
+    command = cmd_config.get_command(
+        "news.read", args=[str(news_index)], default_privilege=not current_user_in_group("portage")
+    )
 
     op = Operation(
         command.full_cmd,
@@ -211,7 +214,7 @@ def mark_all_news_read(app: App, on_complete: Callable[[bool], None] | None = No
         on_complete: Optional callback when operation finishes (receives success bool)
     """
     cmd_config = get_commands_config()
-    command = cmd_config.get_command("news.read", args=["all"], default_privilege=False)
+    command = cmd_config.get_command("news.read", args=["all"], default_privilege=not current_user_in_group("portage"))
 
     op = Operation(
         command.full_cmd,
@@ -233,7 +236,7 @@ def purge_read_news(app: App, on_complete: Callable[[bool], None] | None = None)
         on_complete: Optional callback when operation finishes (receives success bool)
     """
     cmd_config = get_commands_config()
-    command = cmd_config.get_command("news.purge", default_privilege=False)
+    command = cmd_config.get_command("news.purge", default_privilege=not current_user_in_group("portage"))
 
     op = Operation(
         command.full_cmd,
