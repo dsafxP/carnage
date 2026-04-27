@@ -16,7 +16,6 @@ from carnage.core.args import config_path as arg_cfg_path
 _DEFAULT_CONFIG: Final[dict[str, Any]] = {
     "global": {
         "theme": "textual-dark",
-        "initial_tab": "news",
         "compact_mode": False,
         "ignore_warnings": False,
     },
@@ -31,7 +30,10 @@ _DEFAULT_CONFIG: Final[dict[str, Any]] = {
         "cache_max_age": 72,
         "overlay_source": "https://api.gentoo.org/overlays/repositories.xml",
     },
-    "use": {"minimum_characters": 3, "cache_max_age": 96},
+    "use": {
+        "minimum_characters": 3,
+        "cache_max_age": 96,
+    },
     "logging": {
         "automatic_pane": True,
     },
@@ -122,10 +124,6 @@ class Configuration:
         global_section.add(tomlkit.comment("User interface theme"))
         global_section.add(tomlkit.comment("Preferred to be set directly through Carnage"))
         global_section.add("theme", "textual-dark")
-        global_section.add(tomlkit.nl())
-        global_section.add(tomlkit.comment("Initial tab selected"))
-        global_section.add(tomlkit.comment("Options: news, glsas, browse, use, overlays"))
-        global_section.add("initial_tab", "news")
         global_section.add(tomlkit.nl())
         global_section.add(tomlkit.comment("Compact mode reduces visual noise and increases content density"))
         global_section.add(tomlkit.comment("Preferred to be set directly through Carnage"))
@@ -268,11 +266,6 @@ class Configuration:
     def theme(self, value: str) -> None:
         """Set the theme setting."""
         self._set_nested_value_and_save(["global", "theme"], value)
-
-    @property
-    def initial_tab(self) -> str:
-        """Get the initial tab selected."""
-        return self._get_nested_value(["global", "initial_tab"], _DEFAULT_CONFIG["global"]["initial_tab"])
 
     @property
     def compact_mode(self) -> bool:

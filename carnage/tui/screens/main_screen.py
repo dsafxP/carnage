@@ -73,12 +73,6 @@ class MainScreen(Screen):
         if config.compact_mode:
             self.add_class("compact")
 
-        tabbed_content.active = (
-            config.initial_tab
-            if (self.eix_available and self.eix_cache_available or config.initial_tab not in ("browse", "use"))
-            else "news"
-        )
-
         log_pane: RichLog = self.query_one("#operation-log", RichLog)
 
         # Hide by default
