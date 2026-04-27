@@ -9,6 +9,7 @@ from textual.widgets import Header, Input, RichLog, TabbedContent, TabPane
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.eix import has_cache, is_found
 from carnage.tui.widgets.browse.browse_tab import BrowseTab
+from carnage.tui.widgets.cachetabbedcontent import CachedTabbedContent
 from carnage.tui.widgets.glsa_tab import GLSATab
 from carnage.tui.widgets.news_tab import NewsTab
 from carnage.tui.widgets.overlay_tab import OverlaysTab
@@ -35,7 +36,7 @@ class MainScreen(Screen):
         # Tabbed content
         with Horizontal(id="main-content"):
             # Tabbed content on the left (takes most space)
-            with TabbedContent(initial="news", id="tabs"):
+            with CachedTabbedContent(cache_key="main_tabs", initial="news", id="tabs"):
                 with TabPane("News", id="news"):
                     yield NewsTab()
 

@@ -9,7 +9,7 @@ from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
 from textual.css.query import NoMatches
 from textual.widget import Widget
-from textual.widgets import Button, DataTable, SelectionList, Static, TabbedContent, TabPane, Tree
+from textual.widgets import Button, DataTable, SelectionList, Static, TabPane, Tree
 from textual.widgets._selection_list import Selection
 from textual.widgets._tree import TreeNode
 
@@ -24,6 +24,7 @@ from carnage.core.portage.emerge import (
     emerge_noreplace,
     emerge_uninstall,
 )
+from carnage.tui.widgets.cachetabbedcontent import CachedTabbedContent
 from carnage.tui.widgets.table import NavigableDataTable
 
 
@@ -136,7 +137,7 @@ class PackageDetailWidget(Widget):
         self._use_flag_originals: dict[str, bool] = {}  # flag -> enabled at load time
 
     def compose(self) -> ComposeResult:
-        with TabbedContent():
+        with CachedTabbedContent(cache_key="package_tabs"):
             with TabPane("Details", id="tab-details"):
                 with Vertical():
                     with VerticalScroll(id="pkg-detail-scroll"):
