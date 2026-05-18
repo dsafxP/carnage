@@ -3,6 +3,7 @@
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
+from textual.timer import Timer
 from textual.widget import Widget
 from textual.widgets import DataTable, LoadingIndicator, Static
 
@@ -25,6 +26,8 @@ class UseFlagsTab(Widget):
         self.cache_manager = get_cache_manager()
         self._current_search: str = ""
         self._pending_selection: str | None = None
+        self._cancel_search: bool = False
+        self._search_timer: Timer | None = None
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
@@ -46,7 +49,7 @@ class UseFlagsTab(Widget):
         table.add_columns("USE Flag", "Description")
 
     def search_useflags(self, query: str) -> None:
-        """Search for USE flags and update the table."""
+        """Debounced USE flag search — called by the parent on input changes."""
         config: Configuration = get_config()
 
         if not query.strip() or len(query.strip()) < config.use_minimum_characters:
@@ -55,17 +58,25 @@ class UseFlagsTab(Widget):
             return
 
         self._current_search = query
-        self._perform_search(query)
+
+        if self._search_timer:
+            self._search_timer.stop()
+
+        self._search_timer = self.set_timer(0.3, lambda: self._perform_search(query))
 
     @work(exclusive=True, thread=True)
     async def _perform_search(self, query: str) -> None:
         """Perform USE flag search in a worker thread."""
+        self._cancel_search = True
+
         loading: LoadingIndicator = self.query_one("#useflags-loading", LoadingIndicator)
         table: DataTable = self.query_one("#useflags-table", DataTable)
 
         # Show loading indicator
         loading.display = True
         table.display = False
+
+        self._cancel_search = False
 
         try:
             # Load USE flags from cache or fetch fresh
@@ -75,11 +86,14 @@ class UseFlagsTab(Widget):
             filtered: list[UseFlag] = self._filter_useflags(useflags, query)
 
             # Update UI with results on main thread
-            self.app.call_from_thread(self._populate_table, filtered)
+            if not self._cancel_search and self._current_search == query:
+                self.app.call_from_thread(self._populate_table, filtered)
         except Exception as e:
-            self.app.call_from_thread(self.notify, f"Search failed: {e}", severity="error")
+            if not self._cancel_search:
+                self.app.call_from_thread(self.notify, f"Search failed: {e}", severity="error")
         finally:
-            self.app.call_from_thread(self._hide_loading)
+            if not self._cancel_search:
+                self.app.call_from_thread(self._hide_loading)
 
     @staticmethod
     def _filter_useflags(useflags: list[UseFlag], query: str) -> list[UseFlag]:
@@ -97,6 +111,9 @@ class UseFlagsTab(Widget):
 
     def _clear_table(self) -> None:
         """Clear the USE flags table."""
+        # Cancel any ongoing search
+        self._cancel_search = True
+
         table: DataTable = self.query_one("#useflags-table", DataTable)
         table.clear()
         self.filtered_useflags = []
@@ -160,7 +177,7 @@ class UseFlagsTab(Widget):
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection in the USE flags table."""
-        if event.row_key is None:
+        if event.row_key is None or event.data_table.id != "useflags-table":
             return
 
         # Find the selected USE flag using the row index
