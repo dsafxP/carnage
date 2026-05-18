@@ -41,6 +41,10 @@ class UseFlagsTab(Widget):
         self._hide_loading()
         self._hide_detail_loading()
 
+        table: DataTable = self.query_one("#useflags-table", DataTable)
+
+        table.add_columns("USE Flag", "Description")
+
     def search_useflags(self, query: str) -> None:
         """Search for USE flags and update the table."""
         config: Configuration = get_config()
@@ -94,7 +98,7 @@ class UseFlagsTab(Widget):
     def _clear_table(self) -> None:
         """Clear the USE flags table."""
         table: DataTable = self.query_one("#useflags-table", DataTable)
-        table.clear(columns=True)
+        table.clear()
         self.filtered_useflags = []
         self.selected_useflag = None
 
@@ -105,10 +109,10 @@ class UseFlagsTab(Widget):
     def _populate_table(self, useflags: list[UseFlag]) -> None:
         """Populate the table with USE flag search results."""
         self.filtered_useflags = useflags
+
         table: DataTable = self.query_one("#useflags-table", DataTable)
 
-        table.clear(columns=True)
-        table.add_columns("USE Flag", "Description")
+        table.clear()
 
         for i, useflag in enumerate(self.filtered_useflags):
             description: str = useflag.description or "Unknown"

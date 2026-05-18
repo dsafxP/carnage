@@ -47,6 +47,10 @@ class NewsTab(Widget):
         """Load news when widget is mounted."""
         self.load_news()
 
+        table: DataTable = self.query_one("#news-table", DataTable)
+
+        table.add_columns("Status", "Date", "Title")
+
     @work(exclusive=True, thread=True)
     def load_news(self) -> None:
         """Load news items from the system in a worker thread."""
@@ -72,8 +76,7 @@ class NewsTab(Widget):
         self.news_items = news_items
         table: DataTable = self.query_one("#news-table", DataTable)
 
-        table.clear(columns=True)
-        table.add_columns("Status", "Date", "Title")
+        table.clear()
 
         for news in self.news_items:
             status: str = "[dim]Read[/]" if news.read else "[green]New[/]"
@@ -102,8 +105,7 @@ class NewsTab(Widget):
         self.news_items = [news for news in self.news_items if not news.read]
 
         # Clear and repopulate table with remaining items
-        table.clear(columns=True)
-        table.add_columns("Status", "Date", "Title")
+        table.clear()
 
         for news in self.news_items:
             status: str = "[dim]Read[/]" if news.read else "[green]New[/]"

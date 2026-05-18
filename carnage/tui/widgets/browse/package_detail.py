@@ -174,7 +174,11 @@ class PackageDetailWidget(Widget):
                 yield Tree("/", id="pkg-files-tree")
 
     def on_mount(self) -> None:
+        table = self.query_one("#pkg-versions-table", DataTable)
+        table.add_columns("Version", "Overlay")
+
         self._populate_versions_table()
+
         self._load_use_flags()
         self._load_deps()
         self._load_ebuild()
@@ -384,8 +388,8 @@ class PackageDetailWidget(Widget):
 
     def _populate_versions_table(self) -> None:
         table = self.query_one("#pkg-versions-table", DataTable)
-        table.clear(columns=True)
-        table.add_columns("Version", "Overlay")
+
+        table.clear()
 
         non_virtual_ids: set[str] = {v.id for v in self.package.versions if not v.virtual}
 

@@ -33,6 +33,11 @@ class BrowseTab(Widget):
     def on_mount(self) -> None:
         self._hide_loading()
 
+        table: DataTable = self.query_one("#browse-table", DataTable)
+
+        table.clear()
+        table.add_columns("Package", "Overlay", "Description")
+
     def search_packages(self, query: str) -> None:
         """Debounced package search — called by the parent on input changes."""
         config: Configuration = get_config()
@@ -74,7 +79,7 @@ class BrowseTab(Widget):
 
     def _clear_table(self) -> None:
         table: DataTable = self.query_one("#browse-table", DataTable)
-        table.clear(columns=True)
+        table.clear()
         self.packages = []
         self._remove_detail_widget()
 
@@ -82,8 +87,7 @@ class BrowseTab(Widget):
         self.packages = packages
         table: DataTable = self.query_one("#browse-table", DataTable)
 
-        table.clear(columns=True)
-        table.add_columns("Package", "Overlay", "Description")
+        table.clear()
 
         for i, package in enumerate(packages):
             overlay: str = "?"

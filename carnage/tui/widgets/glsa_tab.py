@@ -38,6 +38,10 @@ class GLSATab(Widget):
         """Load GLSAs when widget is mounted."""
         self.load_glsas()
 
+        table: DataTable = self.query_one("#glsa-table", DataTable)
+
+        table.add_columns("ID", "Product", "Title")
+
     @work(exclusive=True, thread=True)
     def load_glsas(self) -> None:
         """Load GLSAs from the system."""
@@ -73,8 +77,7 @@ class GLSATab(Widget):
         self.glsa_items = glsa_items
         table: DataTable = self.query_one("#glsa-table", DataTable)
 
-        table.clear(columns=True)
-        table.add_columns("ID", "Product", "Title")
+        table.clear()
 
         for glsa in self.glsa_items:
             table.add_row(glsa.id, glsa.product or "N/A", glsa.title or glsa.synopsis, key=glsa.id)

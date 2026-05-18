@@ -61,6 +61,14 @@ class OverlaysTab(Widget):
         """Load overlays when widget is mounted."""
         self.load_overlays()
 
+        table: DataTable = self.query_one("#overlays-table", DataTable)
+
+        # Only show package count column if counting is enabled
+        if self.should_skip_pkg_count:
+            table.add_columns("Name", "Description")
+        else:
+            table.add_columns("Name", "Packages", "Description")
+
     def apply_filter(self, filter_text: str) -> None:
         """Apply search filter to overlays and update the table."""
         self._current_filter = filter_text.lower().strip()
@@ -91,13 +99,7 @@ class OverlaysTab(Widget):
         content_widget: Static = self.query_one("#overlays-content", Static)
         content_widget.update("Select an overlay to view details")
 
-        table.clear(columns=True)
-
-        # Only show package count column if counting is enabled
-        if self.should_skip_pkg_count:
-            table.add_columns("Name", "Description")
-        else:
-            table.add_columns("Name", "Packages", "Description")
+        table.clear()
 
         for i, overlay in enumerate(self.filtered_overlays):
             name: str = f"[italic]{overlay.name}[/]" if overlay.status == OverlayStatus.OFFICIAL else overlay.name
