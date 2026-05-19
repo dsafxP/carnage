@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from pathlib import PurePath
 
 from textual.app import App, SystemCommand
+from textual.binding import Binding
 from textual.reactive import reactive
 from textual.screen import Screen
 
@@ -32,6 +33,8 @@ class CarnageApp(App[None]):
 
     SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
+    BINDINGS = [Binding("ctrl+q", "try_quit", "Quit", show=False, priority=True)]
+
     blocked: reactive[bool] = reactive(False)
     __config: Configuration
 
@@ -49,6 +52,7 @@ class CarnageApp(App[None]):
         super().__init__(css_path=css_paths)
 
         self.blocked = False
+        self.tried_exit: bool = False
 
     def _tick(self) -> None:
         if self.blocked:
@@ -57,6 +61,20 @@ class CarnageApp(App[None]):
         else:
             self.sub_title = ""
             self._frame = 0
+
+    def _action_try_quit(self) -> None:
+        if self.blocked and not self.tried_exit and not self.__config.ignore_warnings:
+            self.tried_exit = True
+
+            self.notify(
+                "An operation is currently on-going. Press [b]ctrl+q[/] again to cancel and quit.", severity="error"
+            )
+
+            self.bell()
+
+            return
+
+        self.exit()
 
     def on_mount(self) -> None:
         """Initialize the application."""
