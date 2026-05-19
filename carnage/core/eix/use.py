@@ -5,6 +5,7 @@ import subprocess
 from subprocess import CompletedProcess
 
 from carnage.core.eix.eix import has_remote_cache
+from carnage.core.process import tracked_run
 
 
 def get_all_useflags() -> list[str]:
@@ -25,7 +26,7 @@ def get_all_useflags() -> list[str]:
     else:
         cmd = ["eix", "--print-all-useflags"]
 
-    result: CompletedProcess[str] = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    result: CompletedProcess[str] = tracked_run(cmd, capture_output=True, text=True)
 
     # Parse output - one USE flag per line
     raw_useflags: list[str] = []
@@ -86,7 +87,7 @@ def get_package_count_for_useflag(useflag: str) -> int:
         cmd = ["eix", "-Q*", "--format", "1", "--use", useflag]
 
     try:
-        result: CompletedProcess[bytes] = subprocess.run(cmd, capture_output=True, env=env)
+        result: CompletedProcess[bytes] = tracked_run(cmd, env=env)
 
         if result.returncode == 0:
             return len(result.stdout)

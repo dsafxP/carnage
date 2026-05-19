@@ -1,8 +1,9 @@
 """Basic interactions with eix for package management."""
 
 import shutil
-import subprocess
 from subprocess import CompletedProcess
+
+from carnage.core.process import tracked_run
 
 _remote_cache_available: bool | None = None
 
@@ -24,7 +25,7 @@ def has_cache() -> bool:
     Returns:
         True if cache exists, False otherwise
     """
-    result: CompletedProcess[str] = subprocess.run(["eix", "-Qq0"], capture_output=True, text=True)
+    result: CompletedProcess[str] = tracked_run(["eix", "-Qq0"], text=True)
     return result.returncode == 0
 
 
@@ -40,7 +41,7 @@ def has_remote_cache() -> bool:
     global _remote_cache_available
 
     if _remote_cache_available is None:
-        result: CompletedProcess[str] = subprocess.run(["eix", "-QRq0"], capture_output=True, text=True)
+        result: CompletedProcess[str] = tracked_run(["eix", "-QRq0"], text=True)
         _remote_cache_available = result.returncode == 0
 
     return _remote_cache_available
@@ -53,5 +54,5 @@ def has_protobuf_support() -> bool:
     Returns:
         True if protobuf support is available, False otherwise
     """
-    result: CompletedProcess[str] = subprocess.run(["eix", "-Qq0", "--proto"], capture_output=True, text=True)
+    result: CompletedProcess[str] = tracked_run(["eix", "-Qq0", "--proto"], text=True)
     return result.returncode == 0

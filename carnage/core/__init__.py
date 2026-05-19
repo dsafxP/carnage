@@ -35,6 +35,9 @@ from carnage.core.portage.overlays import get_installed as get_installed_overlay
 # USE
 from carnage.core.portage.use import UseFlag, get_or_cache_useflags
 
+# Process
+from carnage.core.process import TrackedProcess, tracked_run
+
 __all__ = [
     # Cache
     "CacheManager",
@@ -67,4 +70,7 @@ __all__ = [
     "Configuration",
     # args
     "config_path",
+    # Process
+    "TrackedProcess",
+    "tracked_run",
 ]

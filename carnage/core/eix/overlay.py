@@ -5,6 +5,7 @@ import subprocess
 from subprocess import CompletedProcess
 
 from carnage.core.eix.eix import has_cache, has_remote_cache
+from carnage.core.process import tracked_run
 
 NO_CACHE_PACKAGE_COUNT = -3
 
@@ -32,7 +33,7 @@ def get_package_count(overlay: str) -> int:
         return NO_CACHE_PACKAGE_COUNT  # No cache available
 
     try:
-        result: CompletedProcess[bytes] = subprocess.run(cmd, capture_output=True, env=env)
+        result: CompletedProcess[bytes] = tracked_run(cmd, env=env)
 
         if result.returncode == 0:
             return len(result.stdout)

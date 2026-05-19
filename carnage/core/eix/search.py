@@ -10,6 +10,7 @@ from lxml import etree
 from carnage.core.commands_config import CommandsConfiguration, get_commands_config
 from carnage.core.eix.eix import has_remote_cache
 from carnage.core.gentoolkit.package import GentoolkitPackage
+from carnage.core.process import tracked_run
 
 
 @dataclass
@@ -185,9 +186,7 @@ class Package:
             True if package is in world file, False otherwise
         """
         try:
-            result: CompletedProcess[str] = subprocess.run(
-                ["eix", "--selected-file", "-0Qq", self.full_name], capture_output=True, text=True, check=False
-            )
+            result: CompletedProcess[str] = tracked_run(["eix", "--selected-file", "-0Qq", self.full_name], text=True)
             return result.returncode == 0
         except (subprocess.SubprocessError, FileNotFoundError):
             return False
@@ -200,9 +199,7 @@ class Package:
             True if package is an installed dependency, False otherwise
         """
         try:
-            result: CompletedProcess[str] = subprocess.run(
-                ["eix", "--installed-deps", "-0Qq", self.full_name], capture_output=True, text=True, check=False
-            )
+            result: CompletedProcess[str] = tracked_run(["eix", "--installed-deps", "-0Qq", self.full_name], text=True)
             return result.returncode == 0
         except (subprocess.SubprocessError, FileNotFoundError):
             return False
@@ -330,7 +327,7 @@ def fetch_packages_by_query(query: list[str], append_cfg: bool = True) -> list[P
     # Append the search query arguments
     cmd.extend(query)
 
-    result: CompletedProcess[str] = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    result: CompletedProcess[str] = tracked_run(cmd, text=True)
 
     parser = etree.XMLParser(recover=True, remove_comments=True)
     root = etree.fromstring(result.stdout.encode("utf-8"), parser=parser)

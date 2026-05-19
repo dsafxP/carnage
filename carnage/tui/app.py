@@ -1,5 +1,6 @@
 """Main Carnage TUI application."""
 
+import os
 from collections.abc import Iterable
 from pathlib import PurePath
 
@@ -20,6 +21,7 @@ from carnage.core.commands import (
 from carnage.core.commands_config import get_commands_config
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.eix import is_found
+from carnage.core.process import TrackedProcess
 from carnage.tui.screens.main_screen import MainScreen
 
 
@@ -63,6 +65,11 @@ class CarnageApp(App[None]):
 
         self._frame = 0
         self.set_interval(0.4, self._tick)
+
+        os.setpgrp()
+
+    def on_unmount(self) -> None:
+        TrackedProcess.terminate_all()
 
     def watch_theme(self, theme: str) -> None:
         """Watch for theme changes."""
