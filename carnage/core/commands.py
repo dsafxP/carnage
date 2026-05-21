@@ -12,7 +12,7 @@ from carnage.tui.screens.main_screen import MainScreen
 
 
 def toggle_compact_mode(screen: Screen) -> None:
-    """Toggle compact mode and save it to settings."""
+    """Toggle compact mode and save it to settings"""
     config: Configuration = get_config()
 
     compact: bool = not config.compact_mode
@@ -22,13 +22,13 @@ def toggle_compact_mode(screen: Screen) -> None:
 
 
 def clear_cache(app: App) -> None:
-    """Clear carnage cache."""
+    """Clear carnage cache"""
     get_cache_manager().clear()
     app.notify("Cache cleared.")
 
 
 def eix_update(app: App) -> None:
-    """Run eix-update and reload the main screen."""
+    """Run eix-update and reload the main screen"""
     cmd_config = get_commands_config()
     command = cmd_config.get_command("eix.update", default_privilege=not has_cache())
 
@@ -48,7 +48,7 @@ def eix_update(app: App) -> None:
 
 
 def eix_remote_update(app: App) -> None:
-    """Run eix-remote update and reload the main screen."""
+    """Run eix-remote update and reload the main screen"""
     cmd_config = get_commands_config()
     command = cmd_config.get_command("eix.remote-update", default_privilege=not has_remote_cache())
 
@@ -69,7 +69,7 @@ def eix_remote_update(app: App) -> None:
 
 
 def run_eclean_dist(app: App) -> None:
-    """Clean obsolete distfiles with eclean-dist."""
+    """Clean obsolete distfiles with eclean-dist"""
     app.notify("Running eclean-dist...", severity="warning", timeout=15)
 
     cmd_config = get_commands_config()
@@ -88,7 +88,7 @@ def run_eclean_dist(app: App) -> None:
 
 
 def run_eclean_pkg(app: App) -> None:
-    """Clean obsolete binary packages with eclean-pkg."""
+    """Clean obsolete binary packages with eclean-pkg"""
     app.notify("Running eclean-pkg...", severity="warning", timeout=15)
 
     cmd_config = get_commands_config()
@@ -107,7 +107,7 @@ def run_eclean_pkg(app: App) -> None:
 
 
 def sync(app: App) -> None:
-    """Run emerge --sync and reload the main screen."""
+    """Run emerge --sync and reload the main screen"""
     cmd_config = get_commands_config()
     command = cmd_config.get_command("emerge.sync", default_privilege=True)
 
