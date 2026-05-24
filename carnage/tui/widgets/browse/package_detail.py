@@ -457,7 +457,9 @@ class PackageDetailWidget(Widget):
         is_installed: bool = self.package.is_installed()
 
         if is_installed:
-            emerge_btn.display = False
+            # emerge_btn.display = False
+            emerge_btn.variant = "default"
+
             depclean_btn.display = True
             # World file buttons depend on async status - hide until known
             if self._in_world_file:
@@ -478,6 +480,9 @@ class PackageDetailWidget(Widget):
                 emerge_btn.display = gt_pkg.available
             else:
                 emerge_btn.display = False
+
+            emerge_btn.variant = "primary"
+
             depclean_btn.display = False
             deselect_btn.display = False
             noreplace_btn.display = False
@@ -587,7 +592,7 @@ class PackageDetailWidget(Widget):
         """Install the selected package version."""
         emerge_btn: Button = self.query_one("#emerge-btn", Button)
 
-        if self.selected_version is None or self.package.is_installed() or emerge_btn.disabled:
+        if self.selected_version is None or emerge_btn.disabled:
             return
 
         emerge_btn.label = "Emerging..."
@@ -595,6 +600,7 @@ class PackageDetailWidget(Widget):
         atom: str = f"={self.package.full_name}-{self.selected_version.id}"
 
         saved_package_name = self.package.full_name
+        installed: bool = self.package.is_installed()
 
         self.notify(f"Installing {atom}... (don't close until finished!)", severity="warning", timeout=15)
 
@@ -602,7 +608,13 @@ class PackageDetailWidget(Widget):
             if success:
                 self.notify(f"Successfully installed {atom}")
                 try:
-                    self._mark_installed(self.selected_version.id, saved_package_name)
+                    if not installed:
+                        self._mark_installed(self.selected_version.id, saved_package_name)
+                    else:
+                        for v in self.package.versions:
+                            v.installed = v.id == self.selected_version.id
+
+                        self._populate_versions_table()
                 except NoMatches:
                     # Selected version no longer exists in the updated package data
                     pass
