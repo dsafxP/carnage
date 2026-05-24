@@ -52,9 +52,17 @@ class TrackedProcess:
 
         self.kwargs["preexec_fn"] = track_pid
 
+        timeout = self.kwargs.pop("timeout", None)
+
         self._process = subprocess.Popen(self.args, **self.kwargs)
 
-        stdout, stderr = self._process.communicate()
+        try:
+            stdout, stderr = self._process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            self._process.kill()
+            self._process.communicate()
+            raise
+
         returncode = self._process.returncode
 
         # Remove from tracking when done

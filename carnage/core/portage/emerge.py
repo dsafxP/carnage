@@ -6,6 +6,7 @@ from textual.app import App
 
 from carnage.core.commands_config import get_commands_config
 from carnage.core.operation import Operation
+from carnage.core.process import tracked_run
 
 
 def emerge_install(app: App, package_atom: str, on_complete: Callable[[bool], None] | None = None) -> None:
@@ -18,6 +19,18 @@ def emerge_install(app: App, package_atom: str, on_complete: Callable[[bool], No
         on_complete: Optional callback when operation finishes (receives success bool)
     """
     cmd_config = get_commands_config()
+
+    try:
+        qlop_command = cmd_config.get_command("qlop.prediction", args=[package_atom])
+        result = tracked_run(qlop_command.full_cmd, env=qlop_command.env, timeout=5)
+
+        if result.stdout.strip():
+            log = app.screen.log_operation_output  # type: ignore
+            log(result.stdout)
+            log(b"\n")
+    except Exception:
+        pass
+
     command = cmd_config.get_command("emerge.install", args=[package_atom], default_privilege=True)
 
     op = Operation(

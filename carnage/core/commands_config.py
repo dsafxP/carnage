@@ -104,6 +104,9 @@ privilege_backend = []
 # [overlays.remove]
 # command = ["eselect", "repository", "remove", "$1"]
 # privilege = true
+
+# [qlop.prediction]
+# command = ["qlop", "-pH", "$1"]
 """
 
     # Internal default commands for fallback
@@ -162,6 +165,9 @@ privilege_backend = []
         },
         "overlays.remove": {
             "command": ["eselect", "repository", "remove", "$1"],
+        },
+        "qlop.prediction": {
+            "command": ["qlop", "-pH", "$1"],
         },
     }
 
