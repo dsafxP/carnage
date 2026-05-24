@@ -22,6 +22,7 @@ from carnage.core.commands import (
 from carnage.core.commands_config import get_commands_config
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.eix import is_found
+from carnage.core.operation import cancel_all_operations
 from carnage.core.process import TrackedProcess
 from carnage.tui.screens.main_screen import MainScreen
 
@@ -86,8 +87,11 @@ class CarnageApp(App[None]):
 
         os.setpgrp()
 
-    def on_unmount(self) -> None:
+    async def on_unmount(self) -> None:
         TrackedProcess.terminate_all()
+
+        if self.blocked:
+            await cancel_all_operations()
 
     def watch_theme(self, theme: str) -> None:
         """Watch for theme changes."""
@@ -128,3 +132,11 @@ class CarnageApp(App[None]):
             "Display or hide the logging output view pane",
             lambda: self.screen._action_toggle_operation_log(),  # type: ignore
         )
+
+        # Cancel all operations
+        if self.blocked:
+            yield SystemCommand(
+                "Cancel all operations",
+                "Attempt to cancel all current operations and terminate their processes",
+                lambda: cancel_all_operations(),
+            )

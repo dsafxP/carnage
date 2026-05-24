@@ -12,7 +12,9 @@ except ImportError:
 
 import asyncio
 import logging
+import os
 import shutil
+import signal
 from asyncio.subprocess import Process
 from collections.abc import Callable
 from datetime import datetime
@@ -21,9 +23,13 @@ from pathlib import Path
 
 from platformdirs import user_log_path
 from textual.app import App
+from textual.worker import Worker
 
 # Privilege escalation backends in detection priority order
 _BACKENDS: list[str] = ["pkexec", "sudo", "doas"]
+
+# Module-level registry of all currently running operations
+_active_operations: list["Operation"] = []
 
 _log = logging.getLogger("carnage.exec")
 _log.propagate = False
@@ -81,6 +87,27 @@ def generate_default_privilege_backend() -> str:
     return detect_backend() or ""
 
 
+async def cancel_all_operations() -> None:
+    """
+    Cancel all currently running operations.
+
+    Sends SIGTERM to each operation's process group, waits up to 5 seconds,
+    then force-kills any that have not exited. Also cancels their Textual workers.
+
+    Safe to call when no operations are running.
+    """
+    if not _active_operations:
+        return
+
+    _log.info("Cancelling %d active operation(s).", len(_active_operations))
+
+    # Snapshot the list - entries remove themselves from _active_operations
+    # once their worker finishes, so iterate over a copy.
+    ops = list(_active_operations)
+    for op in ops:
+        await op.cancel()
+
+
 class OperationError(Exception):
     """Raised when an operation exits with a non-zero return code."""
 
@@ -118,6 +145,8 @@ class Operation:
         self.cmd = cmd
         self.env = env
         self._log_callback = log_callback
+        self._process: Process | None = None
+        self._worker: Worker | None = None  # type: ignore[type-arg]
 
         _ensure_log_handler()
 
@@ -147,7 +176,9 @@ class Operation:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,  # merge stderr into stdout
             env=self.env,  # Pass environment
+            start_new_session=True,  # Isolate the child in its own process group
         )
+        self._process = process
 
         # Stream output lines as they arrive rather than buffering.
         assert process.stdout is not None
@@ -178,6 +209,49 @@ class Operation:
 
         return returncode
 
+    async def cancel(self) -> None:
+        """
+        Cancel this operation.
+
+        Sends SIGTERM to the process group so that privilege-escalation wrappers
+        (pkexec, sudo, doas) forward the signal to the child. Waits up to 5 seconds
+        for a clean exit, then sends SIGKILL. Also cancels the Textual worker if one
+        was started via start_in_app().
+        """
+        # Cancel the Textual worker first so the coroutine stops reading stdout
+        # and does not race with us killing the process.
+        if self._worker is not None:
+            self._worker.cancel()
+
+        if self._process is None or self._process.returncode is not None:
+            return  # Already finished — nothing to do.
+
+        pid = self._process.pid
+        _log.info("Cancelling operation %s (pid=%d)", self.cmd[0], pid)
+
+        try:
+            pgid = os.getpgid(pid)
+            os.killpg(pgid, signal.SIGTERM)
+        except ProcessLookupError:
+            return  # Process already gone.
+        except PermissionError:
+            # Can't signal the process group (e.g. pkexec owns it); fall back to
+            # terminating the wrapper directly and hope the child follows.
+            _log.warning("Cannot signal process group for pid=%d; falling back to terminate()", pid)
+            self._process.terminate()
+
+        try:
+            await asyncio.wait_for(self._process.wait(), timeout=5.0)
+        except TimeoutError:
+            _log.warning("Process pid=%d did not exit after SIGTERM; sending SIGKILL", pid)
+            try:
+                pgid = os.getpgid(pid)
+                os.killpg(pgid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+
+        self._process = None
+
     def start_in_app(self, app: App, *, on_complete: Callable[[bool], None] | None = None) -> None:
         """
         Start this operation as a Textual worker.
@@ -201,6 +275,8 @@ class Operation:
 
             app.blocked = True  # type: ignore
 
+        _active_operations.append(self)
+
         async def _worker() -> None:
             success = False
 
@@ -209,11 +285,21 @@ class Operation:
                 success = True
             except OperationError as e:
                 app.notify(f"Command failed (exit {e.returncode}): {e.cmd[0]}", severity="error")
+            except asyncio.CancelledError:
+                _log.info("Operation cancelled: %s", self.cmd[0])
+                if self._log_callback:
+                    self._log_callback(b"\n[dim]Operation cancelled.[/]\n")
             except Exception as e:
                 _log.exception("Unexpected error in operation worker")
 
                 app.notify(f"Internal error: {e}", severity="error")
             finally:
+                # Deregister from the active operations list
+                try:
+                    _active_operations.remove(self)
+                except ValueError:
+                    pass
+
                 # Unblock BEFORE calling on_complete and success notification
                 if has_blocked:
                     app.blocked = False  # type: ignore
@@ -236,4 +322,4 @@ class Operation:
             # if success:
             #    app.notify(f"Command finished successfully: {self.cmd[0]}", severity="information")
 
-        app.run_worker(_worker(), exclusive=True)
+        self._worker = app.run_worker(_worker(), exclusive=True)
