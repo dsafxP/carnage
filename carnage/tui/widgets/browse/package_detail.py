@@ -197,6 +197,13 @@ class PackageDetailWidget(Widget):
         if pkg.description:
             details += f"{pkg.description}\n\n"
 
+        vers: PackageVersion | None = pkg.installed_version()
+
+        if vers:
+            from datetime import datetime
+
+            details += f"[green]Last installed at [b]{datetime.fromtimestamp(vers.install_date)}[/][/]\n\n"
+
         if pkg.homepage:
             details += f"[dim]{pkg.homepage}[/]\n\n"
 

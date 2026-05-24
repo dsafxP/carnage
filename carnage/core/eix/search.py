@@ -22,6 +22,8 @@ class PackageVersion:
     repository: str | None
     virtual: bool
     installed: bool
+    install_date: int | None
+    install_eapi: str | None
     src_uri: str | None
     iuse: list[str]
     iuse_default: list[str]
@@ -250,6 +252,8 @@ def _parse_version(version_elem: etree._Element) -> PackageVersion:
         repository=version_elem.get("repository") or "gentoo",
         virtual=version_elem.get("virtual") == "1",
         installed=version_elem.get("installed") == "1",
+        install_date=int(d) if (d := version_elem.get("installDate")) is not None else None,
+        install_eapi=version_elem.get("installEAPI"),
         src_uri=version_elem.get("srcURI"),
         iuse=iuse,
         iuse_default=iuse_default,
