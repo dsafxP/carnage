@@ -1,6 +1,5 @@
 """Main Carnage TUI application."""
 
-import os
 from collections.abc import Iterable
 from pathlib import PurePath
 
@@ -85,7 +84,7 @@ class CarnageApp(App[None]):
         self._frame = 0
         self.set_interval(0.4, self._tick)
 
-        os.setpgrp()
+        # os.setpgrp()
 
     async def on_unmount(self) -> None:
         TrackedProcess.terminate_all()
