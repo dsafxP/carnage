@@ -1,8 +1,8 @@
 <div align="center">
 
-![carnage logo](./assets/carnage.svg)
+![carnage logo](assets/carnage.svg)
 
-<h1>carnage</h1>
+# carnage
 
 Terminal user interface (TUI) front-end for **Portage** and **eix**.
 
@@ -11,7 +11,7 @@ Terminal user interface (TUI) front-end for **Portage** and **eix**.
 [![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2FdsafxP%2Fcarnage%2Fmain%2Fpyproject.toml)](#)
 [![Gentoo Wiki Badge](https://img.shields.io/badge/gentoo-wiki-54487A?logo=gentoo)](https://wiki.gentoo.org/wiki/Carnage)
 
-<img src="./.github/screenshots/01.svg" alt="Preview">
+![Preview](.github/screenshots/01.svg)
 
 </div>
 
