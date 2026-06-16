@@ -35,7 +35,3 @@ carnage = "carnage.main:main"
 notifications = [
     "desktop-notifier>=6.1.0",
 ]
-
-[tool.pyrefly]
-python-version = "3.14"
-python-interpreter = ".venv/bin/python3"
