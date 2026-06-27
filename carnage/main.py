@@ -7,7 +7,7 @@ from carnage.tui.app import CarnageApp
 def main() -> None:
     app = CarnageApp()
 
-    lock = InstanceLock(on_signal=lambda _: app.bell())
+    lock = InstanceLock(on_signal=lambda _: app.call_from_thread(app.bell))
 
     if not lock.acquire():
         sys.exit(0)
