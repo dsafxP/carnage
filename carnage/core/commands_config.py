@@ -1,5 +1,6 @@
 """Command overrides configuration for Carnage using TOML."""
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -327,14 +328,12 @@ privilege_backend = []
         # Determine if we need privilege
         use_privilege = privilege if privilege is not None else default_privilege
 
-        # Build full command with privilege and env
-        full_cmd = list(cmd_with_args)
+        # No need for privilege escalation if already root
+        if os.geteuid() == 0:
+            use_privilege = False
 
-        if merged_env:
-            env_args = []
-            for k, v in merged_env.items():
-                env_args.extend([f"{k}={v}"])
-            full_cmd = ["env", *env_args, *full_cmd]
+        # Build full command with privilege escalation only.
+        full_cmd = list(cmd_with_args)
 
         if use_privilege and self.privilege_backend:
             full_cmd = [*self.privilege_backend, *full_cmd]

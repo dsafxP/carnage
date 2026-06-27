@@ -124,14 +124,17 @@ class Operation:
     The full command (including privilege escalation and environment) should be
     built by CommandsConfiguration before being passed here.
 
+    Note: if the command is run through a privilege-escalation wrapper (pkexec,
+    sudo, doas), that wrapper may itself sanitize or drop environment variables
+
     Args:
-        cmd: Full command and arguments to execute (already includes privilege and env)
-        env: Environment variables to pass to the subprocess
+        cmd: Full command and arguments to execute (already includes privilege escalation)
+        env: Extra environment variables to merge on top of the parent environment
         log_callback: Optional callback for streaming output
 
     Example::
-        cmd = commands_config.get_command("emerge.install", args=["app-editors/vim"]).full_cmd
-        op = Operation(cmd)
+        command = commands_config.get_command("emerge.install", args=["app-editors/vim"])
+        op = Operation(command.full_cmd, env=command.env)
         await op.run()
     """
 
@@ -171,11 +174,14 @@ class Operation:
             grey_cmd = f"[dim]$ {cmd_str}[/]\n"
             self._log_callback(grey_cmd.encode())
 
+        # Merge any extra environment variables on top of the parent process's
+        subprocess_env = {**os.environ, **(self.env or {})}
+
         process: Process = await asyncio.create_subprocess_exec(
             *self.cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,  # merge stderr into stdout
-            env=self.env,  # Pass environment
+            env=subprocess_env,  # Inherit parent env, with overrides merged in
             start_new_session=True,  # Isolate the child in its own process group
         )
         self._process = process
