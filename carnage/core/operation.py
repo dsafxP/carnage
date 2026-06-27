@@ -26,7 +26,7 @@ from textual.app import App
 from textual.worker import Worker
 
 # Privilege escalation backends in detection priority order
-_BACKENDS: list[str] = ["pkexec", "sudo", "doas"]
+_BACKENDS: list[str] = ["run0", "pkexec", "sudo", "doas"]
 
 # Module-level registry of all currently running operations
 _active_operations: list["Operation"] = []
