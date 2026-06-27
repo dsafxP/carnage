@@ -41,6 +41,26 @@ class TrackedProcess:
             self.kwargs["stdout"] = subprocess.PIPE
             self.kwargs["stderr"] = subprocess.PIPE
 
+        # subprocess.run() accepts a handful of convenience kwargs (capture_output,
+        # input, timeout) that subprocess.Popen does not understand - run() consumes
+        # them internally before constructing its own Popen. Since we construct
+        # Popen ourselves (to keep a handle on the process for tracking/signaling),
+        # we have to translate or intercept these the same way, rather than
+        # forwarding everything straight through to Popen.
+        if self.kwargs.pop("capture_output", False):
+            if "stdout" in self.kwargs and self.kwargs["stdout"] is not subprocess.PIPE:
+                raise ValueError("stdout and stderr arguments may not be used with capture_output.")
+            if "stderr" in self.kwargs and self.kwargs["stderr"] is not subprocess.PIPE:
+                raise ValueError("stdout and stderr arguments may not be used with capture_output.")
+            self.kwargs["stdout"] = subprocess.PIPE
+            self.kwargs["stderr"] = subprocess.PIPE
+
+        run_input = self.kwargs.pop("input", None)
+        if run_input is not None:
+            if "stdin" in self.kwargs:
+                raise ValueError("stdin and input arguments may not both be used.")
+            self.kwargs["stdin"] = subprocess.PIPE
+
         # Store original preexec_fn if any
         original_preexec = self.kwargs.get("preexec_fn")
 
@@ -57,7 +77,7 @@ class TrackedProcess:
         self._process = subprocess.Popen(self.args, **self.kwargs)
 
         try:
-            stdout, stderr = self._process.communicate(timeout=timeout)
+            stdout, stderr = self._process.communicate(input=run_input, timeout=timeout)
         except subprocess.TimeoutExpired:
             self._process.kill()
             self._process.communicate()
