@@ -120,7 +120,7 @@ class UseFlagsTab(Widget):
         self.selected_useflag = None
 
         content_widget: Static = self.query_one("#useflags-content", Static)
-        content_widget.update("Search for USE flags to view details")
+        content_widget.update("Select a USE flag to view details")
         self._hide_detail_loading()
 
     def _populate_table(self, useflags: list[UseFlag]) -> None:
