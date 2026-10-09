@@ -6,7 +6,7 @@ from textual.screen import Screen
 from carnage.core import Configuration, get_config
 from carnage.core.cache import get_cache_manager
 from carnage.core.commands_config import get_commands_config
-from carnage.core.eix.eix import has_cache, has_remote_cache
+from carnage.core.eix.eix import has_cache, has_remote_cache, invalidate_remote_cache
 from carnage.core.operation import Operation
 from carnage.tui.screens.main_screen import MainScreen
 
@@ -60,6 +60,10 @@ def eix_remote_update(app: App) -> None:
 
     def on_complete(success: bool) -> None:
         if success:
+            # The probe result is memoized for the process lifetime; without
+            # this, search and USE queries keep using non -R commands (hiding
+            # remote-only packages) until the app is restarted.
+            invalidate_remote_cache()
             get_cache_manager().clear()
             app.switch_screen(MainScreen())
 

@@ -29,6 +29,13 @@ def has_cache() -> bool:
     return result.returncode == 0
 
 
+def invalidate_remote_cache() -> None:
+    """Forget the cached has_remote_cache() answer so it is probed again."""
+    global _remote_cache_available
+
+    _remote_cache_available = None
+
+
 def has_remote_cache() -> bool:
     """
     Check if eix remote cache exists and is valid.

@@ -9,6 +9,7 @@ import pytest
 
 import carnage.core.commands_config as commands_config_module
 import carnage.core.config as config_module
+import carnage.core.eix.eix as eix_module
 import carnage.core.operation as operation_module
 import carnage.core.process as process_module
 from carnage.core.args import parse_args, reset_args
@@ -25,6 +26,7 @@ def _reset_state() -> None:
     commands_config_module._commands_instance = None
     operation_module._active_operations.clear()
     process_module.TrackedProcess._running_processes.clear()
+    eix_module._remote_cache_available = None
 
 
 @pytest.fixture(autouse=True)
