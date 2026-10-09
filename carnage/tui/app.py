@@ -42,7 +42,8 @@ class CarnageApp(App[None]):
         """Initialize the application."""
         self.__config: Configuration = get_config()
 
-        _ = get_commands_config()  # Create default config.
+        # Create default config, keeping a handle so load errors can be surfaced.
+        self.__commands_config = get_commands_config()
 
         css_paths: list[str | PurePath] = ["styles.tcss"]
 
@@ -103,6 +104,9 @@ class CarnageApp(App[None]):
 
         self._frame = 0
         self.set_interval(0.4, self._tick)
+
+        if self.__commands_config.load_error:
+            self.notify(self.__commands_config.load_error, severity="error")
 
         # os.setpgrp()
 

@@ -188,6 +188,8 @@ privilege_backend = []
         self.config_path = config_path
         self._config: dict[str, Any] = {}
         self._toml_doc: TOMLDocument | None = None
+        # Set when the overrides file could not be read, so the UI can say so.
+        self.load_error: str | None = None
         self._load_config()
 
     def _create_default_config(self) -> None:
@@ -214,16 +216,17 @@ privilege_backend = []
         """Load configuration from file or create default."""
         if not self.config_path.exists():
             self._create_default_config()
-            self._config = {}
-            self._toml_doc = None
-            return
 
+        # Read the generated file back too: leaving _config empty meant the
+        # detected privilege backend was ignored until the next start.
         try:
             with open(self.config_path, encoding="utf-8") as f:
                 content = f.read()
                 self._toml_doc = tomlkit.parse(content)
                 self._config = self._toml_doc.unwrap()
-        except (TOMLKitError, OSError):
+            self.load_error = None
+        except (TOMLKitError, OSError) as e:
+            self.load_error = f"Could not read {self.config_path.name}: {e}"
             self._config = {}
             self._toml_doc = None
 
@@ -250,7 +253,20 @@ privilege_backend = []
     @property
     def privilege_backend(self) -> list[str]:
         """Get the privilege escalation backend setting."""
-        return self._get_nested_value(["privilege_backend"], ["pkexec"])
+        configured = self._get_nested_value(["privilege_backend"])
+
+        if configured is None:
+            # The key is missing (unreadable or hand-edited config): detect the
+            # backend instead of assuming pkexec, which may not be installed.
+            from carnage.core.operation import generate_default_privilege_backend
+
+            detected = generate_default_privilege_backend()
+            return [detected] if detected else []
+
+        if isinstance(configured, list):
+            return configured
+
+        return []
 
     @property
     def eix_search_flags(self) -> list[str]:
