@@ -321,11 +321,8 @@ def fetch_packages_by_query(query: list[str], append_cfg: bool = True) -> list[P
         append_cfg: Append arguments from configuration
 
     Returns:
-        List of matching Package objects
-
-    Raises:
-        subprocess.CalledProcessError: If eix command fails
-        etree.ParseError: If XML parsing fails
+        List of matching Package objects, or an empty list when eix produced
+        nothing usable (no matches, a broken cache, or non-XML output)
     """
     # Build base command based on remote cache availability
     if has_remote_cache():
@@ -344,8 +341,17 @@ def fetch_packages_by_query(query: list[str], append_cfg: bool = True) -> list[P
 
     result: CompletedProcess[str] = tracked_run(cmd, text=True)
 
+    # eix exits 1 when nothing matches, and prints diagnostics rather than XML
+    # when the cache is broken. Neither is an error for us - and recovering from
+    # non-XML used to leave root as None, which then crashed on the xpath below.
+    if not result.stdout.strip():
+        return []
+
     parser = etree.XMLParser(recover=True, remove_comments=True)
     root = etree.fromstring(result.stdout.encode("utf-8"), parser=parser)
+
+    if root is None:
+        return []
 
     packages: list[Package] = []
 
@@ -388,7 +394,7 @@ def search_packages(query: str) -> list[Package]:
 
         packages: list[Package] = fetch_packages_by_query(query_args, append_cfg=append_cfg)
         return packages
-    except (subprocess.CalledProcessError, etree.ParseError):
+    except (subprocess.CalledProcessError, etree.ParseError, OSError):
         # Return empty list on error rather than crashing
         return []
 
@@ -410,5 +416,5 @@ def get_package_by_atom(atom: str) -> Package | None:
             if pkg.full_name == atom:
                 return pkg
         return None
-    except (subprocess.CalledProcessError, etree.ParseError):
+    except (subprocess.CalledProcessError, etree.ParseError, OSError):
         return None

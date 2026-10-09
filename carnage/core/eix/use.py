@@ -26,7 +26,7 @@ def get_all_useflags() -> list[str]:
     else:
         cmd = ["eix", "--print-all-useflags"]
 
-    result: CompletedProcess[str] = tracked_run(cmd, capture_output=True, text=True)
+    result: CompletedProcess[str] = tracked_run(cmd, capture_output=True, text=True, check=True)
 
     # Parse output - one USE flag per line
     raw_useflags: list[str] = []
