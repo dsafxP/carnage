@@ -35,6 +35,27 @@ def has_cache() -> bool:
     return result.returncode == 0
 
 
+def count_matches(stdout: bytes) -> int:
+    """
+    Count matches in the output of an ``eix --format 1`` query.
+
+    That format emits exactly one ``1`` byte per match and nothing else, so
+    counting those bytes is what the callers want. Anything else on stdout - a
+    banner, a warning - would silently turn into a wrong package count, so it
+    is reported as an error instead.
+
+    Args:
+        stdout: Raw stdout of the query
+
+    Returns:
+        Number of matches, or -1 when the output is not in the expected format
+    """
+    if set(stdout) - {ord("1"), ord("\n"), ord("\r"), ord(" "), ord("\t")}:
+        return -1
+
+    return stdout.count(b"1")
+
+
 def invalidate_remote_cache() -> None:
     """Forget the cached has_remote_cache() answer so it is probed again."""
     global _remote_cache_available
