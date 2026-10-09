@@ -199,7 +199,7 @@ class PackageDetailWidget(Widget):
 
         vers: PackageVersion | None = pkg.installed_version()
 
-        if vers:
+        if vers and vers.install_date is not None:
             from datetime import datetime
 
             details += f"[green]Last installed at [b]{datetime.fromtimestamp(vers.install_date)}[/][/]\n\n"
