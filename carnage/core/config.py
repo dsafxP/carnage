@@ -80,8 +80,20 @@ class Configuration:
         # Create fresh default configuration
         self._create_default_config()
 
-        # Reload the new configuration
-        self._load_config()
+        # Reload without validating again: a freshly generated file is by
+        # definition the expected structure, and re-validating would recurse.
+        try:
+            self._read_config()
+        except (TOMLKitError, OSError, ImportError):
+            self._config = {}
+            self._toml_doc = None
+
+    def _read_config(self) -> None:
+        """Parse the configuration file into ``_config`` and ``_toml_doc``."""
+        with open(self.config_path, encoding="utf-8") as f:
+            self._toml_doc = tomlkit.parse(f.read())
+            # Convert to plain dict for easy access
+            self._config = self._toml_doc.unwrap()
 
     def _validate_config_structure(self) -> bool:
         """
@@ -194,13 +206,13 @@ class Configuration:
 
         if not self.config_path.exists():
             self._create_default_config()
-            return
 
+        # Always read the file back, including the one we just generated.
+        # Otherwise the first setter would find no TOML document and write an
+        # empty file over the freshly generated defaults, losing the change on
+        # the next start.
         try:
-            with open(self.config_path, encoding="utf-8") as f:
-                self._toml_doc = tomlkit.parse(f.read())
-                # Convert to plain dict for easy access
-                self._config = self._toml_doc.unwrap()
+            self._read_config()
 
             # Validate configuration structure
             if not self._validate_config_structure():
