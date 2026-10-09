@@ -38,7 +38,9 @@ from carnage.core.portage.use import UseFlag, get_or_cache_useflags
 # Process
 from carnage.core.process import TrackedProcess, tracked_run
 
-__all__ = [
+# Grouped by feature rather than alphabetically, which is what a reader wants
+# here; ruff would flatten it.
+__all__ = [  # noqa: RUF022
     # Cache
     "CacheManager",
     # Overlays

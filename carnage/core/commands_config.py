@@ -5,7 +5,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import tomlkit
 from tomlkit import TOMLDocument
@@ -141,7 +141,7 @@ privilege_backend = []
 """
 
     # Internal default commands for fallback
-    _DEFAULT_COMMANDS: dict[str, dict[str, Any]] = {
+    _DEFAULT_COMMANDS: ClassVar[dict[str, dict[str, Any]]] = {
         "eix.search": {
             "command": ["-Qf", "3"],
         },

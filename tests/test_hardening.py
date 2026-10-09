@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 
@@ -16,7 +17,7 @@ from carnage.core.process import tracked_run
 class _RecordingProcess:
     """Stands in for TrackedProcess and records the kwargs it would receive."""
 
-    seen: dict[str, object] = {}
+    seen: ClassVar[dict[str, object]] = {}
 
     def __init__(self, args, **kwargs) -> None:
         type(self).seen = dict(kwargs)

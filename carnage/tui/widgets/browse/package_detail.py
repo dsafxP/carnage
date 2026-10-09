@@ -1,11 +1,12 @@
 """Package detail widget with tabbed views for the Browse tab."""
 
 from pathlib import Path
+from typing import ClassVar
 
 from textual import work
 from textual._context import NoActiveAppError
 from textual.app import ComposeResult
-from textual.binding import Binding
+from textual.binding import Binding, BindingType
 from textual.containers import Vertical, VerticalScroll
 from textual.css.query import NoMatches
 from textual.widget import Widget
@@ -149,7 +150,7 @@ class PackageDetailWidget(Widget):
     Owns: version selection, world file status, and all package actions.
     """
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("e", "emerge", "Emerge", show=True),
         Binding("c", "depclean", "Depclean", show=True),
         Binding("w", "deselect", "Deselect", show=True),

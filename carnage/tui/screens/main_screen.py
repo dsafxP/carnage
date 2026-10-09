@@ -1,8 +1,10 @@
 """Main screen with tabs for Carnage."""
 
+from typing import ClassVar
+
 from rich.markup import MarkupError, escape
 from textual.app import ComposeResult
-from textual.binding import Binding
+from textual.binding import Binding, BindingType
 from textual.containers import Horizontal
 from textual.screen import Screen
 from textual.widgets import Header, Input, RichLog, TabbedContent, TabPane
@@ -20,7 +22,9 @@ from carnage.tui.widgets.use_tab import UseFlagsTab
 class MainScreen(Screen):
     """Main screen with search bar and tabbed content."""
 
-    BINDINGS = [Binding("ctrl+l", "toggle_operation_log", "Toggle log view pane", show=True)]
+    BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("ctrl+l", "toggle_operation_log", "Toggle log view pane", show=True)
+    ]
 
     def __init__(self) -> None:
         super().__init__()

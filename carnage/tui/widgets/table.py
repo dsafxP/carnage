@@ -1,11 +1,13 @@
-from textual.binding import Binding
+from typing import ClassVar
+
+from textual.binding import Binding, BindingType
 from textual.widgets import DataTable
 
 
 class NavigableDataTable(DataTable):
     """DataTable with vim-like navigation bindings."""
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("j", "cursor_down", "Down", show=False),
         Binding("k", "cursor_up", "Up", show=False),
         Binding("ctrl+d", "page_down", "Page Down", show=False),

@@ -2,9 +2,10 @@
 
 from collections.abc import Iterable
 from pathlib import PurePath
+from typing import ClassVar
 
 from textual.app import App, SystemCommand
-from textual.binding import Binding
+from textual.binding import Binding, BindingType
 from textual.reactive import reactive
 from textual.screen import Screen
 
@@ -33,7 +34,7 @@ class CarnageApp(App[None]):
 
     SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
-    BINDINGS = [Binding("ctrl+q", "try_quit", "Quit", show=False, priority=True)]
+    BINDINGS: ClassVar[list[BindingType]] = [Binding("ctrl+q", "try_quit", "Quit", show=False, priority=True)]
 
     blocked: reactive[bool] = reactive(False)
     __config: Configuration

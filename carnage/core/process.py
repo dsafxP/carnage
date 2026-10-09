@@ -6,7 +6,7 @@ import subprocess
 import time
 from collections.abc import Sequence
 from subprocess import CompletedProcess
-from typing import Any
+from typing import Any, ClassVar
 
 # Upper bound applied to every tracked subprocess that does not name its own.
 DEFAULT_TIMEOUT = 30.0
@@ -27,7 +27,7 @@ def _is_alive(pid: int) -> bool:
 class TrackedProcess:
     """A simple wrapper for subprocess.run that tracks the PID for later signaling."""
 
-    _running_processes: dict[int, "TrackedProcess"] = {}
+    _running_processes: ClassVar[dict[int, "TrackedProcess"]] = {}
 
     def __init__(self, args: Sequence[str], **kwargs: Any) -> None:
         """

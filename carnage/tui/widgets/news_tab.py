@@ -1,8 +1,10 @@
 """News tab widget for displaying Gentoo repository news."""
 
+from typing import ClassVar
+
 from textual import work
 from textual.app import ComposeResult
-from textual.binding import Binding
+from textual.binding import Binding, BindingType
 from textual.containers import Vertical, VerticalScroll
 from textual.coordinate import Coordinate
 from textual.widgets import Button, DataTable, LoadingIndicator, Rule, Static
@@ -18,7 +20,7 @@ class NewsTab(TableTab):
     TABLE_ID = "news-table"
     LOADING_ID = "news-loading"
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("r", "mark_read", "Mark Read", show=True),
         Binding("a", "mark_all_read", "Mark All Read", show=True),
         Binding("p", "purge", "Purge Read", show=True),

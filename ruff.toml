@@ -10,7 +10,19 @@ select = [
     "I",   # isort
     "UP",  # pyupgrade
     "B",   # flake8-bugbear
+    "RUF", # ruff-specific rules
+    "C90", # mccabe complexity
 ]
+
+[lint.mccabe]
+max-complexity = 15
+
+[lint.per-file-ignores]
+# Widgets that own a whole view: version selection, world-file state, USE
+# diffs and four action handlers live in one class by design.
+"carnage/tui/widgets/browse/package_detail.py" = ["C901"]
+"carnage/core/portage/overlays.py" = ["C901"]
+"carnage/core/commands_config.py" = ["C901"]
 
 [per-file-target-version]
 "**/*.py" = "py313"

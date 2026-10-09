@@ -16,7 +16,7 @@ from carnage.core.gentoolkit.package import GentoolkitPackage
 class _StalledExecutor:
     """Executor whose futures never complete."""
 
-    def submit(self, fn, *args, **kwargs) -> Future:  # noqa: ARG002 - the work is deliberately never run
+    def submit(self, fn, *args, **kwargs) -> Future:
         return Future()
 
 
