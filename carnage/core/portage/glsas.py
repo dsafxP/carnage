@@ -305,10 +305,10 @@ def fix_glsas(app: App, on_complete: Callable[[bool], None] | None = None) -> No
                 on_complete(True)
             return
 
-        # Join all vulnerable IDs into a single space-separated string
-        glsa_ids_str = " ".join(vulnerable_ids)
-
-        command = cmd_config.get_command("glsa.fix", args=[glsa_ids_str], default_privilege=True)
+        # Pass the ids as separate arguments: glsa-check takes one positional
+        # id per operand, so joining them produced a single bogus token and the
+        # fix failed whenever more than one advisory was vulnerable.
+        command = cmd_config.get_command("glsa.fix", args=list(vulnerable_ids), default_privilege=True)
 
         op = Operation(
             command.full_cmd,
