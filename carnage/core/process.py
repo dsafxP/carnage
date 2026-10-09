@@ -3,9 +3,22 @@
 import os
 import signal
 import subprocess
+import time
 from collections.abc import Sequence
 from subprocess import CompletedProcess
 from typing import Any
+
+
+def _is_alive(pid: int) -> bool:
+    """Return whether a process still exists."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        # Exists, but belongs to someone else.
+        return True
+    return True
 
 
 class TrackedProcess:
@@ -61,20 +74,15 @@ class TrackedProcess:
                 raise ValueError("stdin and input arguments may not both be used.")
             self.kwargs["stdin"] = subprocess.PIPE
 
-        # Store original preexec_fn if any
-        original_preexec = self.kwargs.get("preexec_fn")
-
-        def track_pid() -> None:
-            if original_preexec:
-                original_preexec()
-            if self._process:
-                TrackedProcess._running_processes[self._process.pid] = self
-
-        self.kwargs["preexec_fn"] = track_pid
-
         timeout = self.kwargs.pop("timeout", None)
 
         self._process = subprocess.Popen(self.args, **self.kwargs)
+
+        # Register in this process, not in the child: the forked child would only
+        # ever see a discarded copy of the registry (and self._process is not
+        # assigned until Popen returns). The entry lives exactly as long as the
+        # communicate() below, so a concurrent terminate_all() can reach it.
+        TrackedProcess._running_processes[self._process.pid] = self
 
         try:
             stdout, stderr = self._process.communicate(input=run_input, timeout=timeout)
@@ -82,11 +90,10 @@ class TrackedProcess:
             self._process.kill()
             self._process.communicate()
             raise
+        finally:
+            TrackedProcess._running_processes.pop(self._process.pid, None)
 
         returncode = self._process.returncode
-
-        # Remove from tracking when done
-        TrackedProcess._running_processes.pop(self._process.pid, None)
 
         self._result = CompletedProcess(
             args=self.args,
@@ -106,9 +113,20 @@ class TrackedProcess:
         return self._process.pid if self._process else None
 
     @classmethod
-    def terminate_all(cls, signum: int = signal.SIGTERM) -> None:
-        """Send a signal to all tracked running processes."""
-        for pid, _ in list(cls._running_processes.items()):
+    def terminate_all(cls, signum: int = signal.SIGTERM, grace: float = 0.5) -> list[int]:
+        """
+        Signal every tracked process, escalating to SIGKILL for the survivors.
+
+        Args:
+            signum: Signal to send first.
+            grace: Seconds to wait for the processes to exit before escalating.
+
+        Returns:
+            The PIDs that survived because they refused to be signaled.
+        """
+        pids = list(cls._running_processes)
+
+        for pid in pids:
             try:
                 os.kill(pid, signum)
             except ProcessLookupError:
@@ -117,6 +135,26 @@ class TrackedProcess:
             except PermissionError:
                 # Can't signal this process
                 pass
+
+        deadline = time.monotonic() + grace
+        pending = [pid for pid in pids if _is_alive(pid)]
+
+        while pending and time.monotonic() < deadline:
+            pending = [pid for pid in pending if _is_alive(pid)]
+            if pending:
+                time.sleep(0.02)
+
+        survivors: list[int] = []
+
+        for pid in pending:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                cls._running_processes.pop(pid, None)
+            except PermissionError:
+                survivors.append(pid)
+
+        return survivors
 
 
 def tracked_run(args: Sequence[str], **kwargs: Any) -> CompletedProcess:
