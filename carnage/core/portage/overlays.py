@@ -27,6 +27,9 @@ CACHE_KEY = "overlays_data"
 # Special value to indicate package counting was skipped
 SKIPPED_PACKAGE_COUNT = -4
 
+# Upper bound for the overlay list document.
+_MAX_SOURCE_BYTES = 8 * 1024 * 1024
+
 
 class OverlayQuality(Enum):
     """Quality status of an overlay."""
@@ -310,9 +313,16 @@ def fetch(source_url: str | None = None) -> list[Overlay]:
     url: str = source_url or config.overlay_source
 
     with urllib.request.urlopen(url, timeout=30) as response:
-        xml_data = response.read()
+        # Bounded: a hostile or misconfigured source must not be able to grow
+        # without limit inside the worker thread.
+        xml_data = response.read(_MAX_SOURCE_BYTES + 1)
 
-    parser = etree.XMLParser(recover=True, remove_comments=True)
+    if len(xml_data) > _MAX_SOURCE_BYTES:
+        raise ValueError(f"Overlay source is larger than {_MAX_SOURCE_BYTES} bytes")
+
+    # No recover mode: a truncated or malformed document should fail here
+    # instead of silently yielding half a list of overlays.
+    parser = etree.XMLParser(remove_comments=True)
     root = etree.fromstring(xml_data, parser=parser)
 
     overlays: list[Overlay] = []

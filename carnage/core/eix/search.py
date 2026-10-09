@@ -394,7 +394,7 @@ def search_packages(query: str) -> list[Package]:
 
         packages: list[Package] = fetch_packages_by_query(query_args, append_cfg=append_cfg)
         return packages
-    except (subprocess.CalledProcessError, etree.ParseError, OSError):
+    except (subprocess.SubprocessError, etree.ParseError, OSError):
         # Return empty list on error rather than crashing
         return []
 
@@ -416,5 +416,5 @@ def get_package_by_atom(atom: str) -> Package | None:
             if pkg.full_name == atom:
                 return pkg
         return None
-    except (subprocess.CalledProcessError, etree.ParseError, OSError):
+    except (subprocess.SubprocessError, etree.ParseError, OSError):
         return None

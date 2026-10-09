@@ -8,6 +8,9 @@ from collections.abc import Sequence
 from subprocess import CompletedProcess
 from typing import Any
 
+# Upper bound applied to every tracked subprocess that does not name its own.
+DEFAULT_TIMEOUT = 30.0
+
 
 def _is_alive(pid: int) -> bool:
     """Return whether a process still exists."""
@@ -163,11 +166,17 @@ def tracked_run(args: Sequence[str], **kwargs: Any) -> CompletedProcess:
     """
     Drop-in replacement for subprocess.run that tracks the process.
 
+    Every call gets DEFAULT_TIMEOUT unless it names one: communicate() cannot
+    be interrupted, so without a bound a stuck query would pin whichever
+    thread made the call forever.
+
     Example:
         result = tracked_run(["emerge", "--moo"], capture_output=True, text=True)
 
         # Later, terminate all tracked processes:
         TrackedProcess.terminate_all()
     """
+    kwargs.setdefault("timeout", DEFAULT_TIMEOUT)
+
     proc = TrackedProcess(args, **kwargs)
     return proc.run()

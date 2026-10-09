@@ -1,10 +1,27 @@
 """Cache management for Carnage using msgpack."""
 
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import msgpack
+
+
+def _atomic_write(path: Path, payload: bytes) -> None:
+    """Write a file so readers see either the old contents or the new ones."""
+    tmp_path = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+
+    try:
+        with open(tmp_path, "wb") as f:
+            f.write(payload)
+            f.flush()
+            os.fsync(f.fileno())
+
+        os.replace(tmp_path, path)
+    except OSError:
+        tmp_path.unlink(missing_ok=True)
+        raise
 
 
 class CacheManager:
@@ -24,7 +41,9 @@ class CacheManager:
             cache_dir = user_cache_path("carnage")
 
         self.cache_dir = cache_dir
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        # Private to this user: the cache feeds command construction, so it
+        # should not be writable by anybody else.
+        self.cache_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
 
     def _get_cache_path(self, key: str) -> Path:
         """Get the full path for a cache file."""
@@ -45,14 +64,10 @@ class CacheManager:
         cache_path: Path = self._get_cache_path(key)
         meta_path: Path = self._get_metadata_path(key)
 
-        # Write data
-        packed_data: bytes = msgpack.packb(data, use_bin_type=True)
-        with open(cache_path, "wb") as f:
-            f.write(packed_data)
-
-        # Write metadata (timestamp)
-        with open(meta_path, "w") as f:
-            f.write(str(datetime.now().timestamp()))
+        # Written through a temporary file: a reader - or a crash - must never
+        # see a half-written entry, and metadata only lands once the data does.
+        _atomic_write(cache_path, msgpack.packb(data, use_bin_type=True))
+        _atomic_write(meta_path, str(datetime.now().timestamp()).encode())
 
     def get(self, key: str) -> Any | None:
         """
