@@ -1,5 +1,6 @@
 """Main screen with tabs for Carnage."""
 
+from rich.markup import MarkupError, escape
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
@@ -96,7 +97,14 @@ class MainScreen(Screen):
             line = raw_line.decode("latin-1", errors="replace").rstrip()
 
         # Write to RichLog - it will parse ANSI codes
-        log_pane.write(line)
+        try:
+            log_pane.write(line)
+        except MarkupError:
+            # Subprocess output is not authored by us: a stray "[" (or an
+            # unmatched tag) must not blow up the worker running the command.
+            # The app's own [dim]/[red] markers stay markup, everything else
+            # falls back to literal text.
+            log_pane.write(escape(line))
 
     def _on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
         """Handle tab changes to update search bar."""
