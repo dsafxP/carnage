@@ -28,6 +28,26 @@ from textual.worker import Worker
 # Privilege escalation backends in detection priority order
 _BACKENDS: list[str] = ["run0", "pkexec", "sudo", "doas"]
 
+# Variables that must not be inherited by a child process: they can change how a
+# privileged program loads code or parses input. Values set explicitly through a
+# command's own environment table still win.
+_UNSAFE_ENV_VARS: frozenset[str] = frozenset(
+    {
+        "BASH_ENV",
+        "CDPATH",
+        "ENV",
+        "IFS",
+        "LD_AUDIT",
+        "LD_LIBRARY_PATH",
+        "LD_PRELOAD",
+        "PERL5OPT",
+        "PS4",
+        "PYTHONHOME",
+        "PYTHONPATH",
+        "SHELLOPTS",
+    }
+)
+
 # Module-level registry of all currently running operations
 _active_operations: list["Operation"] = []
 
@@ -183,8 +203,11 @@ class Operation:
             grey_cmd = f"[dim]$ {cmd_str}[/]\n"
             self._log_callback(grey_cmd.encode())
 
-        # Merge any extra environment variables on top of the parent process's
-        subprocess_env = {**os.environ, **(self.env or {})}
+        # Start from the parent environment, minus the variables that let a
+        # caller influence how a privileged program loads code, then apply the
+        # overrides this command asks for.
+        subprocess_env = {k: v for k, v in os.environ.items() if k not in _UNSAFE_ENV_VARS}
+        subprocess_env.update(self.env or {})
 
         process: Process = await asyncio.create_subprocess_exec(
             *self.cmd,

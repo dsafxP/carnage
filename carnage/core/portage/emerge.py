@@ -1,5 +1,7 @@
 """Utilities for managing packages with emerge."""
 
+import os
+import subprocess
 from collections.abc import Callable
 
 from textual.app import App
@@ -32,24 +34,41 @@ def emerge_install(app: App, package_atom: str, on_complete: Callable[[bool], No
         return
 
     cmd_config = get_commands_config()
+    log = app.screen.log_operation_output  # type: ignore
 
-    try:
-        qlop_command = cmd_config.get_command("qlop.prediction", args=[package_atom])
-        result = tracked_run(qlop_command.full_cmd, env=qlop_command.env, timeout=5)
+    def _predict() -> None:
+        """Write the merge-time prediction to the log. Purely informational."""
+        try:
+            qlop_command = cmd_config.get_command("qlop.prediction", args=[package_atom])
+            result = tracked_run(
+                qlop_command.full_cmd,
+                env={**os.environ, **qlop_command.env},
+                timeout=5,
+            )
+        except (OSError, subprocess.SubprocessError):
+            # qlop is optional: missing, broken or hanging must not stop us.
+            return
 
         if result.stdout.strip():
-            log = app.screen.log_operation_output  # type: ignore
-            log(result.stdout)
-            log(b"\n")
-    except Exception:
-        pass
+            app.call_from_thread(log, result.stdout)
+            app.call_from_thread(log, b"\n")
+
+    # Keep it off the event loop: a slow qlop would otherwise freeze the UI for
+    # up to the 5s timeout before emerge gets a chance to start.
+    app.run_worker(
+        _predict,
+        thread=True,
+        group="qlop-prediction",
+        exclusive=True,
+        exit_on_error=False,
+    )
 
     command = cmd_config.get_command("emerge.install", args=[package_atom], default_privilege=True)
 
     op = Operation(
         command.full_cmd,
         env=command.env,
-        log_callback=app.screen.log_operation_output,  # type: ignore
+        log_callback=log,
     )
     op.start_in_app(app, on_complete=on_complete)
 

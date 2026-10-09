@@ -423,7 +423,15 @@ privilege_backend = []
         full_cmd = list(cmd_with_args)
 
         if use_privilege and self.privilege_backend:
-            full_cmd = [*self.privilege_backend, *full_cmd]
+            backend = list(self.privilege_backend)
+
+            # run0 builds the child's environment from the service manager, so
+            # anything not handed over explicitly never reaches the command -
+            # env= below only applies to the run0 client process itself.
+            if Path(backend[0]).name == "run0":
+                backend.extend(f"--setenv={key}={value}" for key, value in sorted(merged_env.items()))
+
+            full_cmd = [*backend, *full_cmd]
 
         return Command(
             full_cmd=full_cmd,
