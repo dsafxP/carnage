@@ -471,7 +471,6 @@ class PackageDetailWidget(Widget):
         is_installed: bool = self.package.is_installed()
 
         if is_installed:
-            # emerge_btn.display = False
             emerge_btn.variant = "default"
 
             depclean_btn.display = True
@@ -516,7 +515,6 @@ class PackageDetailWidget(Widget):
         for v in self.package.versions:
             v.installed = v.id == version_id
         self._load_world_file_status()
-        # self._update_buttons()
         self._load_installed_files()
         self._populate_versions_table()
         # Re-enable the files tab

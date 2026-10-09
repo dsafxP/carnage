@@ -241,7 +241,6 @@ class GLSATab(TableTab):
             self.app.bell()
 
         fix_glsas(self.app, on_complete=on_complete)
-        # self.update_button_states()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""

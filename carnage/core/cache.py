@@ -189,15 +189,6 @@ class CacheManager:
 
         return count
 
-    def list_keys(self) -> list[str]:
-        """
-        List all cache keys.
-
-        Returns:
-            List of cache key names.
-        """
-        return [path.stem for path in self.cache_dir.glob("*.msgpack")]
-
 
 _cache: CacheManager | None = None
 

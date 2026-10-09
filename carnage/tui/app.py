@@ -108,8 +108,6 @@ class CarnageApp(App[None]):
         if self.__commands_config.load_error:
             self.notify(self.__commands_config.load_error, severity="error")
 
-        # os.setpgrp()
-
     async def on_unmount(self) -> None:
         TrackedProcess.terminate_all()
 

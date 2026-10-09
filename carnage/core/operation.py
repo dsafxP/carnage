@@ -82,6 +82,19 @@ def _ensure_log_handler() -> None:
     _handler_installed = True
 
 
+def get_logger() -> logging.Logger:
+    """
+    Logger backed by carnage's rotating log file.
+
+    Use this instead of logging.getLogger() directly: it makes sure the file
+    handler exists, and the logger deliberately does not propagate, so nothing
+    is ever written to the terminal while the TUI is drawing on it.
+    """
+    _ensure_log_handler()
+
+    return _log
+
+
 def detect_backend() -> str | None:
     """
     Detect the first available privilege escalation backend.
@@ -223,7 +236,6 @@ class Operation:
         async for raw_line in process.stdout:
             line = raw_line.decode(errors="replace").rstrip()
 
-            # print(line)
             _log.debug("%s", line)
 
             if self._log_callback:
@@ -408,9 +420,6 @@ class Operation:
                     message=f"Command finished: {' '.join(self.cmd)}",
                     urgency=Urgency.Normal if success else Urgency.Critical,
                 )
-
-            # if success:
-            #    app.notify(f"Command finished successfully: {self.cmd[0]}", severity="information")
 
         self._worker = app.run_worker(_worker(), exclusive=True)
 

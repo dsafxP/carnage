@@ -65,18 +65,3 @@ def has_remote_cache() -> bool:
         _remote_cache_available = result is not None and result.returncode == 0
 
     return _remote_cache_available
-
-
-def has_protobuf_support() -> bool:
-    """
-    Check if eix was compiled with protobuf support.
-
-    Returns:
-        True if protobuf support is available, False otherwise
-    """
-    try:
-        result: CompletedProcess[str] = tracked_run(["eix", "-Qq0", "--proto"], text=True)
-    except (subprocess.SubprocessError, OSError):
-        return False
-
-    return result.returncode == 0

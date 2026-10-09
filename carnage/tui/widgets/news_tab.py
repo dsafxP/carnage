@@ -97,28 +97,6 @@ class NewsTab(TableTab):
 
         self.update_button_states()
 
-    def _remove_read_rows(self) -> None:
-        """Remove all read news from the table and data."""
-        table: DataTable = self.query_one("#news-table", DataTable)
-
-        # Remove read items from our data
-        self.news_items = [news for news in self.news_items if not news.read]
-
-        # Clear and repopulate table with remaining items
-        table.clear()
-
-        for news in self.news_items:
-            status: str = "[dim]Read[/]" if news.read else "[green]New[/]"
-            table.add_row(status, news.date, news.title, key=str(news.index))
-
-        # Clear selection if the selected news was purged
-        if self.selected_news and self.selected_news.read:
-            self.selected_news = None
-            content_widget: Static = self.query_one("#news-content", Static)
-            content_widget.update("Select a news item to view details")
-
-        self.update_button_states()
-
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection in the news table."""
         if event.row_key is None:

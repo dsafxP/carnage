@@ -13,7 +13,6 @@ from carnage.core.eix.eix import has_remote_cache, is_found
 from carnage.core.portage.overlays import (
     Overlay,
     OverlayStatus,
-    clear_cache,
     enable_and_sync_overlay,
     get_or_cache,
     remove_overlay,
@@ -170,20 +169,6 @@ class OverlaysTab(TableTab):
                     severity="warning",
                     timeout=10,
                 )
-
-    def _reload_overlays(self) -> None:
-        """Trigger an overlay reload with cache refresh."""
-        # Save cursor position before reload
-        table: DataTable = self.query_one("#overlays-table", DataTable)
-        cursor_row = table.cursor_row
-
-        # Force refresh by clearing cache and reloading
-        clear_cache(self.cache_manager)
-        self.load_overlays()
-
-        # Restore cursor position after reload
-        if cursor_row is not None and cursor_row < len(self.filtered_overlays):
-            table.move_cursor(row=cursor_row)
 
     def _update_overlay_installation_status(self, overlay_name: str, installed: bool) -> None:
         """Update the installation status of an overlay locally and in cache."""

@@ -175,19 +175,3 @@ def get_or_cache_useflags(cache_manager: CacheManager, force_refresh: bool = Fal
     cache_manager.set(CACHE_KEY_USEFLAGS, cache_data)
 
     return useflags
-
-
-def clear_useflags_cache(cache_manager: CacheManager) -> bool:
-    """
-    Clear the USE flags cache.
-
-    Args:
-        cache_manager: CacheManager instance. If None, creates a new one.
-
-    Returns:
-        True if cache was cleared, False otherwise.
-    """
-    # Clear main useflags cache
-    cleared: bool = cache_manager.delete(CACHE_KEY_USEFLAGS)
-
-    return cleared

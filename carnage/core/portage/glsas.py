@@ -17,7 +17,7 @@ from portage.glsa import (
 from textual import work
 from textual.app import App
 
-from carnage.core.operation import start_operation
+from carnage.core.operation import get_logger, start_operation
 from carnage.core.portage.portageq import ctx
 
 
@@ -209,7 +209,9 @@ def _parse_glsa_xml(glsa_id: str, xml_path: Path) -> GLSA | None:
             references=references,
         )
     except (etree.ParseError, etree.XMLSyntaxError, OSError) as e:
-        print(f"Error parsing GLSA {glsa_id}: {e}")
+        # Not print(): writing to stdout corrupts the alternate screen the TUI
+        # is drawing on.
+        get_logger().warning("Error parsing GLSA %s: %s", glsa_id, e)
         return None
 
 

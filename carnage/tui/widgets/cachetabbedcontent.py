@@ -47,14 +47,6 @@ class CachedTabbedContent(TabbedContent):
         except Exception:
             pass
 
-    def _save_tab(self, tab_id: str) -> None:
-        """Save the current tab ID to cache."""
-        try:
-            self._cache_manager.set(self._cache_key, tab_id)
-        except Exception:
-            # Fail silently - cache is non-critical
-            pass
-
     def _restore_tab(self) -> None:
         """Restore the last selected tab from cache."""
         try:
@@ -65,12 +57,5 @@ class CachedTabbedContent(TabbedContent):
 
                 if not to_tab.disabled:
                     self.active = cached_tab
-        except Exception:
-            pass
-
-    def reset_cache(self) -> None:
-        """Clear the cached tab selection."""
-        try:
-            self._cache_manager.delete(self._cache_key)
         except Exception:
             pass
