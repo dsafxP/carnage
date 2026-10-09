@@ -413,3 +413,47 @@ class Operation:
             #    app.notify(f"Command finished successfully: {self.cmd[0]}", severity="information")
 
         self._worker = app.run_worker(_worker(), exclusive=True)
+
+
+def start_operation(
+    app: App,
+    command_id: str,
+    *,
+    args: list[str] | None = None,
+    default_privilege: bool = False,
+    on_complete: Callable[[bool], None] | None = None,
+) -> None:
+    """
+    Build a configured command and run it as an operation on the app.
+
+    Call sites used to spell out get_command(), Operation() and start_in_app()
+    separately - eighteen near-identical blocks, each needing its own type
+    ignore for the log callback.
+
+    Args:
+        app: The App instance
+        command_id: Dot notation path of the command (e.g., "emerge.install")
+        args: Arguments to substitute for $1, $2, etc.
+        default_privilege: Internal default privilege if not overridden
+        on_complete: Optional callback when operation finishes (receives success bool)
+    """
+    # Local import: commands_config resolves the privilege backend through
+    # this module, so importing it at module scope would close a cycle.
+    from carnage.core.commands_config import get_commands_config
+
+    command = get_commands_config().get_command(command_id, args=args, default_privilege=default_privilege)
+
+    operation = Operation(command.full_cmd, env=command.env, log_callback=screen_log_callback(app))
+    operation.start_in_app(app, on_complete=on_complete)
+
+
+def screen_log_callback(app: App) -> Callable[[bytes], None] | None:
+    """
+    The operation log sink of the app's current screen, when it has one.
+
+    Resolved through getattr because the screen type is not known here; this is
+    the one place the per-callsite type: ignore used to live.
+    """
+    callback: Callable[[bytes], None] | None = getattr(app.screen, "log_operation_output", None)
+
+    return callback if callable(callback) else None

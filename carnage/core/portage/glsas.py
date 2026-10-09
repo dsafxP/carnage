@@ -17,8 +17,7 @@ from portage.glsa import (
 from textual import work
 from textual.app import App
 
-from carnage.core.commands_config import get_commands_config
-from carnage.core.operation import Operation
+from carnage.core.operation import start_operation
 from carnage.core.portage.portageq import ctx
 
 
@@ -296,7 +295,6 @@ def fix_glsas(app: App, on_complete: Callable[[bool], None] | None = None) -> No
         app: The Textual App instance
         on_complete: Optional callback when operation finishes (receives success bool)
     """
-    cmd_config = get_commands_config()
 
     def on_vulnerable_ids(vulnerable_ids: list[str]) -> None:
         """Called when vulnerable GLSA IDs are ready."""
@@ -308,13 +306,6 @@ def fix_glsas(app: App, on_complete: Callable[[bool], None] | None = None) -> No
         # Pass the ids as separate arguments: glsa-check takes one positional
         # id per operand, so joining them produced a single bogus token and the
         # fix failed whenever more than one advisory was vulnerable.
-        command = cmd_config.get_command("glsa.fix", args=list(vulnerable_ids), default_privilege=True)
-
-        op = Operation(
-            command.full_cmd,
-            env=command.env,
-            log_callback=app.screen.log_operation_output,  # type: ignore
-        )
-        op.start_in_app(app, on_complete=on_complete)
+        start_operation(app, "glsa.fix", args=list(vulnerable_ids), default_privilege=True, on_complete=on_complete)
 
     get_vulnerable_glsas_async(app, on_vulnerable_ids)

@@ -15,10 +15,10 @@ from lxml import etree
 from textual.app import App
 
 from carnage.core.cache import CacheManager
-from carnage.core.commands_config import get_commands_config, is_valid_component
+from carnage.core.commands_config import is_valid_component
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
-from carnage.core.operation import Operation
+from carnage.core.operation import start_operation
 from carnage.core.portage.portageq import ctx
 
 # Cache configuration
@@ -169,15 +169,7 @@ def remove_overlay(app: App, overlay_name: str, on_complete: Callable | None = N
     if _reject_invalid_name(app, overlay_name):
         return
 
-    cmd_config = get_commands_config()
-    command = cmd_config.get_command("overlays.remove", args=[overlay_name], default_privilege=True)
-
-    op = Operation(
-        command.full_cmd,
-        env=command.env,
-        log_callback=app.screen.log_operation_output,  # type: ignore
-    )
-    op.start_in_app(app, on_complete=on_complete)
+    start_operation(app, "overlays.remove", args=[overlay_name], default_privilege=True, on_complete=on_complete)
 
 
 def sync_overlay(app: App, overlay_name: str, on_complete: Callable | None = None) -> None:
@@ -192,15 +184,7 @@ def sync_overlay(app: App, overlay_name: str, on_complete: Callable | None = Non
     if _reject_invalid_name(app, overlay_name):
         return
 
-    cmd_config = get_commands_config()
-    command = cmd_config.get_command("overlays.sync", args=[overlay_name], default_privilege=True)
-
-    op = Operation(
-        command.full_cmd,
-        env=command.env,
-        log_callback=app.screen.log_operation_output,  # type: ignore
-    )
-    op.start_in_app(app, on_complete=on_complete)
+    start_operation(app, "overlays.sync", args=[overlay_name], default_privilege=True, on_complete=on_complete)
 
 
 def enable_and_sync_overlay(app: App, overlay_name: str, on_complete: Callable | None = None) -> None:
@@ -215,15 +199,7 @@ def enable_and_sync_overlay(app: App, overlay_name: str, on_complete: Callable |
     if _reject_invalid_name(app, overlay_name):
         return
 
-    cmd_config = get_commands_config()
-    command = cmd_config.get_command("overlays.add", args=[overlay_name], default_privilege=True)
-
-    op = Operation(
-        command.full_cmd,
-        env=command.env,
-        log_callback=app.screen.log_operation_output,  # type: ignore
-    )
-    op.start_in_app(app, on_complete=on_complete)
+    start_operation(app, "overlays.add", args=[overlay_name], default_privilege=True, on_complete=on_complete)
 
 
 def _parse_owner(repo_elem: etree._Element) -> Owner | None:

@@ -4,8 +4,8 @@ from collections.abc import Callable
 
 from textual.app import App
 
-from carnage.core.commands_config import get_commands_config, is_valid_atom
-from carnage.core.operation import Operation
+from carnage.core.commands_config import is_valid_atom
+from carnage.core.operation import start_operation
 
 
 def _reject_unsafe_atom(app: App, package_atom: str) -> bool:
@@ -33,15 +33,13 @@ def euse_enable(
     if _reject_unsafe_atom(app, package_atom):
         return
 
-    cmd_config = get_commands_config()
-    command = cmd_config.get_command("euse.enable", args=[package_atom, " ".join(flags)], default_privilege=True)
-
-    op = Operation(
-        command.full_cmd,
-        env=command.env,
-        log_callback=app.screen.log_operation_output,  # type: ignore
+    start_operation(
+        app,
+        "euse.enable",
+        args=[package_atom, " ".join(flags)],
+        default_privilege=True,
+        on_complete=on_complete,
     )
-    op.start_in_app(app, on_complete=on_complete)
 
 
 def euse_disable(
@@ -59,12 +57,10 @@ def euse_disable(
     if _reject_unsafe_atom(app, package_atom):
         return
 
-    cmd_config = get_commands_config()
-    command = cmd_config.get_command("euse.disable", args=[package_atom, " ".join(flags)], default_privilege=True)
-
-    op = Operation(
-        command.full_cmd,
-        env=command.env,
-        log_callback=app.screen.log_operation_output,  # type: ignore
+    start_operation(
+        app,
+        "euse.disable",
+        args=[package_atom, " ".join(flags)],
+        default_privilege=True,
+        on_complete=on_complete,
     )
-    op.start_in_app(app, on_complete=on_complete)

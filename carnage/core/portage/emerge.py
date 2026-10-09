@@ -7,7 +7,7 @@ from collections.abc import Callable
 from textual.app import App
 
 from carnage.core.commands_config import get_commands_config, is_valid_atom
-from carnage.core.operation import Operation
+from carnage.core.operation import start_operation
 from carnage.core.process import tracked_run
 
 
@@ -63,14 +63,7 @@ def emerge_install(app: App, package_atom: str, on_complete: Callable[[bool], No
         exit_on_error=False,
     )
 
-    command = cmd_config.get_command("emerge.install", args=[package_atom], default_privilege=True)
-
-    op = Operation(
-        command.full_cmd,
-        env=command.env,
-        log_callback=log,
-    )
-    op.start_in_app(app, on_complete=on_complete)
+    start_operation(app, "emerge.install", args=[package_atom], default_privilege=True, on_complete=on_complete)
 
 
 def emerge_uninstall(app: App, package_atom: str, on_complete: Callable[[bool], None] | None = None) -> None:
@@ -85,15 +78,7 @@ def emerge_uninstall(app: App, package_atom: str, on_complete: Callable[[bool], 
     if _reject_unsafe_atom(app, package_atom):
         return
 
-    cmd_config = get_commands_config()
-    command = cmd_config.get_command("emerge.uninstall", args=[package_atom], default_privilege=True)
-
-    op = Operation(
-        command.full_cmd,
-        env=command.env,
-        log_callback=app.screen.log_operation_output,  # type: ignore
-    )
-    op.start_in_app(app, on_complete=on_complete)
+    start_operation(app, "emerge.uninstall", args=[package_atom], default_privilege=True, on_complete=on_complete)
 
 
 def emerge_deselect(app: App, package_atom: str, on_complete: Callable[[bool], None] | None = None) -> None:
@@ -108,15 +93,7 @@ def emerge_deselect(app: App, package_atom: str, on_complete: Callable[[bool], N
     if _reject_unsafe_atom(app, package_atom):
         return
 
-    cmd_config = get_commands_config()
-    command = cmd_config.get_command("emerge.deselect", args=[package_atom], default_privilege=True)
-
-    op = Operation(
-        command.full_cmd,
-        env=command.env,
-        log_callback=app.screen.log_operation_output,  # type: ignore
-    )
-    op.start_in_app(app, on_complete=on_complete)
+    start_operation(app, "emerge.deselect", args=[package_atom], default_privilege=True, on_complete=on_complete)
 
 
 def emerge_noreplace(app: App, package_atom: str, on_complete: Callable[[bool], None] | None = None) -> None:
@@ -131,12 +108,4 @@ def emerge_noreplace(app: App, package_atom: str, on_complete: Callable[[bool], 
     if _reject_unsafe_atom(app, package_atom):
         return
 
-    cmd_config = get_commands_config()
-    command = cmd_config.get_command("emerge.noreplace", args=[package_atom], default_privilege=True)
-
-    op = Operation(
-        command.full_cmd,
-        env=command.env,
-        log_callback=app.screen.log_operation_output,  # type: ignore
-    )
-    op.start_in_app(app, on_complete=on_complete)
+    start_operation(app, "emerge.noreplace", args=[package_atom], default_privilege=True, on_complete=on_complete)

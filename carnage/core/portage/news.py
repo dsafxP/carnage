@@ -9,8 +9,8 @@ from portage.news import NewsItem
 from portage.util import grabfile
 from textual.app import App
 
-from carnage.core.commands_config import get_commands_config, is_valid_component
-from carnage.core.operation import Operation
+from carnage.core.commands_config import is_valid_component
+from carnage.core.operation import start_operation
 from carnage.core.portage.portageq import ctx
 from carnage.core.unix import current_user_in_group
 
@@ -203,17 +203,13 @@ def mark_news_read(app: App, news_name: str, on_complete: Callable[[bool], None]
         app.notify("Refused to mark a news item with an invalid name.", severity="error")
         return
 
-    cmd_config = get_commands_config()
-    command = cmd_config.get_command(
-        "news.read", args=[news_name], default_privilege=not current_user_in_group("portage")
+    start_operation(
+        app,
+        "news.read",
+        args=[news_name],
+        default_privilege=not current_user_in_group("portage"),
+        on_complete=on_complete,
     )
-
-    op = Operation(
-        command.full_cmd,
-        env=command.env,
-        log_callback=app.screen.log_operation_output,  # type: ignore
-    )
-    op.start_in_app(app, on_complete=on_complete)
 
 
 def mark_all_news_read(app: App, on_complete: Callable[[bool], None] | None = None) -> None:
@@ -224,15 +220,13 @@ def mark_all_news_read(app: App, on_complete: Callable[[bool], None] | None = No
         app: The Textual App instance
         on_complete: Optional callback when operation finishes (receives success bool)
     """
-    cmd_config = get_commands_config()
-    command = cmd_config.get_command("news.read", args=["all"], default_privilege=not current_user_in_group("portage"))
-
-    op = Operation(
-        command.full_cmd,
-        env=command.env,
-        log_callback=app.screen.log_operation_output,  # type: ignore
+    start_operation(
+        app,
+        "news.read",
+        args=["all"],
+        default_privilege=not current_user_in_group("portage"),
+        on_complete=on_complete,
     )
-    op.start_in_app(app, on_complete=on_complete)
 
 
 def purge_read_news(app: App, on_complete: Callable[[bool], None] | None = None) -> None:
@@ -246,12 +240,9 @@ def purge_read_news(app: App, on_complete: Callable[[bool], None] | None = None)
         app: The Textual App instance
         on_complete: Optional callback when operation finishes (receives success bool)
     """
-    cmd_config = get_commands_config()
-    command = cmd_config.get_command("news.purge", default_privilege=not current_user_in_group("portage"))
-
-    op = Operation(
-        command.full_cmd,
-        env=command.env,
-        log_callback=app.screen.log_operation_output,  # type: ignore
+    start_operation(
+        app,
+        "news.purge",
+        default_privilege=not current_user_in_group("portage"),
+        on_complete=on_complete,
     )
-    op.start_in_app(app, on_complete=on_complete)
