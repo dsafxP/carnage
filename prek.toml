@@ -8,3 +8,13 @@ hooks = [
   # Run the formatter.
   { id = "ruff-format", types_or = ["python", "pyi"] },
 ]
+
+[[repos]]
+repo = "local"
+hooks = [
+  # Run the type checker.
+  { id = "pyrefly", name = "pyrefly", entry = "uv run pyrefly check", language = "system", pass_filenames = false },
+
+  # Run the test suite.
+  { id = "pytest", name = "pytest", entry = "uv run pytest", language = "system", pass_filenames = false },
+]
