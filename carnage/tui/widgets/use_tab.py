@@ -4,7 +4,6 @@ from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.timer import Timer
-from textual.widget import Widget
 from textual.widgets import DataTable, LoadingIndicator, Static
 
 from carnage.core.cache import get_cache_manager
@@ -13,10 +12,14 @@ from carnage.core.eix.search import Package, fetch_packages_by_query
 from carnage.core.eix.use import get_package_count_for_useflag
 from carnage.core.portage.use import UseFlag, get_or_cache_useflags
 from carnage.tui.widgets.table import NavigableDataTable
+from carnage.tui.widgets.table_tab import TableTab
 
 
-class UseFlagsTab(Widget):
+class UseFlagsTab(TableTab):
     """Widget for browsing Gentoo USE flags."""
+
+    TABLE_ID = "useflags-table"
+    LOADING_ID = "useflags-loading"
 
     def __init__(self) -> None:
         super().__init__()
@@ -164,22 +167,6 @@ class UseFlagsTab(Widget):
 
             # Clear the pending selection
             self._pending_selection = None
-
-    def _show_loading(self) -> None:
-        """Show the loading indicator and hide the table (event loop only)."""
-        loading: LoadingIndicator = self.query_one("#useflags-loading", LoadingIndicator)
-        table: DataTable = self.query_one("#useflags-table", DataTable)
-
-        loading.display = True
-        table.display = False
-
-    def _hide_loading(self) -> None:
-        """Hide loading indicator and show table."""
-        loading: LoadingIndicator = self.query_one("#useflags-loading", LoadingIndicator)
-        table: DataTable = self.query_one("#useflags-table", DataTable)
-
-        loading.display = False
-        table.display = True
 
     def _show_detail_loading(self) -> None:
         """Show loading indicator for details."""

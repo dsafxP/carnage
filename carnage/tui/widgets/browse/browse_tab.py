@@ -4,7 +4,6 @@ from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.timer import Timer
-from textual.widget import Widget
 from textual.widgets import DataTable, LoadingIndicator
 
 from carnage.core.config import Configuration, get_config
@@ -12,10 +11,14 @@ from carnage.core.eix.search import Package, PackageVersion, search_packages
 from carnage.core.gentoolkit.package import GentoolkitPackage
 from carnage.tui.widgets.browse.package_detail import PackageDetailWidget, default_version
 from carnage.tui.widgets.table import NavigableDataTable
+from carnage.tui.widgets.table_tab import TableTab
 
 
-class BrowseTab(Widget):
+class BrowseTab(TableTab):
     """Widget for browsing Gentoo packages. Handles search and table only."""
+
+    TABLE_ID = "browse-table"
+    LOADING_ID = "browse-loading"
 
     def __init__(self) -> None:
         super().__init__()
@@ -139,20 +142,6 @@ class BrowseTab(Widget):
                 description,
                 key=str(i),
             )
-
-    def _show_loading(self) -> None:
-        """Show the loading indicator and hide the table (event loop only)."""
-        loading: LoadingIndicator = self.query_one("#browse-loading", LoadingIndicator)
-        table: DataTable = self.query_one("#browse-table", DataTable)
-
-        loading.display = True
-        table.display = False
-
-    def _hide_loading(self) -> None:
-        loading: LoadingIndicator = self.query_one("#browse-loading", LoadingIndicator)
-        table: DataTable = self.query_one("#browse-table", DataTable)
-        loading.display = False
-        table.display = True
 
     def _remove_detail_widget(self) -> None:
         for widget in self.query(PackageDetailWidget):

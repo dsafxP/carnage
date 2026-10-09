@@ -3,16 +3,19 @@
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
-from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Rule, Static, TabbedContent
 
 from carnage.core.config import Configuration, get_config
 from carnage.core.portage.glsas import GLSA, fetch_glsas, fix_glsas
 from carnage.tui.widgets.table import NavigableDataTable
+from carnage.tui.widgets.table_tab import TableTab
 
 
-class GLSATab(Widget):
+class GLSATab(TableTab):
     """Widget for displaying and managing Gentoo Linux Security Advisories."""
+
+    TABLE_ID = "glsa-table"
+    LOADING_ID = "glsa-loading"
 
     def __init__(self) -> None:
         super().__init__()
@@ -83,22 +86,6 @@ class GLSATab(Widget):
             table.add_row(glsa.id, glsa.product or "N/A", glsa.title or glsa.synopsis, key=glsa.id)
 
         self.update_button_states()
-
-    def _show_loading(self) -> None:
-        """Show the loading indicator and hide the table (event loop only)."""
-        loading: LoadingIndicator = self.query_one("#glsa-loading", LoadingIndicator)
-        table: DataTable = self.query_one("#glsa-table", DataTable)
-
-        loading.display = True
-        table.display = False
-
-    def _hide_loading(self) -> None:
-        """Hide loading indicator and show table."""
-        loading: LoadingIndicator = self.query_one("#glsa-loading", LoadingIndicator)
-        table: DataTable = self.query_one("#glsa-table", DataTable)
-
-        loading.display = False
-        table.display = True
 
     def _reload_glsas(self) -> None:
         """Trigger a GLSAs reload (non-worker wrapper)."""

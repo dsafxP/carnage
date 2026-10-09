@@ -5,15 +5,18 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
 from textual.coordinate import Coordinate
-from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Rule, Static
 
 from carnage.core import News, get_news, mark_all_news_read, mark_news_read, purge_read_news
 from carnage.tui.widgets.table import NavigableDataTable
+from carnage.tui.widgets.table_tab import TableTab
 
 
-class NewsTab(Widget):
+class NewsTab(TableTab):
     """Widget for displaying and managing Gentoo news."""
+
+    TABLE_ID = "news-table"
+    LOADING_ID = "news-loading"
 
     BINDINGS = [
         Binding("r", "mark_read", "Mark Read", show=True),
@@ -115,22 +118,6 @@ class NewsTab(Widget):
             content_widget.update("Select a news item to view details")
 
         self.update_button_states()
-
-    def _show_loading(self) -> None:
-        """Show the loading indicator and hide the table (event loop only)."""
-        loading: LoadingIndicator = self.query_one("#news-loading", LoadingIndicator)
-        table: DataTable = self.query_one("#news-table", DataTable)
-
-        loading.display = True
-        table.display = False
-
-    def _hide_loading(self) -> None:
-        """Hide loading indicator and show table."""
-        loading: LoadingIndicator = self.query_one("#news-loading", LoadingIndicator)
-        table: DataTable = self.query_one("#news-table", DataTable)
-
-        loading.display = False
-        table.display = True
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection in the news table."""

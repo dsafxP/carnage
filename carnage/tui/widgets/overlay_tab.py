@@ -5,7 +5,6 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical, VerticalScroll
 from textual.coordinate import Coordinate
-from textual.widget import Widget
 from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
 from carnage.core.cache import get_cache_manager
@@ -21,10 +20,14 @@ from carnage.core.portage.overlays import (
     sync_overlay,
 )
 from carnage.tui.widgets.table import NavigableDataTable
+from carnage.tui.widgets.table_tab import TableTab
 
 
-class OverlaysTab(Widget):
+class OverlaysTab(TableTab):
     """Widget for displaying and managing Gentoo overlays."""
+
+    TABLE_ID = "overlays-table"
+    LOADING_ID = "overlays-loading"
 
     BINDINGS = [
         Binding("r", "remove", "Remove", show=True),
@@ -167,22 +170,6 @@ class OverlaysTab(Widget):
                     severity="warning",
                     timeout=10,
                 )
-
-    def _show_loading(self) -> None:
-        """Show the loading indicator and hide the table (event loop only)."""
-        loading: LoadingIndicator = self.query_one("#overlays-loading", LoadingIndicator)
-        table: DataTable = self.query_one("#overlays-table", DataTable)
-
-        loading.display = True
-        table.display = False
-
-    def _hide_loading(self) -> None:
-        """Hide loading indicator and show table."""
-        loading: LoadingIndicator = self.query_one("#overlays-loading", LoadingIndicator)
-        table: DataTable = self.query_one("#overlays-table", DataTable)
-
-        loading.display = False
-        table.display = True
 
     def _reload_overlays(self) -> None:
         """Trigger an overlay reload with cache refresh."""
