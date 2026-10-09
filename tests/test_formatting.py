@@ -6,7 +6,13 @@ from datetime import datetime
 from typing import Any
 
 from carnage.core.eix.search import Package, PackageVersion
-from carnage.core.formatting import format_package_details, package_row_label
+from carnage.core.formatting import (
+    format_glsa_details,
+    format_glsa_header,
+    format_package_details,
+    package_row_label,
+)
+from carnage.core.portage.glsas import GLSA, AffectedPackage, Resolution
 
 
 def _version(**overrides: Any) -> PackageVersion:
@@ -104,3 +110,79 @@ def test_details_omit_the_install_date_when_unknown() -> None:
     details = format_package_details(_package(versions=[installed]), None)
 
     assert "Last installed at" not in details
+
+
+def _glsa(**overrides: Any) -> GLSA:
+    defaults: dict[str, Any] = {
+        "id": "GLSA-2024-0001",
+        "title": "A title",
+        "synopsis": "A synopsis",
+        "product": "app-misc/foo",
+        "announced": "2024-01-15",
+        "revised": None,
+        "revision_count": "01",
+        "bugs": ["123456"],
+        "access": "remote",
+        "background": "Some background",
+        "description": "A description",
+        "impact": "An impact",
+        "impact_type": "normal",
+        "workaround": None,
+        "resolutions": [],
+        "affected_packages": [],
+        "references": ["https://example.invalid"],
+    }
+    defaults.update(overrides)
+
+    return GLSA(**defaults)
+
+
+def test_glsa_header_shows_the_identifying_fields() -> None:
+    header = format_glsa_header(_glsa())
+
+    assert header.startswith("[r]A title[/]")
+    assert "[dim][b]ID:[/] GLSA-2024-0001[/]" in header
+    assert "[dim][b]Product:[/] app-misc/foo[/]" in header
+    assert "[dim][b]Announced:[/] 2024-01-15[/]" in header
+    assert "[dim][b]Severity:[/] normal[/]" in header
+    assert "[dim][b]Exploitable:[/] remote[/]" in header
+
+
+def test_glsa_header_falls_back_to_the_synopsis() -> None:
+    header = format_glsa_header(_glsa(title=None))
+
+    assert header.startswith("[r]A synopsis[/]")
+
+
+def test_glsa_details_render_version_conditions_with_symbols() -> None:
+    package = AffectedPackage(
+        name="app-misc/foo",
+        auto="auto",
+        arch="amd64",
+        unaffected_conditions=[{"range": "lt", "value": "1.0", "slot": None}],
+        vulnerable_conditions=[{"range": "ge", "value": "2.0", "slot": "0"}],
+    )
+    details = format_glsa_details(_glsa(affected_packages=[package]))
+
+    assert "[r]app-misc/foo[/] on [b]amd64[/]" in details
+    assert "[red][b]Affected versions:[/] ≥ [bold]2.0:0[/bold][/red]" in details
+    assert "[green][b]Unaffected versions:[/] < [bold]1.0[/bold][/green]" in details
+
+
+def test_glsa_details_render_optional_sections() -> None:
+    details = format_glsa_details(
+        _glsa(workaround="Do this", resolutions=[Resolution(text="Run that", code="emerge -1 foo")])
+    )
+
+    assert "[b]Workaround:[/]\nDo this" in details
+    assert "Run that" in details
+    assert "[dim]emerge -1 foo[/dim]" in details
+    assert "https://bugs.gentoo.org/123456" in details
+
+
+def test_glsa_details_omit_absent_sections() -> None:
+    details = format_glsa_details(_glsa(background=None, workaround=None, references=[]))
+
+    assert "Background" not in details
+    assert "Workaround" not in details
+    assert "References" not in details

@@ -6,6 +6,7 @@ from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Button, DataTable, LoadingIndicator, Rule, Static, TabbedContent
 
 from carnage.core.config import Configuration, get_config
+from carnage.core.formatting import format_glsa_details, format_glsa_header
 from carnage.core.portage.glsas import GLSA, fetch_glsas, fix_glsas
 from carnage.tui.widgets.table import NavigableDataTable
 from carnage.tui.widgets.table_tab import TableTab
@@ -104,101 +105,8 @@ class GLSATab(TableTab):
             return
 
         # Display GLSA details
-        header_widget: Static = self.query_one("#glsa-header", Static)
-        content_widget: Static = self.query_one("#glsa-content", Static)
-
-        # Format the GLSA content
-        header: str = f"[r]{self.selected_glsa.title or self.selected_glsa.synopsis}[/]\n\n"
-
-        if self.selected_glsa.product:
-            header += f"[dim][b]Product:[/] {self.selected_glsa.product}[/]\n"
-
-        header += f"[dim][b]ID:[/] {self.selected_glsa.id}[/]\n"
-
-        if self.selected_glsa.announced:
-            header += f"[dim][b]Announced:[/] {self.selected_glsa.announced}[/]\n"
-
-        # if self.selected_glsa.revised:
-        #   header += f"[dim]Revised: {self.selected_glsa.revised} (revision {self.selected_glsa.revision_count})[/]\n"
-
-        if self.selected_glsa.impact_type:
-            header += f"[dim][b]Severity:[/] {self.selected_glsa.impact_type}[/]\n"
-
-        if self.selected_glsa.access:
-            header += f"[dim][b]Exploitable:[/] {self.selected_glsa.access}[/]"
-
-        header_widget.update(header)
-
-        details: str = ""
-
-        # Render affected packages
-        if self.selected_glsa.affected_packages:
-            details += "[b]Affected Packages:[/]\n\n"
-
-            for package in self.selected_glsa.affected_packages:
-                details += f"[dim][b]Package:[/] [r]{package.name}[/] on [b]{package.arch}[/][/dim]\n"
-
-                # Render vulnerable versions (affected)
-                if package.vulnerable_conditions:
-                    affected_versions: list[str] = []
-                    for condition in package.vulnerable_conditions:
-                        range_symbol = _get_range_symbol(condition["range"])
-                        slot_info: str = f":{condition['slot']}" if condition["slot"] else ""
-                        affected_versions.append(f"{range_symbol} [bold]{condition['value']}{slot_info}[/bold]")
-
-                    details += f"[red][b]Affected versions:[/] {', '.join(affected_versions)}[/red]\n"
-
-                # Render unaffected versions
-                if package.unaffected_conditions:
-                    unaffected_versions: list[str] = []
-                    for condition in package.unaffected_conditions:
-                        range_symbol: str = _get_range_symbol(condition["range"])
-                        slot_info = f":{condition['slot']}" if condition["slot"] else ""
-                        unaffected_versions.append(f"{range_symbol} [bold]{condition['value']}{slot_info}[/bold]")
-
-                    details += f"[green][b]Unaffected versions:[/] {', '.join(unaffected_versions)}[/green]\n"
-
-                details += "\n"  # Add spacing between packages
-
-        if self.selected_glsa.background:
-            details += f"[b]Background:[/]\n{self.selected_glsa.background}\n\n"
-
-        if self.selected_glsa.description:
-            details += f"[b]Description:[/]\n{self.selected_glsa.description}\n\n"
-
-        if self.selected_glsa.impact:
-            details += f"[b]Impact:[/]\n{self.selected_glsa.impact}\n\n"
-
-        if self.selected_glsa.workaround:
-            details += f"[b]Workaround:[/]\n{self.selected_glsa.workaround}\n\n"
-
-        # Render resolutions
-        if self.selected_glsa.resolutions:
-            details += "[b]Resolution:[/]\n"
-
-            for i, resolution in enumerate(self.selected_glsa.resolutions, 1):
-                if resolution.text:
-                    details += f"{resolution.text}\n"
-
-                if resolution.code:
-                    details += f"[dim]{resolution.code}[/dim]\n"
-
-                # Add spacing between multiple resolutions, but not after the last one
-                if i < len(self.selected_glsa.resolutions):
-                    details += "\n"
-
-        if self.selected_glsa.references:
-            details += "[b]References:[/]\n"
-            for ref in self.selected_glsa.references:
-                details += f"  • {ref}\n"
-            details += "\n"
-
-        if self.selected_glsa.bugs:
-            details += "[b]Bugzilla entries:[/]\n"
-            for bug in self.selected_glsa.bugs:
-                details += f"  • [link='https://bugs.gentoo.org/{bug}']{bug}[/link]\n"
-
-        content_widget.update(details)
+        self.query_one("#glsa-header", Static).update(format_glsa_header(self.selected_glsa))
+        self.query_one("#glsa-content", Static).update(format_glsa_details(self.selected_glsa))
 
         # Update button states
         self.update_button_states()
@@ -246,21 +154,3 @@ class GLSATab(TableTab):
         """Handle button presses."""
         if event.button.id == "fix-glsa-btn":
             self._action_fix_glsas()
-
-
-__symbols: dict[str, str] = {
-    "lt": "<",
-    "le": "≤",
-    "eq": "=",
-    "ge": "≥",
-    "gt": ">",
-    "rge": "≳",
-    "rle": "≲",
-    "rgt": ">~",
-    "rlt": "<~",
-}
-
-
-def _get_range_symbol(range_str: str) -> str:
-    """Convert range operator to symbol."""
-    return __symbols.get(range_str, range_str)
