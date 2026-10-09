@@ -7,11 +7,26 @@ from textual.timer import Timer
 from textual.widgets import DataTable, LoadingIndicator
 
 from carnage.core.config import Configuration, get_config
-from carnage.core.eix.search import Package, PackageVersion, search_packages
-from carnage.core.gentoolkit.package import GentoolkitPackage
+from carnage.core.eix.search import Package, search_packages
+from carnage.core.formatting import package_row_label
 from carnage.tui.widgets.browse.package_detail import PackageDetailWidget, default_version
 from carnage.tui.widgets.table import NavigableDataTable
 from carnage.tui.widgets.table_tab import TableTab
+
+
+def _exists_in_repo(package: Package) -> bool:
+    """
+    Whether eix can find the package in a repo.
+
+    Runs a portage query, so it belongs in a worker rather than in the row
+    loop of a widget update.
+    """
+    version = default_version(package)
+
+    if version is None:
+        return False
+
+    return version.to_gentoolkit(package.category, package.name).exists_f
 
 
 class BrowseTab(TableTab):
@@ -23,6 +38,7 @@ class BrowseTab(TableTab):
     def __init__(self) -> None:
         super().__init__()
         self.packages: list[Package] = []
+        self._missing_packages: frozenset[str] = frozenset()
         self._current_search: str = ""
         self._cancel_search: bool = False
         self._search_timer: Timer | None = None
@@ -77,8 +93,16 @@ class BrowseTab(TableTab):
 
         try:
             packages = search_packages(query)
+
+            # Resolve the "missing from every repo" mark here: it runs a
+            # portage query per row, which would stall the UI in the
+            # populate call below.
+            missing = frozenset(
+                package.full_name for package in packages if not package.is_installed() and not _exists_in_repo(package)
+            )
+
             if not self._cancel_search and self._current_search == query:
-                self.app.call_from_thread(self._populate_table, packages)
+                self.app.call_from_thread(self._populate_table, packages, missing)
         except Exception as e:
             if not self._cancel_search:
                 self.app.call_from_thread(self.notify, f"Search failed: {e}", severity="error")
@@ -101,8 +125,12 @@ class BrowseTab(TableTab):
         self.packages = []
         self._remove_detail_widget()
 
-    def _populate_table(self, packages: list[Package]) -> None:
+    def _populate_table(self, packages: list[Package], missing: frozenset[str] | None = None) -> None:
         self.packages = packages
+
+        if missing is not None:
+            self._missing_packages = missing
+
         table: DataTable = self.query_one("#browse-table", DataTable)
 
         table.clear()
@@ -121,19 +149,10 @@ class BrowseTab(TableTab):
             if len(description) > 80:
                 description = description[:77] + "..."
 
-            installed: bool = package.is_installed()
-            defo_version: PackageVersion = default_version(package)  # type: ignore
-
-            gt_pkg: GentoolkitPackage = defo_version.to_gentoolkit(package.category, package.name)
-
-            name_cell: str = (
-                f"[green]✓[/green] {package.category}/[bold]{package.name}[/bold]"
-                if installed
-                else (
-                    f"[red]✗[/red] {package.category}/[bold]{package.name}[/bold]"
-                    if not gt_pkg.exists_f
-                    else f"  {package.category}/[bold]{package.name}[/bold]"
-                )
+            name_cell: str = package_row_label(
+                package,
+                installed=package.is_installed(),
+                exists=package.full_name not in self._missing_packages,
             )
 
             table.add_row(

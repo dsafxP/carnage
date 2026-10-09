@@ -15,6 +15,7 @@ from textual.widgets._tree import TreeNode
 
 from carnage.core import Configuration, get_config
 from carnage.core.eix.search import Package, PackageVersion
+from carnage.core.formatting import format_package_details
 from carnage.core.gentoolkit.euse import euse_disable, euse_enable
 from carnage.core.gentoolkit.flag import get_all_cpv_usef
 from carnage.core.gentoolkit.package import GentoolkitPackage
@@ -216,27 +217,7 @@ class PackageDetailWidget(Widget):
 
     def _format_details(self) -> str:
         """Format the top-level package details block."""
-        pkg: Package = self.package
-        version_label: str = f" {self.selected_version.id}" if self.selected_version else ""
-        details: str = f"[r]{pkg.category}/[b]{pkg.name}[/][/]{version_label}\n\n"
-
-        if pkg.description:
-            details += f"{pkg.description}\n\n"
-
-        vers: PackageVersion | None = pkg.installed_version()
-
-        if vers and vers.install_date is not None:
-            from datetime import datetime
-
-            details += f"[green]Last installed at [b]{datetime.fromtimestamp(vers.install_date)}[/][/]\n\n"
-
-        if pkg.homepage:
-            details += f"[dim]{pkg.homepage}[/]\n\n"
-
-        if pkg.licenses:
-            details += f"[dim][b]License(s):[/] {', '.join(pkg.licenses)}[/]\n"
-
-        return details.rstrip()
+        return format_package_details(self.package, self.selected_version)
 
     def _load_ebuild(self) -> None:
         """Populate the Ebuild tab for the currently selected version."""
