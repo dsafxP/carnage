@@ -54,28 +54,54 @@ def default_version(package: Package) -> PackageVersion | None:
     return package.versions[0] if package.versions else None
 
 
-def _build_dep_tree(node: TreeNode[str], deps: list, current_depth: int = 0) -> None:
-    """Recursively build a Textual Tree from graph_depends() flat results."""
+def _dep_label(pkg) -> str:
+    """Label one dependency: pkg is either a gentoolkit Package or a bare atom."""
+    if isinstance(pkg, str):
+        category, _, name = pkg.partition("/")
+        return f"{category}/[bold]{name}[/bold]"
+
+    return f"{pkg.category}/[bold]{pkg.name}[/bold]-{pkg.version}"
+
+
+def _build_dep_tree(node: TreeNode[str], deps: list, index: int = 0, depth: int = 1) -> int:
+    """
+    Build a Textual Tree from graph_depends() flat DFS results.
+
+    Returns the index of the first entry this call did not consume. graph_depends
+    emits parents before their children, contiguously, so walking with a cursor
+    keeps each subtree attached to its own node: testing depths against the whole
+    list gave every sibling the children of the first one.
+
+    Args:
+        node: Tree node to populate.
+        deps: Flat [(depth, pkg), ...] results from graph_depends().
+        index: Where this subtree starts in ``deps``.
+        depth: Depth of the entries this level consumes.
+
+    Returns:
+        Index of the first entry belonging to an enclosing level.
+    """
     config: Configuration = get_config()
+    position = index
 
-    for dep_depth, pkg in deps:
-        if dep_depth != current_depth + 1:
-            continue
+    while position < len(deps):
+        dep_depth, pkg = deps[position]
 
-        # pkg is either a gentoolkit Package or a bare atom string
-        if isinstance(pkg, str):
-            category, _, name = pkg.partition("/")
-            label = f"{category}/[bold]{name}[/bold]"
-        else:
-            label = f"{pkg.category}/[bold]{pkg.name}[/bold]-{pkg.version}"
+        if dep_depth < depth:
+            # Back at an enclosing level: these entries are siblings of ours.
+            break
 
-        has_children: bool = any(d == current_depth + 2 for d, _ in deps)
+        position += 1
+        label = _dep_label(pkg)
 
-        if has_children:
+        # Children, if any, follow the parent immediately at depth + 1.
+        if position < len(deps) and deps[position][0] == depth + 1:
             child: TreeNode[str] = node.add(label, expand=config.expand)
-            _build_dep_tree(child, deps, dep_depth)
+            position = _build_dep_tree(child, deps, position, depth + 1)
         else:
             node.add_leaf(label)
+
+    return position
 
 
 def _build_file_tree(node: TreeNode[str], prefix: str, contents: dict) -> None:
