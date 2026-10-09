@@ -26,6 +26,8 @@ dev = [
     "textual-dev>=1.8.0",
     "ruff>=0.15.10",
     "prek>=0.3.9",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
 ]
 
 [project.scripts]
@@ -35,3 +37,7 @@ carnage = "carnage.main:main"
 notifications = [
     "desktop-notifier>=6.1.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
