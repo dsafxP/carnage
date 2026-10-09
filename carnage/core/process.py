@@ -55,11 +55,11 @@ class TrackedProcess:
             self.kwargs["stderr"] = subprocess.PIPE
 
         # subprocess.run() accepts a handful of convenience kwargs (capture_output,
-        # input, timeout) that subprocess.Popen does not understand - run() consumes
-        # them internally before constructing its own Popen. Since we construct
-        # Popen ourselves (to keep a handle on the process for tracking/signaling),
-        # we have to translate or intercept these the same way, rather than
-        # forwarding everything straight through to Popen.
+        # input, timeout, check) that subprocess.Popen does not understand - run()
+        # consumes them internally before constructing its own Popen. Since we
+        # construct Popen ourselves (to keep a handle on the process for
+        # tracking/signaling), we have to translate or intercept these the same way,
+        # rather than forwarding everything straight through to Popen.
         if self.kwargs.pop("capture_output", False):
             if "stdout" in self.kwargs and self.kwargs["stdout"] is not subprocess.PIPE:
                 raise ValueError("stdout and stderr arguments may not be used with capture_output.")
@@ -73,6 +73,8 @@ class TrackedProcess:
             if "stdin" in self.kwargs:
                 raise ValueError("stdin and input arguments may not both be used.")
             self.kwargs["stdin"] = subprocess.PIPE
+
+        check = bool(self.kwargs.pop("check", False))
 
         timeout = self.kwargs.pop("timeout", None)
 
@@ -102,7 +104,7 @@ class TrackedProcess:
             stderr=stderr,
         )
 
-        if self.kwargs.get("check", False) and returncode != 0:
+        if check and returncode != 0:
             raise subprocess.CalledProcessError(returncode, self.args, output=stdout, stderr=stderr)
 
         return self._result

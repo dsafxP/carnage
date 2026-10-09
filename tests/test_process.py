@@ -87,8 +87,28 @@ def test_terminate_all_escalates_to_sigkill() -> None:
     assert TrackedProcess._running_processes == {}
 
 
+def test_check_true_raises_called_process_error() -> None:
+    """check=True is intercepted instead of being forwarded to Popen."""
+    with pytest.raises(subprocess.CalledProcessError) as exc_info:
+        tracked_run(["sh", "-c", "exit 3"], check=True)
+
+    assert exc_info.value.returncode == 3
+
+
+def test_check_true_passes_on_success() -> None:
+    result = tracked_run(["sh", "-c", "exit 0"], check=True, text=True, capture_output=True)
+
+    assert result.returncode == 0
+
+
+def test_check_false_returns_the_failure() -> None:
+    result = tracked_run(["sh", "-c", "exit 3"])
+
+    assert result.returncode == 3
+
+
 def test_input_is_piped_to_the_process() -> None:
-    result = tracked_run(["cat"], input="hello", text=True)
+    result = tracked_run(["cat"], input="hello", text=True, check=True)
 
     assert result.returncode == 0
     assert result.stdout == "hello"
