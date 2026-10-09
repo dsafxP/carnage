@@ -2,7 +2,7 @@
 
 # Expose main classes and functions
 # args
-from carnage.core.args import config_path
+from carnage.core.args import get_config_path
 from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
 
@@ -69,7 +69,7 @@ __all__ = [
     "get_config",
     "Configuration",
     # args
-    "config_path",
+    "get_config_path",
     # Process
     "TrackedProcess",
     "tracked_run",

@@ -9,7 +9,7 @@ import tomlkit
 from tomlkit import TOMLDocument
 from tomlkit.exceptions import TOMLKitError
 
-from carnage.core.args import config_path as arg_cfg_path
+from carnage.core.args import get_config_path
 
 
 @dataclass
@@ -369,8 +369,8 @@ def get_commands_config(config_path: Path | None = None) -> CommandsConfiguratio
     global _commands_instance
 
     if _commands_instance is None:
-        if arg_cfg_path:
-            config_path = arg_cfg_path.parent / "commands.toml"
+        if cli_config_path := get_config_path():
+            config_path = cli_config_path.parent / "commands.toml"
         _commands_instance = CommandsConfiguration(config_path)
 
     return _commands_instance

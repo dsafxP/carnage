@@ -10,7 +10,7 @@ from tomlkit import TOMLDocument
 from tomlkit.exceptions import TOMLKitError
 from tomlkit.items import Table
 
-from carnage.core.args import config_path as arg_cfg_path
+from carnage.core.args import get_config_path
 
 # Default configuration as a constant
 _DEFAULT_CONFIG: Final[dict[str, Any]] = {
@@ -370,6 +370,6 @@ def get_config(config_path: Path | None = None) -> Configuration:
     global _config_instance
 
     if _config_instance is None:
-        _config_instance = Configuration(arg_cfg_path or config_path)
+        _config_instance = Configuration(config_path or get_config_path())
 
     return _config_instance

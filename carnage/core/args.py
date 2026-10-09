@@ -1,4 +1,5 @@
 import argparse
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -8,11 +9,11 @@ import carnage
 
 
 class __ArgsInit:
-    def __init__(self):
-        self.args = self._parse_args()
+    def __init__(self) -> None:
+        self.__namespace: argparse.Namespace | None = None
 
     @staticmethod
-    def _parse_args() -> argparse.Namespace:
+    def _build_parser() -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(prog=carnage.__name__, description=carnage.__doc__)
 
         # Version argument
@@ -38,16 +39,41 @@ class __ArgsInit:
             metavar="FILE",
         )
 
-        return parser.parse_args()
+        return parser
+
+    def parse(self, argv: Sequence[str] | None = None) -> argparse.Namespace:
+        """Parse the command line, unless it was already parsed."""
+        if self.__namespace is None:
+            self.__namespace = self._build_parser().parse_args(argv)
+        return self.__namespace
+
+    def reset(self) -> None:
+        """Forget the cached command line so it can be parsed again."""
+        self.__namespace = None
 
     def get_element(self, element: str) -> Any:
         """Returns the value of a command line argument"""
-        return getattr(self.args, element, None)
+        return getattr(self.parse(), element, None)
 
 
-# Initialize argument parser
 __args = __ArgsInit()
 
-# Public
-config_path: Path | None = __args.get_element("config")
-css_path: Path = __args.get_element("css")
+
+def parse_args(argv: Sequence[str] | None = None) -> None:
+    """Eagerly parse the command line so ``--help``/``--version`` exit before startup work."""
+    _ = __args.parse(argv)
+
+
+def reset_args() -> None:
+    """Discard the cached command line. Intended for tests."""
+    __args.reset()
+
+
+def get_config_path() -> Path | None:
+    """Path to the configuration file requested on the command line, if any."""
+    return __args.get_element("config")
+
+
+def get_css_path() -> Path:
+    """Path to the custom stylesheet requested on the command line."""
+    return __args.get_element("css")

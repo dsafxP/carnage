@@ -8,7 +8,7 @@ from textual.binding import Binding
 from textual.reactive import reactive
 from textual.screen import Screen
 
-from carnage.core.args import css_path as arg_custom_css_path
+from carnage.core.args import get_css_path
 from carnage.core.commands import (
     clear_cache,
     eix_remote_update,
@@ -46,8 +46,10 @@ class CarnageApp(App[None]):
 
         css_paths: list[str | PurePath] = ["styles.tcss"]
 
-        if arg_custom_css_path.exists():
-            css_paths.append(arg_custom_css_path)
+        custom_css_path = get_css_path()
+
+        if custom_css_path.exists():
+            css_paths.append(custom_css_path)
 
         super().__init__(css_path=css_paths)
 
