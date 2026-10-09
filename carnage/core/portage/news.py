@@ -9,7 +9,7 @@ from portage.news import NewsItem
 from portage.util import grabfile
 from textual.app import App
 
-from carnage.core.commands_config import get_commands_config
+from carnage.core.commands_config import get_commands_config, is_valid_component
 from carnage.core.operation import Operation
 from carnage.core.portage.portageq import ctx
 from carnage.core.unix import current_user_in_group
@@ -23,6 +23,7 @@ class News:
     """Represents a Gentoo news item."""
 
     index: int
+    name: str
     date: str
     title: str
     read: bool
@@ -167,6 +168,7 @@ def get_news() -> list[News]:
         news_items.append(
             News(
                 index=index,
+                name=item_name,
                 date=date,
                 title=metadata.get("title", item_name),
                 read=item_name in read,
@@ -183,18 +185,27 @@ def get_news() -> list[News]:
     return news_items
 
 
-def mark_news_read(app: App, news_index: int, on_complete: Callable[[bool], None] | None = None) -> None:
+def mark_news_read(app: App, news_name: str, on_complete: Callable[[bool], None] | None = None) -> None:
     """
     Mark a news item as read.
 
+    The item is identified by name rather than by position: eselect numbers the
+    full tracking set while the tab only lists the relevant items, so the two
+    index spaces drift apart and a number would mark the wrong item.
+
     Args:
         app: The Textual App instance
-        news_index: 1-based index of the news item to mark as read
+        news_name: Name of the news item to mark as read
         on_complete: Optional callback when operation finishes (receives success bool)
     """
+    if not is_valid_component(news_name):
+        # A name getopt could read as an option.
+        app.notify("Refused to mark a news item with an invalid name.", severity="error")
+        return
+
     cmd_config = get_commands_config()
     command = cmd_config.get_command(
-        "news.read", args=[str(news_index)], default_privilege=not current_user_in_group("portage")
+        "news.read", args=[news_name], default_privilege=not current_user_in_group("portage")
     )
 
     op = Operation(

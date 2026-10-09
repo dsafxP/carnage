@@ -187,6 +187,7 @@ class NewsTab(Widget):
             return
 
         news_index: int = self.selected_news.index
+        news_name: str = self.selected_news.name
 
         mark_read_btn.label = "Marking..."
 
@@ -208,7 +209,7 @@ class NewsTab(Widget):
             self.update_button_states()
             self.app.bell()
 
-        mark_news_read(self.app, news_index, on_complete=on_complete)
+        mark_news_read(self.app, news_name, on_complete=on_complete)
         self.update_button_states()
 
     def _action_mark_all_read(self) -> None:
