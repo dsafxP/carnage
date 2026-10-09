@@ -1,8 +1,10 @@
 """Overlays tab widget for managing Gentoo overlays."""
 
+from typing import ClassVar
+
 from textual import work
 from textual.app import ComposeResult
-from textual.binding import Binding
+from textual.binding import Binding, BindingType
 from textual.containers import Vertical, VerticalScroll
 from textual.coordinate import Coordinate
 from textual.widgets import Button, DataTable, LoadingIndicator, Static
@@ -11,6 +13,7 @@ from carnage.core.cache import get_cache_manager
 from carnage.core.config import get_config
 from carnage.core.eix.eix import has_remote_cache, is_found
 from carnage.core.portage.overlays import (
+    CACHE_KEY,
     Overlay,
     OverlayStatus,
     enable_and_sync_overlay,
@@ -28,7 +31,7 @@ class OverlaysTab(TableTab):
     TABLE_ID = "overlays-table"
     LOADING_ID = "overlays-loading"
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("r", "remove", "Remove", show=True),
         Binding("e", "enable_sync", "Enable & Sync", show=True),
         Binding("s", "sync", "Sync", show=True),
@@ -186,7 +189,7 @@ class OverlaysTab(TableTab):
 
         # Update cache
         cache_data = [overlay.to_dict() for overlay in self.overlays]
-        self.cache_manager.set("overlays_data", cache_data)
+        self.cache_manager.set(CACHE_KEY, cache_data)
 
     def _update_overlay_row(self, overlay_name: str, installed: bool) -> None:
         """Update a single row in the table without full refresh."""
