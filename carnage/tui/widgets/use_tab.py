@@ -52,6 +52,10 @@ class UseFlagsTab(Widget):
         """Debounced USE flag search — called by the parent on input changes."""
         config: Configuration = get_config()
 
+        # Drop any debounce still pending: clearing the box has to cancel the
+        # search scheduled for what was typed before it.
+        self._stop_pending_search()
+
         if not query.strip() or len(query.strip()) < config.use_minimum_characters:
             # Clear table when search is empty or too short
             self._clear_table()
@@ -59,15 +63,22 @@ class UseFlagsTab(Widget):
 
         self._current_search = query
 
-        if self._search_timer:
-            self._search_timer.stop()
-
         self._search_timer = self.set_timer(0.3, lambda: self._perform_search(query))
+
+    def _stop_pending_search(self) -> None:
+        """Drop a search that has been scheduled but has not started yet."""
+        if self._search_timer is not None:
+            self._search_timer.stop()
+            self._search_timer = None
 
     @work(exclusive=True, thread=True)
     async def _perform_search(self, query: str) -> None:
         """Perform USE flag search in a worker thread."""
-        self._cancel_search = True
+        if query != self._current_search:
+            # The box changed while this search's debounce timer was pending.
+            return
+
+        self._cancel_search = False
 
         loading: LoadingIndicator = self.query_one("#useflags-loading", LoadingIndicator)
         table: DataTable = self.query_one("#useflags-table", DataTable)
@@ -75,8 +86,6 @@ class UseFlagsTab(Widget):
         # Show loading indicator
         loading.display = True
         table.display = False
-
-        self._cancel_search = False
 
         try:
             # Load USE flags from cache or fetch fresh
@@ -92,7 +101,11 @@ class UseFlagsTab(Widget):
             if not self._cancel_search:
                 self.app.call_from_thread(self.notify, f"Search failed: {e}", severity="error")
         finally:
-            if not self._cancel_search:
+            # Hide only while this is still the live query: a newer search owns
+            # the indicator then, and a cleared box hides it in _clear_table.
+            # Unconditionally skipping this used to leave the spinner running
+            # forever whenever _cancel_search had been set meanwhile.
+            if self._current_search == query:
                 self.app.call_from_thread(self._hide_loading)
 
     @staticmethod
@@ -111,8 +124,13 @@ class UseFlagsTab(Widget):
 
     def _clear_table(self) -> None:
         """Clear the USE flags table."""
-        # Cancel any ongoing search
+        # Nothing will populate the table now: drop the pending search, forget
+        # the live query and put the loading indicator away ourselves, since
+        # the in-flight worker will no longer consider itself the current one.
+        self._stop_pending_search()
         self._cancel_search = True
+        self._current_search = ""
+        self._hide_loading()
 
         table: DataTable = self.query_one("#useflags-table", DataTable)
         table.clear()

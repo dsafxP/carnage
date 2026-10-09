@@ -42,29 +42,38 @@ class BrowseTab(Widget):
         """Debounced package search — called by the parent on input changes."""
         config: Configuration = get_config()
 
+        # Drop any debounce still pending: clearing the box has to cancel the
+        # search scheduled for what was typed before it.
+        self._stop_pending_search()
+
         if not query.strip() or len(query.strip()) < config.browse_minimum_characters:
             self._clear_table()
             return
 
         self._current_search = query
 
-        if self._search_timer:
-            self._search_timer.stop()
-
         self._search_timer = self.set_timer(0.3, lambda: self._perform_search(query))
+
+    def _stop_pending_search(self) -> None:
+        """Drop a search that has been scheduled but has not started yet."""
+        if self._search_timer is not None:
+            self._search_timer.stop()
+            self._search_timer = None
 
     @work(exclusive=True, thread=True)
     def _perform_search(self, query: str) -> None:
         """Perform package search in a worker thread."""
-        self._cancel_search = True
+        if query != self._current_search:
+            # The box changed while this search's debounce timer was pending.
+            return
+
+        self._cancel_search = False
 
         loading: LoadingIndicator = self.query_one("#browse-loading", LoadingIndicator)
         table: DataTable = self.query_one("#browse-table", DataTable)
 
         loading.display = True
         table.display = False
-
-        self._cancel_search = False
 
         try:
             packages = search_packages(query)
@@ -74,10 +83,19 @@ class BrowseTab(Widget):
             if not self._cancel_search:
                 self.app.call_from_thread(self.notify, f"Search failed: {e}", severity="error")
         finally:
-            if not self._cancel_search:
+            # Hide only while this is still the live query: a newer search owns
+            # the indicator then, and a cleared box hides it in _clear_table.
+            if self._current_search == query:
                 self.app.call_from_thread(self._hide_loading)
 
     def _clear_table(self) -> None:
+        # Nothing will populate the table now: drop the pending search, mark
+        # the in-flight one obsolete and put the loading indicator away.
+        self._stop_pending_search()
+        self._cancel_search = True
+        self._current_search = ""
+        self._hide_loading()
+
         table: DataTable = self.query_one("#browse-table", DataTable)
         table.clear()
         self.packages = []
