@@ -63,6 +63,37 @@ It allows advanced users to override the exact commands executed for various ope
 Variables \f(CR$1\fR, \f(CR$2\fR, etc. are replaced with arguments passed by carnage. The \f(CRprivilege\fR field controls whether the command needs escalation (uses \f(CRprivilege_backend\fR when \f(CRtrue\fR). The \f(CRenvironment\fR field sets additional environment variables for that command only.
 .PP
 This file is intended for advanced users only; incorrect configurations may cause operations to fail in unexpected ways.
+.SS
+privilege\_backend
+.PP
+\f(CRprivilege_backend\fR is a top-level key of \f(CRcommands.toml\fR and names the tool used to escalate privileged commands.
+.TS
+tab(|) expand allbox;
+lb lb
+ l l.
+T{
+Value
+T}|T{
+Behaviour
+T}
+T{
+\f(CR["run0"]\fR, \f(CR["pkexec"]\fR
+T}|T{
+Use that tool. Several entries are kept in order until one is available.
+T}
+T{
+not present
+T}|T{
+Detected at start-up: \f(CRrun0\fR, \f(CRpkexec\fR, \f(CRsudo\fR, \f(CRdoas\fR are tried in that order, and the result is written back to the file.
+T}
+T{
+\f(CR[]\fR
+T}|T{
+Escalation is disabled: privileged commands run with your own privileges, which almost never works for \f(CRemerge\fR.
+T}
+.TE
+.PP
+When no tool from the list is installed, commands marked \f(CRprivilege = true\fR are left unprivileged rather than failing at start-up, so a silent downgrade is worth checking for if operations begin to be refused.
 .PP
 The main configuration file uses the \c
 .UR https://toml.io/

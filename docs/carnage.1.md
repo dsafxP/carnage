@@ -40,6 +40,18 @@ Variables `$1`, `$2`, etc. are replaced with arguments passed by carnage. The `p
 
 This file is intended for advanced users only; incorrect configurations may cause operations to fail in unexpected ways.
 
+## privilege\_backend
+
+`privilege_backend` is a top-level key of `commands.toml` and names the tool used to escalate privileged commands.
+
+| Value                    | Behaviour                                                                                                                   |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| `["run0"]`, `["pkexec"]` | Use that tool. Several entries are kept in order until one is available.                                                     |
+| not present              | Detected at start-up: `run0`, `pkexec`, `sudo`, `doas` are tried in that order, and the result is written back to the file.   |
+| `[]`                     | Escalation is disabled: privileged commands run with your own privileges, which almost never works for `emerge`.             |
+
+When no tool from the list is installed, commands marked `privilege = true` are left unprivileged rather than failing at start-up, so a silent downgrade is worth checking for if operations begin to be refused.
+
 The main configuration file uses the [TOML](https://toml.io/) format and contains the following sections and options:
 
 ## [global]
