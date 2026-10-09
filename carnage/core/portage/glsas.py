@@ -216,14 +216,19 @@ def _parse_glsa_xml(glsa_id: str, xml_path: Path) -> GLSA | None:
 
 # Create a thread pool executor for blocking Portage calls
 _executor = ThreadPoolExecutor(max_workers=1)
+_QUERY_TIMEOUT = 30
 
 
 def _is_vulnerable(glsa_id: str) -> bool:
     """Check whether this GLSA affects the current system via the portage API."""
     try:
         future = _executor.submit(lambda: Glsa(glsa_id, ctx.settings, ctx.vardbapi, ctx.portdbapi).isVulnerable())
-        return future.result(timeout=30)
+        return future.result(timeout=_QUERY_TIMEOUT)
     except (GlsaArgumentException, GlsaFormatException, GlsaTypeException):
+        return False
+    except TimeoutError:
+        # A stalled portage query used to abort the caller's loop, which left
+        # the "Apply fixes" button disabled at "Applying..." forever.
         return False
 
 
@@ -267,16 +272,20 @@ def get_vulnerable_glsas_async(app: App, on_result: Callable[[list[str]], None])
         app: The Textual App instance
         on_result: Callback with the list of vulnerable GLSA IDs
     """
-    applied = set(get_applied_glsas(ctx.settings))
     vulnerable_ids: list[str] = []
 
-    for glsa_id in get_glsa_list(ctx.settings):
-        if glsa_id in applied:
-            continue
-        if _is_vulnerable(glsa_id):
-            vulnerable_ids.append(glsa_id)
+    try:
+        applied = set(get_applied_glsas(ctx.settings))
 
-    app.call_from_thread(on_result, vulnerable_ids)
+        for glsa_id in get_glsa_list(ctx.settings):
+            if glsa_id in applied:
+                continue
+            if _is_vulnerable(glsa_id):
+                vulnerable_ids.append(glsa_id)
+    finally:
+        # Always report back: the caller has already disabled its button and
+        # only this callback re-enables it.
+        app.call_from_thread(on_result, vulnerable_ids)
 
 
 def fix_glsas(app: App, on_complete: Callable[[bool], None] | None = None) -> None:
