@@ -54,11 +54,8 @@ class NewsTab(Widget):
     @work(exclusive=True, thread=True)
     def load_news(self) -> None:
         """Load news items from the system in a worker thread."""
-        loading: LoadingIndicator = self.query_one("#news-loading", LoadingIndicator)
-        table: DataTable = self.query_one("#news-table", DataTable)
-
-        loading.display = True
-        table.display = False
+        # Widgets are not thread-safe: every DOM touch goes through the loop.
+        self.app.call_from_thread(self._show_loading)
 
         try:
             # This runs in a thread, so it won't block the UI
@@ -118,6 +115,14 @@ class NewsTab(Widget):
             content_widget.update("Select a news item to view details")
 
         self.update_button_states()
+
+    def _show_loading(self) -> None:
+        """Show the loading indicator and hide the table (event loop only)."""
+        loading: LoadingIndicator = self.query_one("#news-loading", LoadingIndicator)
+        table: DataTable = self.query_one("#news-table", DataTable)
+
+        loading.display = True
+        table.display = False
 
     def _hide_loading(self) -> None:
         """Hide loading indicator and show table."""

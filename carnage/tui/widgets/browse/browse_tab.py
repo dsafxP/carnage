@@ -69,11 +69,8 @@ class BrowseTab(Widget):
 
         self._cancel_search = False
 
-        loading: LoadingIndicator = self.query_one("#browse-loading", LoadingIndicator)
-        table: DataTable = self.query_one("#browse-table", DataTable)
-
-        loading.display = True
-        table.display = False
+        # Widgets are not thread-safe: every DOM touch goes through the loop.
+        self.app.call_from_thread(self._show_loading)
 
         try:
             packages = search_packages(query)
@@ -142,6 +139,14 @@ class BrowseTab(Widget):
                 description,
                 key=str(i),
             )
+
+    def _show_loading(self) -> None:
+        """Show the loading indicator and hide the table (event loop only)."""
+        loading: LoadingIndicator = self.query_one("#browse-loading", LoadingIndicator)
+        table: DataTable = self.query_one("#browse-table", DataTable)
+
+        loading.display = True
+        table.display = False
 
     def _hide_loading(self) -> None:
         loading: LoadingIndicator = self.query_one("#browse-loading", LoadingIndicator)

@@ -125,11 +125,8 @@ class OverlaysTab(Widget):
     @work(exclusive=True, thread=True)
     async def load_overlays(self) -> None:
         """Load overlays from cache or fetch fresh data in a worker thread."""
-        loading: LoadingIndicator = self.query_one("#overlays-loading", LoadingIndicator)
-        table: DataTable = self.query_one("#overlays-table", DataTable)
-
-        loading.display = True
-        table.display = False
+        # Widgets are not thread-safe: every DOM touch goes through the loop.
+        self.app.call_from_thread(self._show_loading)
 
         try:
             # Get overlays from cache or fetch fresh with package counts
@@ -146,7 +143,7 @@ class OverlaysTab(Widget):
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Failed to load overlays: {e}", severity="error")
 
-            self.update_button_states()
+            self.app.call_from_thread(self.update_button_states)
         finally:
             self.app.call_from_thread(self._hide_loading)
 
@@ -170,6 +167,14 @@ class OverlaysTab(Widget):
                     severity="warning",
                     timeout=10,
                 )
+
+    def _show_loading(self) -> None:
+        """Show the loading indicator and hide the table (event loop only)."""
+        loading: LoadingIndicator = self.query_one("#overlays-loading", LoadingIndicator)
+        table: DataTable = self.query_one("#overlays-table", DataTable)
+
+        loading.display = True
+        table.display = False
 
     def _hide_loading(self) -> None:
         """Hide loading indicator and show table."""

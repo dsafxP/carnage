@@ -45,32 +45,32 @@ class GLSATab(Widget):
     @work(exclusive=True, thread=True)
     def load_glsas(self) -> None:
         """Load GLSAs from the system."""
-        loading: LoadingIndicator = self.query_one("#glsa-loading", LoadingIndicator)
-        table: DataTable = self.query_one("#glsa-table", DataTable)
-
-        loading.display = True
-        table.display = False
+        # Widgets are not thread-safe: every DOM touch goes through the loop.
+        self.app.call_from_thread(self._show_loading)
 
         try:
             glsa_items: list[GLSA] = fetch_glsas()
 
             if glsa_items:
-                tabbed_content: TabbedContent = self.screen.query_one(TabbedContent)
-                config: Configuration = get_config()
-
-                if tabbed_content.active != "glsas" and not config.ignore_warnings:
-                    self.app.call_from_thread(
-                        self.notify,
-                        "Found security advisories that affect the system. Please review ASAP!",
-                        severity="warning",
-                    )
-                    self.app.bell()
+                self.app.call_from_thread(self._warn_if_new_glsas)
 
             self.app.call_from_thread(self._populate_table, glsa_items)
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Failed to load GLSAs: {e}", severity="error")
         finally:
             self.app.call_from_thread(self._hide_loading)
+
+    def _warn_if_new_glsas(self) -> None:
+        """Ring the bell when advisories exist and their tab is not open."""
+        tabbed_content: TabbedContent = self.screen.query_one(TabbedContent)
+        config: Configuration = get_config()
+
+        if tabbed_content.active != "glsas" and not config.ignore_warnings:
+            self.notify(
+                "Found security advisories that affect the system. Please review ASAP!",
+                severity="warning",
+            )
+            self.app.bell()
 
     def _populate_table(self, glsa_items: list[GLSA]) -> None:
         """Populate the table with GLSA items (runs on main thread)."""
@@ -83,6 +83,14 @@ class GLSATab(Widget):
             table.add_row(glsa.id, glsa.product or "N/A", glsa.title or glsa.synopsis, key=glsa.id)
 
         self.update_button_states()
+
+    def _show_loading(self) -> None:
+        """Show the loading indicator and hide the table (event loop only)."""
+        loading: LoadingIndicator = self.query_one("#glsa-loading", LoadingIndicator)
+        table: DataTable = self.query_one("#glsa-table", DataTable)
+
+        loading.display = True
+        table.display = False
 
     def _hide_loading(self) -> None:
         """Hide loading indicator and show table."""
