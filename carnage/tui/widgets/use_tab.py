@@ -18,7 +18,7 @@ from carnage.tui.widgets.table import NavigableDataTable
 class UseFlagsTab(Widget):
     """Widget for browsing Gentoo USE flags."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.useflags: list[UseFlag] = []
         self.filtered_useflags: list[UseFlag] = []

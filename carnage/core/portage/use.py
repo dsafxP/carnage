@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
 from re import Match
-from typing import Any
 
 from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
@@ -39,7 +38,7 @@ class UseFlag:
         return cls(name=data["name"], description=data["description"])
 
 
-def _parse_flag_line(line: str) -> tuple[str | Any, ...] | None:
+def _parse_flag_line(line: str) -> tuple[str, ...] | None:
     """Parse a single USE flag description line.
 
     Returns:
@@ -56,7 +55,7 @@ def _parse_flag_line(line: str) -> tuple[str | Any, ...] | None:
     return None
 
 
-def _parse_local_flag_line(line: str) -> tuple[str | Any, ...] | None:
+def _parse_local_flag_line(line: str) -> tuple[str, ...] | None:
     """Parse a local USE flag description line.
 
     Handles both package-specific and global formats.
@@ -155,7 +154,7 @@ def get_or_cache_useflags(cache_manager: CacheManager, force_refresh: bool = Fal
     # Fetch fresh data
     useflag_names: list[str] = get_all_useflags()
     descriptions: dict[str, str] = _parse_useflag_descriptions()
-    useflags: list[Any] = []
+    useflags: list[UseFlag] = []
 
     for flag_name in useflag_names:
         # Skip flags that are only special characters

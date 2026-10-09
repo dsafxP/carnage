@@ -32,7 +32,7 @@ class OverlaysTab(Widget):
         Binding("s", "sync", "Sync", show=True),
     ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.overlays: list[Overlay] = []
         self.filtered_overlays: list[Overlay] = []

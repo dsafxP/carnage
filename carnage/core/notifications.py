@@ -1,4 +1,4 @@
-from typing import Optional
+from __future__ import annotations
 
 try:
     from desktop_notifier import DesktopNotifier
@@ -9,7 +9,7 @@ except ImportError:
     HAS_NOTIFICATIONS = False
 
 
-def get_notifier() -> Optional["DesktopNotifier"]:
+def get_notifier() -> DesktopNotifier | None:
     """Get a DesktopNotifier instance configured for carnage."""
     if not HAS_NOTIFICATIONS:
         return None

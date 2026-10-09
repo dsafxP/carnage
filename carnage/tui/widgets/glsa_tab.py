@@ -14,7 +14,7 @@ from carnage.tui.widgets.table import NavigableDataTable
 class GLSATab(Widget):
     """Widget for displaying and managing Gentoo Linux Security Advisories."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.glsa_items: list[GLSA] = []
         self.selected_glsa: GLSA | None = None

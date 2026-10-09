@@ -21,7 +21,7 @@ class NewsTab(Widget):
         Binding("p", "purge", "Purge Read", show=True),
     ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.news_items: list[News] = []
         self.selected_news: News | None = None
