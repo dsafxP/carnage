@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "carnage"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
