@@ -87,7 +87,7 @@ def generate_default_privilege_backend() -> str:
     return detect_backend() or ""
 
 
-async def cancel_all_operations() -> None:
+async def cancel_all_operations() -> list["Operation"]:
     """
     Cancel all currently running operations.
 
@@ -95,17 +95,26 @@ async def cancel_all_operations() -> None:
     then force-kills any that have not exited. Also cancels their Textual workers.
 
     Safe to call when no operations are running.
+
+    Returns:
+        The operations whose child process could not be confirmed stopped.
     """
     if not _active_operations:
-        return
+        return []
 
     _log.info("Cancelling %d active operation(s).", len(_active_operations))
 
     # Snapshot the list - entries remove themselves from _active_operations
     # once their worker finishes, so iterate over a copy.
     ops = list(_active_operations)
+
+    survivors: list[Operation] = []
+
     for op in ops:
-        await op.cancel()
+        if not await op.cancel():
+            survivors.append(op)
+
+    return survivors
 
 
 class OperationError(Exception):
@@ -215,7 +224,44 @@ class Operation:
 
         return returncode
 
-    async def cancel(self) -> None:
+    def _signal_group(self, signum: int) -> bool:
+        """
+        Send ``signum`` to the child's process group.
+
+        Returns:
+            True when the process group was reached, False when the child was
+            already gone or could not be signaled.
+        """
+        if self._process is None or self._process.returncode is not None:
+            return False
+
+        pid = self._process.pid
+
+        try:
+            pgid = os.getpgid(pid)
+            os.killpg(pgid, signum)
+        except ProcessLookupError:
+            return False  # Process already gone.
+        except PermissionError:
+            # Can't signal the process group (e.g. pkexec owns it); fall back to
+            # signaling the wrapper directly and hope the child follows.
+            _log.warning("Cannot signal process group for pid=%d; falling back to the wrapper", pid)
+            try:
+                self._process.send_signal(signum)
+            except ProcessLookupError:
+                return False
+
+        return True
+
+    def _terminate_child(self) -> None:
+        """Best-effort synchronous SIGTERM of the child process group."""
+        if self._process is None or self._process.returncode is not None:
+            return
+
+        _log.info("Terminating operation %s (pid=%d)", self.cmd[0], self._process.pid)
+        self._signal_group(signal.SIGTERM)
+
+    async def cancel(self) -> bool:
         """
         Cancel this operation.
 
@@ -223,6 +269,14 @@ class Operation:
         (pkexec, sudo, doas) forward the signal to the child. Waits up to 5 seconds
         for a clean exit, then sends SIGKILL. Also cancels the Textual worker if one
         was started via start_in_app().
+
+        Note: under run0 the privileged command is owned by the service manager
+        rather than by this process, so the wrapper here can be stopped while the
+        command itself keeps running. That case is reported as "not confirmed".
+
+        Returns:
+            True when the child is confirmed to have exited (or never started),
+            False when it could not be stopped.
         """
         # Cancel the Textual worker first so the coroutine stops reading stdout
         # and does not race with us killing the process.
@@ -230,33 +284,31 @@ class Operation:
             self._worker.cancel()
 
         if self._process is None or self._process.returncode is not None:
-            return  # Already finished — nothing to do.
+            return True  # Already finished — nothing to do.
 
         pid = self._process.pid
         _log.info("Cancelling operation %s (pid=%d)", self.cmd[0], pid)
 
-        try:
-            pgid = os.getpgid(pid)
-            os.killpg(pgid, signal.SIGTERM)
-        except ProcessLookupError:
-            return  # Process already gone.
-        except PermissionError:
-            # Can't signal the process group (e.g. pkexec owns it); fall back to
-            # terminating the wrapper directly and hope the child follows.
-            _log.warning("Cannot signal process group for pid=%d; falling back to terminate()", pid)
-            self._process.terminate()
+        self._signal_group(signal.SIGTERM)
 
         try:
             await asyncio.wait_for(self._process.wait(), timeout=5.0)
         except TimeoutError:
             _log.warning("Process pid=%d did not exit after SIGTERM; sending SIGKILL", pid)
+            self._signal_group(signal.SIGKILL)
+
             try:
-                pgid = os.getpgid(pid)
-                os.killpg(pgid, signal.SIGKILL)
-            except ProcessLookupError:
+                await asyncio.wait_for(self._process.wait(), timeout=2.0)
+            except TimeoutError:
                 pass
 
+        survived = self._process.returncode is None
         self._process = None
+
+        if survived:
+            _log.warning("Operation %s (pid=%d) could not be stopped", self.cmd[0], pid)
+
+        return not survived
 
     def start_in_app(self, app: App, *, on_complete: Callable[[bool], None] | None = None) -> None:
         """
@@ -295,8 +347,17 @@ class Operation:
                 _log.info("Operation cancelled: %s", self.cmd[0])
                 if self._log_callback:
                     self._log_callback(b"\n[dim]Operation cancelled.[/]\n")
+
+                # The worker was cancelled without anyone calling cancel() - for
+                # instance because the app is exiting. Make sure the child does
+                # not outlive the UI.
+                self._terminate_child()
             except Exception as e:
                 _log.exception("Unexpected error in operation worker")
+
+                # Nobody will read this process' stdout any more, so leaving it
+                # running would orphan it behind an unblocked UI.
+                self._terminate_child()
 
                 app.notify(f"Internal error: {e}", severity="error")
             finally:

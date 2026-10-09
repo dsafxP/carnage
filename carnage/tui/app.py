@@ -55,6 +55,7 @@ class CarnageApp(App[None]):
 
         self.blocked = False
         self.tried_exit: bool = False
+        self.force_quit: bool = False
 
     def _tick(self) -> None:
         if self.blocked:
@@ -64,12 +65,29 @@ class CarnageApp(App[None]):
             self.sub_title = ""
             self._frame = 0
 
-    def _action_try_quit(self) -> None:
-        if self.blocked and not self.tried_exit and not self.__config.ignore_warnings:
+    async def _action_try_quit(self) -> None:
+        if not self.force_quit and self.blocked and not self.tried_exit and not self.__config.ignore_warnings:
             self.tried_exit = True
 
             self.notify(
                 "An operation is currently on-going. Press [b]ctrl+q[/] again to cancel and quit.", severity="error"
+            )
+
+            self.bell()
+
+            return
+
+        # Stop the children before leaving, otherwise they would keep running
+        # unobserved once the worker that streams their output is gone.
+        survivors = await cancel_all_operations()
+
+        if survivors and not self.force_quit:
+            self.force_quit = True
+
+            self.notify(
+                "An operation could not be stopped; a root process may still be running. "
+                "Press [b]ctrl+q[/] again to quit anyway.",
+                severity="error",
             )
 
             self.bell()
@@ -91,8 +109,18 @@ class CarnageApp(App[None]):
     async def on_unmount(self) -> None:
         TrackedProcess.terminate_all()
 
-        if self.blocked:
-            await cancel_all_operations()
+        # Don't gate this on app.blocked: the workers are cancelled before the
+        # unmount event reaches us, and their cleanup already cleared the flag.
+        await cancel_all_operations()
+
+    async def _cancel_all_operations(self) -> None:
+        """Cancel every running operation, reporting anything that survived."""
+        survivors = await cancel_all_operations()
+
+        if survivors:
+            self.notify("Some operations could not be stopped.", severity="error")
+        else:
+            self.notify("All operations cancelled.")
 
     def watch_theme(self, theme: str) -> None:
         """Watch for theme changes."""
@@ -139,5 +167,5 @@ class CarnageApp(App[None]):
             yield SystemCommand(
                 "Cancel all operations",
                 "Attempt to cancel all current operations and terminate their processes",
-                lambda: cancel_all_operations(),
+                lambda: self._cancel_all_operations(),
             )

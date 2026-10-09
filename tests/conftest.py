@@ -9,6 +9,7 @@ import pytest
 
 import carnage.core.commands_config as commands_config_module
 import carnage.core.config as config_module
+import carnage.core.operation as operation_module
 import carnage.core.process as process_module
 from carnage.core.args import parse_args, reset_args
 
@@ -22,6 +23,7 @@ def _reset_state() -> None:
 
     config_module._config_instance = None
     commands_config_module._commands_instance = None
+    operation_module._active_operations.clear()
     process_module.TrackedProcess._running_processes.clear()
 
 
@@ -31,6 +33,15 @@ def isolated_state() -> Iterator[None]:
     _reset_state()
     yield
     _reset_state()
+
+
+@pytest.fixture(autouse=True)
+def no_real_log_files() -> Iterator[None]:
+    """Keep operations from creating log files (and handlers) under ~/.local."""
+    handler_installed = operation_module._handler_installed
+    operation_module._handler_installed = True
+    yield
+    operation_module._handler_installed = handler_installed
 
 
 @pytest.fixture
