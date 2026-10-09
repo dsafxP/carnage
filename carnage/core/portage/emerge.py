@@ -4,9 +4,19 @@ from collections.abc import Callable
 
 from textual.app import App
 
-from carnage.core.commands_config import get_commands_config
+from carnage.core.commands_config import get_commands_config, is_valid_atom
 from carnage.core.operation import Operation
 from carnage.core.process import tracked_run
+
+
+def _reject_unsafe_atom(app: App, package_atom: str) -> bool:
+    """Refuse to build an emerge command from an atom getopt could read as an option."""
+    if is_valid_atom(package_atom):
+        return False
+
+    # Deliberately not echoing the value: it is untrusted and notify renders markup.
+    app.notify("Refused to run emerge with an invalid package atom.", severity="error")
+    return True
 
 
 def emerge_install(app: App, package_atom: str, on_complete: Callable[[bool], None] | None = None) -> None:
@@ -18,6 +28,9 @@ def emerge_install(app: App, package_atom: str, on_complete: Callable[[bool], No
         package_atom: Package atom to install (e.g., "app-editors/vim")
         on_complete: Optional callback when operation finishes (receives success bool)
     """
+    if _reject_unsafe_atom(app, package_atom):
+        return
+
     cmd_config = get_commands_config()
 
     try:
@@ -50,6 +63,9 @@ def emerge_uninstall(app: App, package_atom: str, on_complete: Callable[[bool], 
         package_atom: Package atom to uninstall (e.g., "app-editors/vim")
         on_complete: Optional callback when operation finishes (receives success bool)
     """
+    if _reject_unsafe_atom(app, package_atom):
+        return
+
     cmd_config = get_commands_config()
     command = cmd_config.get_command("emerge.uninstall", args=[package_atom], default_privilege=True)
 
@@ -70,6 +86,9 @@ def emerge_deselect(app: App, package_atom: str, on_complete: Callable[[bool], N
         package_atom: Package atom to remove from world file (e.g., "app-editors/vim")
         on_complete: Optional callback when operation finishes (receives success bool)
     """
+    if _reject_unsafe_atom(app, package_atom):
+        return
+
     cmd_config = get_commands_config()
     command = cmd_config.get_command("emerge.deselect", args=[package_atom], default_privilege=True)
 
@@ -90,6 +109,9 @@ def emerge_noreplace(app: App, package_atom: str, on_complete: Callable[[bool], 
         package_atom: Package atom to add to world file (e.g., "app-editors/vim")
         on_complete: Optional callback when operation finishes (receives success bool)
     """
+    if _reject_unsafe_atom(app, package_atom):
+        return
+
     cmd_config = get_commands_config()
     command = cmd_config.get_command("emerge.noreplace", args=[package_atom], default_privilege=True)
 

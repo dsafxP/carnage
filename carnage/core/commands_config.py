@@ -1,6 +1,8 @@
 """Command overrides configuration for Carnage using TOML."""
 
 import os
+import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -10,6 +12,34 @@ from tomlkit import TOMLDocument
 from tomlkit.exceptions import TOMLKitError
 
 from carnage.core.args import get_config_path
+
+# Values handed to a command as operands. A component must not start with "-"
+# or "." so getopt can never mistake it for an option.
+_COMPONENT_RE = re.compile(r"[A-Za-z0-9_+][A-Za-z0-9_+.-]*")
+
+# An optional version operator, a category, a name and an optional slot.
+_ATOM_RE = re.compile(
+    r"(?:[<>]=?|~|=)?[A-Za-z0-9_+][A-Za-z0-9_+.-]*/[A-Za-z0-9_+][A-Za-z0-9_+.-]*"
+    r"(?::[A-Za-z0-9_+][A-Za-z0-9_+.-]*)?"
+)
+
+# Programs whose "-c" argument is shell program text rather than plain data.
+_SHELLS: frozenset[str] = frozenset({"sh", "bash", "dash", "ksh", "zsh", "ash", "busybox"})
+
+
+def is_valid_component(value: str) -> bool:
+    """
+    Whether a repository, category, package or version name is safe as an argument.
+
+    Rejects anything that getopt would read as an option, plus whitespace,
+    separators and expansion syntax.
+    """
+    return _COMPONENT_RE.fullmatch(value) is not None
+
+
+def is_valid_atom(value: str) -> bool:
+    """Whether a package atom is safe to pass as an argument."""
+    return _ATOM_RE.fullmatch(value) is not None
 
 
 @dataclass
@@ -51,20 +81,20 @@ privilege_backend = []
 # privilege = true
 
 # [emerge.install]
-# command = ["emerge", "-v", "--nospinner", "$1"]
+# command = ["emerge", "-v", "--nospinner", "--", "$1"]
 # privilege = true
 
 # [emerge.noreplace]
-# command = ["emerge", "-vn", "--nospinner", "$1"]
+# command = ["emerge", "-vn", "--nospinner", "--", "$1"]
 # privilege = true
 
 # [emerge.uninstall]
-# command = ["emerge", "-vc", "--nospinner", "$1"]
+# command = ["emerge", "-vc", "--nospinner", "--", "$1"]
 # privilege = true
 # environment = { CLEAN_DELAY = "0" }
 
 # [emerge.deselect]
-# command = ["emerge", "-W", "$1"]
+# command = ["emerge", "-W", "--", "$1"]
 # privilege = true
 
 # [euse.enable]
@@ -84,7 +114,7 @@ privilege_backend = []
 # privilege = true
 
 # [glsa.fix]
-# command = ["glsa-check", "-vf", "$1"]
+# command = ["glsa-check", "-vf", "--", "$1"]
 # privilege = true
 
 # [news.read]
@@ -107,7 +137,7 @@ privilege_backend = []
 # privilege = true
 
 # [qlop.prediction]
-# command = ["qlop", "-pH", "$1"]
+# command = ["qlop", "-pH", "--", "$1"]
 """
 
     # Internal default commands for fallback
@@ -125,17 +155,17 @@ privilege_backend = []
             "command": ["emerge", "--sync"],
         },
         "emerge.install": {
-            "command": ["emerge", "-v", "--nospinner", "$1"],
+            "command": ["emerge", "-v", "--nospinner", "--", "$1"],
         },
         "emerge.noreplace": {
-            "command": ["emerge", "-vn", "--nospinner", "$1"],
+            "command": ["emerge", "-vn", "--nospinner", "--", "$1"],
         },
         "emerge.uninstall": {
-            "command": ["emerge", "-vc", "--nospinner", "$1"],
+            "command": ["emerge", "-vc", "--nospinner", "--", "$1"],
             "environment": {"CLEAN_DELAY": "0"},
         },
         "emerge.deselect": {
-            "command": ["emerge", "-W", "$1"],
+            "command": ["emerge", "-W", "--", "$1"],
         },
         "euse.enable": {
             "command": ["euse", "-p", "$1", "-E", "$2"],
@@ -150,7 +180,7 @@ privilege_backend = []
             "command": ["eclean-pkg"],
         },
         "glsa.fix": {
-            "command": ["glsa-check", "-vf", "$1"],
+            "command": ["glsa-check", "-vf", "--", "$1"],
         },
         "news.read": {
             "command": ["eselect", "news", "read", "--quiet", "$1"],
@@ -168,7 +198,7 @@ privilege_backend = []
             "command": ["eselect", "repository", "remove", "$1"],
         },
         "qlop.prediction": {
-            "command": ["qlop", "-pH", "$1"],
+            "command": ["qlop", "-pH", "--", "$1"],
         },
     }
 
@@ -240,14 +270,55 @@ privilege_backend = []
                 return default
         return current
 
+    def _shell_script_index(self, cmd: Sequence[str]) -> int | None:
+        """Index of shell program text passed as ``<shell> -c <program>``."""
+        for i in range(1, len(cmd) - 1):
+            if cmd[i] == "-c" and Path(cmd[i - 1]).name in _SHELLS:
+                return i + 1
+        return None
+
     def _substitute_args(self, cmd: list[str], args: list[str]) -> list[str]:
-        """Substitute $1, $2, etc. with actual arguments."""
+        """
+        Substitute $1, $2, etc. with actual arguments.
+
+        A value is never spliced into code: when the command is a shell script
+        (``sh -c <program>``) the values are handed to it as positional
+        parameters instead, so metacharacters coming from an overlay name or a
+        package atom stay inert data. Placeholders in ordinary argv elements are
+        substituted as before - those elements are passed verbatim to exec and
+        are never re-parsed.
+        """
+        if not args:
+            return list(cmd)
+
+        script_index = self._shell_script_index(cmd)
+
+        if script_index is not None:
+            # `sh -c <program>` reads $1.. from the words that follow the
+            # program, the first of which is bound to $0. Supply one when the
+            # command does not already provide it, so $1 keeps meaning the first
+            # real argument.
+            if script_index == len(cmd) - 1:
+                return [*cmd, Path(cmd[0]).name, *args]
+            return [*cmd, *args]
+
         result = []
+        used: set[int] = set()
+
         for part in cmd:
             substituted = part
-            for i, arg in enumerate(args, 1):
-                substituted = substituted.replace(f"${i}", arg)
+            # Descend so $10 is never clobbered by the $1 placeholder.
+            for i in range(len(args), 0, -1):
+                placeholder = f"${i}"
+                if placeholder in substituted:
+                    substituted = substituted.replace(placeholder, args[i - 1])
+                    used.add(i)
             result.append(substituted)
+
+        # Arguments without a placeholder become extra operands, which is how a
+        # variable number of values (several GLSA ids, several flags) is passed.
+        result.extend(arg for i, arg in enumerate(args, 1) if i not in used)
+
         return result
 
     @property

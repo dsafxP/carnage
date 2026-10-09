@@ -15,7 +15,7 @@ from lxml import etree
 from textual.app import App
 
 from carnage.core.cache import CacheManager
-from carnage.core.commands_config import get_commands_config
+from carnage.core.commands_config import get_commands_config, is_valid_component
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
 from carnage.core.operation import Operation
@@ -146,6 +146,17 @@ def is_overlay_installed(name: str) -> bool:
     return overlay_path.exists() and overlay_path.is_dir()
 
 
+def _reject_invalid_name(app: App, overlay_name: str) -> bool:
+    """Refuse to build a command from a name getopt could read as an option."""
+    if is_valid_component(overlay_name):
+        return False
+
+    # Deliberately not echoing the value: it is untrusted and notify renders
+    # markup.
+    app.notify("Refused to run a command with an invalid overlay name.", severity="error")
+    return True
+
+
 def remove_overlay(app: App, overlay_name: str, on_complete: Callable | None = None) -> None:
     """
     Remove an overlay using eselect repository remove.
@@ -155,6 +166,9 @@ def remove_overlay(app: App, overlay_name: str, on_complete: Callable | None = N
         overlay_name: Name of the overlay to remove
         on_complete: Optional callback when operation succeeds
     """
+    if _reject_invalid_name(app, overlay_name):
+        return
+
     cmd_config = get_commands_config()
     command = cmd_config.get_command("overlays.remove", args=[overlay_name], default_privilege=True)
 
@@ -175,6 +189,9 @@ def sync_overlay(app: App, overlay_name: str, on_complete: Callable | None = Non
         overlay_name: Name of the overlay to sync
         on_complete: Optional callback when operation succeeds
     """
+    if _reject_invalid_name(app, overlay_name):
+        return
+
     cmd_config = get_commands_config()
     command = cmd_config.get_command("overlays.sync", args=[overlay_name], default_privilege=True)
 
@@ -195,6 +212,9 @@ def enable_and_sync_overlay(app: App, overlay_name: str, on_complete: Callable |
         overlay_name: Name of the overlay to enable and sync
         on_complete: Optional callback when operation succeeds
     """
+    if _reject_invalid_name(app, overlay_name):
+        return
+
     cmd_config = get_commands_config()
     command = cmd_config.get_command("overlays.add", args=[overlay_name], default_privilege=True)
 
@@ -254,6 +274,11 @@ def _parse_overlay(repo_elem: etree._Element) -> Overlay | None:
     """Parse a single overlay from XML element."""
     name = repo_elem.xpath("string(name)")
     if not name:
+        return None
+
+    # The name ends up as an operand of privileged commands, so skip anything
+    # getopt could read as an option rather than as a repository name.
+    if not is_valid_component(name):
         return None
 
     # Get description

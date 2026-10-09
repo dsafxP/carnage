@@ -7,7 +7,7 @@ from subprocess import CompletedProcess
 from gentoolkit.cpv import CPV
 from lxml import etree
 
-from carnage.core.commands_config import CommandsConfiguration, get_commands_config
+from carnage.core.commands_config import CommandsConfiguration, get_commands_config, is_valid_component
 from carnage.core.eix.eix import has_remote_cache
 from carnage.core.gentoolkit.package import GentoolkitPackage
 from carnage.core.process import tracked_run
@@ -272,9 +272,20 @@ def _parse_version(version_elem: etree._Element) -> PackageVersion:
     )
 
 
-def _parse_package(package_elem: etree._Element, category: str) -> Package:
-    """Parse a package element from eix XML."""
+def _parse_package(package_elem: etree._Element, category: str) -> Package | None:
+    """
+    Parse a package element from eix XML.
+
+    Returns:
+        The package, or None when category/name cannot safely be used as a
+        command argument.
+    """
     name = package_elem.get("name", "")
+
+    # category/name become package atoms handed to privileged commands, so skip
+    # anything getopt could read as an option rather than as a package.
+    if not is_valid_component(category) or not is_valid_component(name):
+        return None
 
     desc_elem = package_elem.xpath("description")[0] if package_elem.xpath("description") else None
     homepage_elem = package_elem.xpath("homepage")[0] if package_elem.xpath("homepage") else None
@@ -345,8 +356,9 @@ def fetch_packages_by_query(query: list[str], append_cfg: bool = True) -> list[P
         # Get all packages in this category
         package_elems = category_elem.xpath("package")
         for package_elem in package_elems:
-            pkg: Package = _parse_package(package_elem, category_name)
-            packages.append(pkg)
+            pkg: Package | None = _parse_package(package_elem, category_name)
+            if pkg is not None:
+                packages.append(pkg)
 
     return packages
 

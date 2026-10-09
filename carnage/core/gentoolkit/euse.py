@@ -4,8 +4,18 @@ from collections.abc import Callable
 
 from textual.app import App
 
-from carnage.core.commands_config import get_commands_config
+from carnage.core.commands_config import get_commands_config, is_valid_atom
 from carnage.core.operation import Operation
+
+
+def _reject_unsafe_atom(app: App, package_atom: str) -> bool:
+    """Refuse to build an euse command from an atom getopt could read as an option."""
+    if is_valid_atom(package_atom):
+        return False
+
+    # Deliberately not echoing the value: it is untrusted and notify renders markup.
+    app.notify("Refused to run euse with an invalid package atom.", severity="error")
+    return True
 
 
 def euse_enable(
@@ -20,6 +30,9 @@ def euse_enable(
         package_atom: Package atom (e.g., "sys-apps/portage")
         on_complete: Optional callback when operation finishes (receives success bool)
     """
+    if _reject_unsafe_atom(app, package_atom):
+        return
+
     cmd_config = get_commands_config()
     command = cmd_config.get_command("euse.enable", args=[package_atom, " ".join(flags)], default_privilege=True)
 
@@ -43,6 +56,9 @@ def euse_disable(
         package_atom: Package atom (e.g., "sys-apps/portage")
         on_complete: Optional callback when operation finishes (receives success bool)
     """
+    if _reject_unsafe_atom(app, package_atom):
+        return
+
     cmd_config = get_commands_config()
     command = cmd_config.get_command("euse.disable", args=[package_atom, " ".join(flags)], default_privilege=True)
 
