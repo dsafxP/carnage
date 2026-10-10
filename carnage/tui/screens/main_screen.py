@@ -8,7 +8,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal
 from textual.screen import Screen
-from textual.widgets import Header, Input, RichLog, TabbedContent, TabPane
+from textual.widgets import Header, Input, TabbedContent, TabPane
 
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.eix import has_cache, is_found
@@ -16,6 +16,7 @@ from carnage.tui.widgets.browse.browse_tab import BrowseTab
 from carnage.tui.widgets.cachetabbedcontent import CachedTabbedContent
 from carnage.tui.widgets.glsa_tab import GLSATab
 from carnage.tui.widgets.news_tab import NewsTab
+from carnage.tui.widgets.operation_log import OperationLog
 from carnage.tui.widgets.overlay_tab import OverlaysTab
 from carnage.tui.widgets.use_tab import UseFlagsTab
 
@@ -31,7 +32,7 @@ class MainScreen(Screen):
         super().__init__()
         self.eix_available = False
         self.eix_cache_available = False
-        self._log_pane: RichLog | None = None
+        self._log_pane: OperationLog | None = None
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the screen."""
@@ -60,7 +61,7 @@ class MainScreen(Screen):
                     yield OverlaysTab()
 
             # Operation log on the right
-            yield RichLog(id="operation-log", markup=True, highlight=True, wrap=True)
+            yield OperationLog(id="operation-log", markup=True, highlight=True, wrap=True)
 
     def on_mount(self) -> None:
         """Check eix availability when screen is mounted."""
@@ -75,7 +76,7 @@ class MainScreen(Screen):
         if config.compact_mode:
             self.add_class("compact")
 
-        log_pane: RichLog = self.query_one("#operation-log", RichLog)
+        log_pane: OperationLog = self.query_one("#operation-log", OperationLog)
 
         # Hide by default
         log_pane.display = False
@@ -99,7 +100,7 @@ class MainScreen(Screen):
         log_pane = self._log_pane
 
         if log_pane is None:
-            log_pane = self._log_pane = self.query_one("#operation-log", RichLog)
+            log_pane = self._log_pane = self.query_one("#operation-log", OperationLog)
 
         config: Configuration = get_config()
 
@@ -107,14 +108,14 @@ class MainScreen(Screen):
             # Optionally auto-show log when operation starts
             log_pane.display = True
 
-        # RichLog automatically handles ANSI color codes
+        # The log renders ANSI color codes
         # Decode as latin-1 to preserve all bytes, then log
         try:
             line = raw_line.decode("utf-8", errors="replace").rstrip()
         except Exception:
             line = raw_line.decode("latin-1", errors="replace").rstrip()
 
-        # Write to RichLog - it will parse ANSI codes
+        # Write to the log - it will parse ANSI codes
         try:
             log_pane.write(line)
         except MarkupError:
@@ -242,5 +243,5 @@ class MainScreen(Screen):
 
     def _action_toggle_operation_log(self) -> None:
         """Toggle the operation log pane visibility."""
-        log_pane = self.query_one("#operation-log", RichLog)
+        log_pane = self.query_one("#operation-log", OperationLog)
         log_pane.display = not log_pane.display

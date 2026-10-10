@@ -107,6 +107,14 @@ Bindings are available for each button in a tab.
 |--------|-----------------------|
 | ctrl+l | Toggle log view pane. |
 
+## Log pane
+
+Only while the log view pane is focused.
+
+| Key | Description        |
+|-----|--------------------|
+| Del | Clear log output.  |
+
 ## News
 
 | Key | Description                 |
