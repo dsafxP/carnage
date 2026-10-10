@@ -409,7 +409,7 @@ class PackageDetailWidget(Widget):
         )
         self.query_one("#use-apply-btn", Button).disabled = not changed
 
-    @work(exclusive=True, thread=True)
+    @work(exclusive=True, thread=True, group="pkg-deps")
     def _load_deps(self) -> None:
         """Populate the Dependencies tab for the selected version."""
         if self.selected_version is None:
@@ -577,7 +577,7 @@ class PackageDetailWidget(Widget):
                 severity="warning",
             )
 
-    @work(exclusive=True, thread=True)
+    @work(exclusive=True, thread=True, group="pkg-world")
     def _load_world_file_status(self) -> None:
         """Check world file membership in a thread then refresh buttons."""
         self._in_world_file = self.package.is_in_world_file()
