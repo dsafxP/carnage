@@ -422,8 +422,12 @@ privilege_backend = []
         # Build full command with privilege escalation only.
         full_cmd = list(cmd_with_args)
 
-        if use_privilege and self.privilege_backend:
-            backend = list(self.privilege_backend)
+        # Read once: without the key in commands.toml every access re-runs
+        # backend detection (up to four shutil.which calls).
+        backend_config = self.privilege_backend
+
+        if use_privilege and backend_config:
+            backend = list(backend_config)
 
             # run0 builds the child's environment from the service manager, so
             # anything not handed over explicitly never reaches the command -
