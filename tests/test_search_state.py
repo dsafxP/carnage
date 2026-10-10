@@ -130,3 +130,24 @@ async def test_clearing_drops_the_pending_package_debounce(monkeypatch: pytest.M
         await pilot.pause(0.5)
 
         assert queried == []
+
+
+def test_useflag_details_render_packages() -> None:
+    """The join-based builder must render exactly what the loop did."""
+    from carnage.core.eix.search import Package
+
+    packages = [
+        Package(category="app-editors", name="vim", description=None, homepage=None, licenses=[], versions=[]),
+        Package(category="app-editors", name="nano", description=None, homepage=None, licenses=[], versions=[]),
+    ]
+
+    details = UseFlagsTab._format_useflag_details(UseFlag(name="gui", description="Desc"), 2, packages)
+
+    assert details == (
+        "[r]gui[/]\n\nDesc\n\n[b]Packages:[/] 2\n[b]Packages with this flag:[/]\n"
+        "  • app-editors/vim\n  • app-editors/nano\n"
+    )
+
+    empty = UseFlagsTab._format_useflag_details(UseFlag(name="gui", description=None), 0, [])
+
+    assert empty == "[r]gui[/]\n\n[b]Packages:[/] 0\n[red]No packages found with this flag[/]\n"
