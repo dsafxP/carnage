@@ -109,3 +109,34 @@ def test_mark_selected_skips_the_status_area() -> None:
 
 def test_mark_selected_falls_back_to_the_whole_label() -> None:
     assert PackageDetailWidget._mark_selected("9.0.0") == "[reverse]9.0.0[/]"
+
+
+async def test_reselecting_the_same_version_is_a_noop() -> None:
+    """Clicking the displayed version again restarts nothing and notifies nothing."""
+    app = _Harness(_package())
+    async with app.run_test() as pilot:
+        widget = app.query_one(PackageDetailWidget)
+        await pilot.pause(1.5)
+
+        table = widget.query_one("#pkg-versions-table", DataTable)
+        key = table._row_locations.get_key(0)
+        assert key is not None
+
+        def select() -> None:
+            widget.on_data_table_row_selected(DataTable.RowSelected(data_table=table, cursor_row=0, row_key=key))
+
+        select()
+        await pilot.pause(0.5)
+
+        calls: list[str] = []
+        notes: list[str] = []
+        widget._load_use_flags = lambda: calls.append("use")  # type: ignore[method-assign]
+        widget._load_deps = lambda: calls.append("deps")  # type: ignore[method-assign]
+        widget._load_ebuild = lambda: calls.append("ebuild")  # type: ignore[method-assign]
+        widget.notify = lambda *args, **kwargs: notes.append(str(args[0]))  # type: ignore[method-assign]
+
+        select()
+        await pilot.pause(0.5)
+
+        assert calls == []
+        assert notes == []

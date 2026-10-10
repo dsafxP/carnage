@@ -202,3 +202,30 @@ async def test_browse_table_draws_before_marks(monkeypatch: pytest.MonkeyPatch) 
         assert tab._missing_packages == frozenset({"app-editors/ghost"})
         assert "✗" not in str(tab.table.get_cell_at(Coordinate(0, 0)))
         assert "✗" in str(tab.table.get_cell_at(Coordinate(1, 0)))
+
+
+async def test_reselecting_the_same_use_flag_is_a_noop() -> None:
+    """Clicking the displayed flag again must not re-run its eix subprocess."""
+    from textual.widgets import DataTable
+
+    async with _UseTabHarness().run_test() as pilot:
+        tab = pilot.app.query_one(UseFlagsTab)
+        tab._populate_table([UseFlag(name="gui", description=None)])
+        await pilot.pause(0.1)
+
+        table = tab.query_one("#useflags-table", DataTable)
+        key = table._row_locations.get_key(0)
+        assert key is not None
+
+        def select() -> None:
+            tab.on_data_table_row_selected(DataTable.RowSelected(data_table=table, cursor_row=0, row_key=key))
+
+        calls: list[str] = []
+        tab._load_useflag_details = lambda useflag: calls.append(useflag.name)  # type: ignore[method-assign]
+
+        select()
+        await pilot.pause(0.3)
+        select()
+        await pilot.pause(0.3)
+
+        assert calls == ["gui"]

@@ -620,6 +620,11 @@ class PackageDetailWidget(Widget):
         if version is None:
             return
 
+        # Re-selecting the displayed version changes nothing: without this,
+        # every click restarted three workers and fired another notification.
+        if self.selected_version is not None and self.selected_version.id == version.id:
+            return
+
         self.selected_version = version
         self._apply_version_selection_marks()
         self._load_use_flags()

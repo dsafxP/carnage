@@ -191,12 +191,20 @@ class UseFlagsTab(TableTab):
         # Find the selected USE flag using the row index
         row_index = int(event.row_key.value)  # type: ignore
         if 0 <= row_index < len(self.filtered_useflags):
-            self.selected_useflag = self.filtered_useflags[row_index]
+            selected = self.filtered_useflags[row_index]
         else:
-            self.selected_useflag = None
+            selected = None
 
-        if self.selected_useflag is None:
+        if selected is None:
+            self.selected_useflag = None
             return
+
+        # Re-selecting the displayed flag changes nothing: without this,
+        # every click re-ran the details worker and its eix subprocess.
+        if self.selected_useflag is not None and self.selected_useflag.name == selected.name:
+            return
+
+        self.selected_useflag = selected
 
         # Load details in a worker thread to avoid freezing
         self._load_useflag_details(self.selected_useflag)
