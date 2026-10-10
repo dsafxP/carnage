@@ -30,6 +30,7 @@ class MainScreen(Screen):
         super().__init__()
         self.eix_available = False
         self.eix_cache_available = False
+        self._log_pane: RichLog | None = None
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the screen."""
@@ -84,9 +85,18 @@ class MainScreen(Screen):
         # Hide by default
         log_pane.display = False
 
+        # Resolved once: this is called for every streamed output line, and a
+        # selector parse plus DOM walk per line is what made verbose commands
+        # feel sluggish.
+        self._log_pane = log_pane
+
     def log_operation_output(self, raw_line: bytes) -> None:
         """Add raw output (with ANSI codes) to the RichLog widget."""
-        log_pane: RichLog = self.query_one("#operation-log", RichLog)
+        log_pane = self._log_pane
+
+        if log_pane is None:
+            log_pane = self._log_pane = self.query_one("#operation-log", RichLog)
+
         config: Configuration = get_config()
 
         if not log_pane.display and config.automatic_pane:

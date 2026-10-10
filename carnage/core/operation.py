@@ -234,9 +234,11 @@ class Operation:
         # Stream output lines as they arrive rather than buffering.
         assert process.stdout is not None
         async for raw_line in process.stdout:
-            line = raw_line.decode(errors="replace").rstrip()
-
-            _log.debug("%s", line)
+            # Decoding is only for the debug log below: the callback gets the
+            # raw bytes and decodes itself, so don't pay for it per line when
+            # debug logging is off (the default).
+            if _log.isEnabledFor(logging.DEBUG):
+                _log.debug("%s", raw_line.decode(errors="replace").rstrip())
 
             if self._log_callback:
                 self._log_callback(raw_line)
