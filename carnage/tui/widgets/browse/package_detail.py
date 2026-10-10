@@ -17,9 +17,8 @@ from textual.widgets._tree import TreeNode
 from carnage.core import Configuration, get_config
 from carnage.core.eix.search import Package, PackageVersion
 from carnage.core.formatting import format_package_details
+from carnage.core.gentoolkit import portage_lock
 from carnage.core.gentoolkit.euse import euse_disable, euse_enable
-from carnage.core.gentoolkit.flag import get_all_cpv_usef
-from carnage.core.gentoolkit.package import GentoolkitPackage, portage_lock
 from carnage.core.portage.emerge import (
     emerge_deselect,
     emerge_install,
@@ -31,6 +30,8 @@ from carnage.tui.widgets.table import NavigableDataTable
 
 if TYPE_CHECKING:
     from rich.console import RenderableType
+
+    from carnage.core.gentoolkit.package import GentoolkitPackage
 
 
 def default_version(package: Package) -> PackageVersion | None:
@@ -347,6 +348,8 @@ class PackageDetailWidget(Widget):
     @work(thread=True, group="pkg-use-flags")
     def _fetch_use_flags(self, version_id: str, flags: list[str]) -> None:
         """Ask portage which flags are enabled, off the event loop."""
+        from carnage.core.gentoolkit.flag import get_all_cpv_usef
+
         try:
             cpv_str: str = f"{self.package.category}/{self.package.name}-{version_id}"
 
@@ -459,6 +462,8 @@ class PackageDetailWidget(Widget):
     def _fetch_installed_files(self, version_id: str) -> None:
         """Read CONTENTS off the event loop; the tree itself builds on it."""
         from gentoolkit.cpv import CPV
+
+        from carnage.core.gentoolkit.package import GentoolkitPackage
 
         try:
             cpv_str: str = f"{self.package.category}/{self.package.name}-{version_id}"

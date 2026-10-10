@@ -4,10 +4,15 @@ These build Rich markup strings from parsed eix data only, so they live away
 from the widgets and can be tested without a running app.
 """
 
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from carnage.core.eix.search import Package, PackageVersion
-from carnage.core.portage.glsas import GLSA
+
+if TYPE_CHECKING:
+    from carnage.core.portage.glsas import GLSA
 
 
 def format_package_details(package: Package, selected_version: PackageVersion | None) -> str:

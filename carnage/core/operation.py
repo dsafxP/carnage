@@ -1,15 +1,5 @@
 """User operation execution with privilege escalation and logging."""
 
-try:
-    from desktop_notifier import DesktopNotifier
-    from desktop_notifier.common import Urgency
-
-    from carnage.core.notifications import get_notifier
-
-    HAS_NOTIFICATIONS = True
-except ImportError:
-    HAS_NOTIFICATIONS = False
-
 import asyncio
 import logging
 import os
@@ -412,16 +402,25 @@ class Operation:
             if on_complete:
                 on_complete(success)
 
-            can_notify: bool = HAS_NOTIFICATIONS and not app.app_focus
+            # Imported here rather than at module scope: desktop notifications
+            # are only needed when an operation finishes while the app is
+            # unfocused, so there is no reason to pay for them at startup.
+            if not app.app_focus:
+                try:
+                    from desktop_notifier.common import Urgency
 
-            if can_notify:
-                notifier: DesktopNotifier = get_notifier()  # type: ignore
+                    from carnage.core.notifications import get_notifier
+                except ImportError:
+                    _log.debug("Desktop notifications unavailable")
+                else:
+                    notifier = get_notifier()
 
-                await notifier.send(
-                    title="Operation completed!",
-                    message=f"Command finished: {' '.join(self.cmd)}",
-                    urgency=Urgency.Normal if success else Urgency.Critical,
-                )
+                    if notifier is not None:
+                        await notifier.send(
+                            title="Operation completed!",
+                            message=f"Command finished: {' '.join(self.cmd)}",
+                            urgency=Urgency.Normal if success else Urgency.Critical,
+                        )
 
         self._worker = app.run_worker(_worker(), exclusive=True)
 

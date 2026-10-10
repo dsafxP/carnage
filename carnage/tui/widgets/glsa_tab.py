@@ -1,5 +1,9 @@
 """GLSAs tab widget for displaying and managing Gentoo Linux Security Advisories."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
@@ -7,9 +11,11 @@ from textual.widgets import Button, DataTable, LoadingIndicator, Rule, Static, T
 
 from carnage.core.config import Configuration, get_config
 from carnage.core.formatting import format_glsa_details, format_glsa_header
-from carnage.core.portage.glsas import GLSA, fetch_glsas, fix_glsas_by_ids
 from carnage.tui.widgets.table import NavigableDataTable
 from carnage.tui.widgets.table_tab import TableTab
+
+if TYPE_CHECKING:
+    from carnage.core.portage.glsas import GLSA
 
 
 class GLSATab(TableTab):
@@ -49,6 +55,8 @@ class GLSATab(TableTab):
     @work(exclusive=True, thread=True)
     def load_glsas(self) -> None:
         """Load GLSAs from the system."""
+        from carnage.core.portage.glsas import fetch_glsas
+
         # Widgets are not thread-safe: every DOM touch goes through the loop.
         self.app.call_from_thread(self._show_loading)
 
@@ -150,6 +158,8 @@ class GLSATab(TableTab):
 
         # The tab already holds exactly the vulnerable ids, so hand them over
         # directly instead of re-scanning every advisory first.
+        from carnage.core.portage.glsas import fix_glsas_by_ids
+
         fix_glsas_by_ids(self.app, [glsa.id for glsa in self.glsa_items], on_complete=on_complete)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:

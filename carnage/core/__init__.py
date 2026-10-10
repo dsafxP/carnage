@@ -6,9 +6,6 @@ from carnage.core.args import get_config_path
 from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
 
-# GLSA management
-from carnage.core.portage.glsas import GLSA, fetch_glsas, fix_glsas, fix_glsas_by_ids
-
 # News management
 from carnage.core.portage.news import (
     News,
@@ -37,6 +34,25 @@ from carnage.core.portage.use import UseFlag, get_or_cache_useflags
 
 # Process
 from carnage.core.process import TrackedProcess, tracked_run
+
+# GLSA management is resolved lazily: portage.glsa is the single most
+# expensive import in the tree, and nothing needs it before the first
+# advisory scan runs in a worker.
+_LAZY_GLSA = "carnage.core.portage.glsas"
+
+
+def __getattr__(name: str) -> object:
+    """Load the GLSA names on first use (PEP 562)."""
+    if name in {"GLSA", "fetch_glsas", "fix_glsas", "fix_glsas_by_ids"}:
+        import importlib
+
+        module = importlib.import_module(_LAZY_GLSA)
+        value = getattr(module, name)
+        globals()[name] = value
+        return value
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 # Grouped by feature rather than alphabetically, which is what a reader wants
 # here; ruff would flatten it.

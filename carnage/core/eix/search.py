@@ -1,17 +1,21 @@
 """Package search functionality using direct eix queries."""
 
+from __future__ import annotations
+
 import subprocess
 from dataclasses import dataclass, field
 from functools import lru_cache
 from subprocess import CompletedProcess
+from typing import TYPE_CHECKING
 
-from gentoolkit.cpv import CPV
 from lxml import etree
 
 from carnage.core.commands_config import CommandsConfiguration, get_commands_config, is_valid_component
 from carnage.core.eix.eix import has_remote_cache
-from carnage.core.gentoolkit.package import GentoolkitPackage
 from carnage.core.process import tracked_run
+
+if TYPE_CHECKING:
+    from carnage.core.gentoolkit.package import GentoolkitPackage
 
 
 @lru_cache(maxsize=1024)
@@ -25,6 +29,10 @@ def _gentoolkit_package(cpv_str: str) -> GentoolkitPackage:
     stale mid-session, but installs flip the version's own installed flag
     (from fresh eix data), which is what the views key off.
     """
+    from gentoolkit.cpv import CPV
+
+    from carnage.core.gentoolkit.package import GentoolkitPackage
+
     return GentoolkitPackage(CPV(cpv_str))
 
 
