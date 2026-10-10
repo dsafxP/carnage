@@ -51,11 +51,56 @@ async def test_overlays_mount_starts_no_load_but_ensure_does_once(monkeypatch: p
         await pilot.pause(0.3)
 
         assert calls == []
+        # No load runs, so no spinner either: the table sits visible.
+        assert tab.query_one("#overlays-loading").display is False
+        assert tab.query_one("#overlays-table").display is True
 
         tab.ensure_loaded()
         tab.ensure_loaded()
 
         assert calls == ["load"]
+
+
+async def test_overlays_failed_start_stays_unloaded(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A worker that never starts must not park the tab as loaded."""
+
+    def boom(self: OverlaysTab) -> None:
+        raise RuntimeError("no workers here")
+
+    monkeypatch.setattr(OverlaysTab, "load_overlays", boom)
+
+    async with _OverlaysHarness().run_test() as pilot:
+        tab = pilot.app.query_one(OverlaysTab)
+        tab.ensure_loaded()
+        await pilot.pause(0.1)
+
+        assert tab._loaded is False
+        assert tab.query_one("#overlays-loading").display is False
+
+
+async def test_overlays_failed_load_retries_on_revisit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A failed load clears the flag so the next activation tries again."""
+    attempts: list[str] = []
+
+    def failing_fetch(_cache_manager: object) -> list:
+        attempts.append("fetch")
+        raise RuntimeError("net down")
+
+    monkeypatch.setattr(overlay_tab_module, "get_or_cache", failing_fetch)
+
+    async with _OverlaysHarness().run_test() as pilot:
+        tab = pilot.app.query_one(OverlaysTab)
+        tab.ensure_loaded()
+        await pilot.pause(0.5)
+
+        assert attempts == ["fetch"]
+        assert tab._loaded is False
+        assert tab.query_one("#overlays-loading").display is False
+
+        tab.ensure_loaded()
+        await pilot.pause(0.5)
+
+        assert attempts == ["fetch", "fetch"]
 
 
 async def test_glsa_mount_starts_no_load_but_ensure_does_once(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -67,6 +112,8 @@ async def test_glsa_mount_starts_no_load_but_ensure_does_once(monkeypatch: pytes
         await pilot.pause(0.3)
 
         assert calls == []
+        assert tab.query_one("#glsa-loading").display is False
+        assert tab.query_one("#glsa-table").display is True
 
         tab.ensure_loaded()
         tab.ensure_loaded()

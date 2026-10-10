@@ -13,6 +13,7 @@ from textual.widgets import Button, DataTable, LoadingIndicator, Static
 from carnage.core.cache import get_cache_manager
 from carnage.core.config import get_config
 from carnage.core.eix.eix import has_remote_cache, is_found
+from carnage.core.gentoolkit import portage_lock
 from carnage.core.portage.overlays import (
     CACHE_KEY,
     Overlay,
@@ -67,6 +68,10 @@ class OverlaysTab(TableTab):
 
     def on_mount(self) -> None:
         """Set up the table; data loads on first activation."""
+        # Park the spinner until a load actually starts: nothing else hides
+        # it if activation never reaches ensure_loaded().
+        self._hide_loading()
+
         table: DataTable = self.query_one("#overlays-table", DataTable)
 
         # Only show package count column if counting is enabled
@@ -77,9 +82,17 @@ class OverlaysTab(TableTab):
 
     def ensure_loaded(self) -> None:
         """Start the first load, once, instead of at mount."""
-        if not self._loaded:
-            self._loaded = True
+        if self._loaded:
+            return
+
+        try:
             self.load_overlays()
+        except Exception:
+            # Worker never started: stay unloaded so the next activation
+            # retries instead of parking the spinner forever.
+            return
+
+        self._loaded = True
 
     def apply_filter(self, filter_text: str) -> None:
         """Apply search filter to overlays and update the table."""
@@ -167,8 +180,11 @@ class OverlaysTab(TableTab):
         self.app.call_from_thread(self._show_loading)
 
         try:
-            # Get overlays from cache or fetch fresh with package counts
-            overlays: list[Overlay] = get_or_cache(self.cache_manager)
+            # Get overlays from cache or fetch fresh with package counts.
+            # Portage is not thread-safe: serialize against the other workers
+            # (the news tab initializes the same trees at startup).
+            with portage_lock:
+                overlays: list[Overlay] = get_or_cache(self.cache_manager)
 
             # Update both full list and filtered list
             self.overlays = overlays
@@ -183,6 +199,9 @@ class OverlaysTab(TableTab):
             remote_cache_available: bool = has_remote_cache() if is_found() else False
             self.app.call_from_thread(self._maybe_notify_remote_cache, remote_cache_available)
         except Exception as e:
+            # Allow a later activation to retry instead of leaving the tab
+            # empty until restart.
+            self._loaded = False
             self.app.call_from_thread(self.notify, f"Failed to load overlays: {e}", severity="error")
 
             self.app.call_from_thread(self.update_button_states)

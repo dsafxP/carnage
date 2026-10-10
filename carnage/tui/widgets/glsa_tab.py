@@ -47,15 +47,27 @@ class GLSATab(TableTab):
 
     def on_mount(self) -> None:
         """Set up the table; data loads on first activation."""
+        # Park the spinner until a load actually starts: nothing else hides
+        # it if activation never reaches ensure_loaded().
+        self._hide_loading()
+
         table: DataTable = self.query_one("#glsa-table", DataTable)
 
         table.add_columns("ID", "Product", "Title")
 
     def ensure_loaded(self) -> None:
         """Start the first load, once, instead of at mount."""
-        if not self._loaded:
-            self._loaded = True
+        if self._loaded:
+            return
+
+        try:
             self.load_glsas()
+        except Exception:
+            # Worker never started: stay unloaded so the next activation
+            # retries instead of parking the spinner forever.
+            return
+
+        self._loaded = True
 
     @work(exclusive=True, thread=True)
     def load_glsas(self) -> None:
@@ -73,6 +85,9 @@ class GLSATab(TableTab):
 
             self.app.call_from_thread(self._populate_table, glsa_items)
         except Exception as e:
+            # Allow a later activation to retry instead of leaving the tab
+            # empty until restart.
+            self._loaded = False
             self.app.call_from_thread(self.notify, f"Failed to load GLSAs: {e}", severity="error")
         finally:
             self.app.call_from_thread(self._hide_loading)
