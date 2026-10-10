@@ -181,7 +181,7 @@ class Operation:
         self.env = env
         self._log_callback = log_callback
         self._process: Process | None = None
-        self._worker: Worker | None = None  # type: ignore[type-arg]
+        self._worker: Worker[None] | None = None
 
         _ensure_log_handler()
 
@@ -236,7 +236,8 @@ class Operation:
         await process.wait()
 
         elapsed = (datetime.now() - start).total_seconds()
-        returncode: int = process.returncode  # type: ignore[assignment]
+        assert process.returncode is not None
+        returncode: int = process.returncode
 
         # Send exit code footer to log callback
         if self._log_callback:
