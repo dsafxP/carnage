@@ -38,6 +38,11 @@ class UseFlag:
         return cls(name=data["name"], description=data["description"])
 
 
+# In-memory decoded USE flags. Reset whenever the on-disk cache is refreshed
+# (see below) and between tests.
+_useflags_memo: list[UseFlag] | None = None
+
+
 def _parse_flag_line(line: str) -> tuple[str, ...] | None:
     """Parse a single USE flag description line.
 
@@ -134,6 +139,10 @@ def get_or_cache_useflags(cache_manager: CacheManager, force_refresh: bool = Fal
     """
     Get USE flags with descriptions from cache or fetch fresh data.
 
+    The decoded list is memoized in memory: the tab calls this on every
+    keystroke, and re-reading plus re-decoding a ~463 KB msgpack file each
+    time is what made typing stutter.
+
     Args:
         cache_manager: CacheManager instance.
         force_refresh: If True, ignore cache and fetch fresh data.
@@ -141,15 +150,21 @@ def get_or_cache_useflags(cache_manager: CacheManager, force_refresh: bool = Fal
     Returns:
         List of UseFlag objects with descriptions.
     """
+    global _useflags_memo
+
     config: Configuration = get_config()
     max_age = timedelta(hours=config.use_cache_max_age)
 
     # Check cache first unless forced refresh
     if not force_refresh and cache_manager.exists(CACHE_KEY_USEFLAGS):
         if not cache_manager.is_stale(CACHE_KEY_USEFLAGS, max_age):
-            cached_data = cache_manager.get(CACHE_KEY_USEFLAGS)
-            if cached_data:
-                return [UseFlag.from_dict(data) for data in cached_data]
+            if _useflags_memo is None:
+                cached_data = cache_manager.get(CACHE_KEY_USEFLAGS)
+                if cached_data:
+                    _useflags_memo = [UseFlag.from_dict(data) for data in cached_data]
+
+            if _useflags_memo is not None:
+                return _useflags_memo
 
     # Fetch fresh data
     useflag_names: list[str] = get_all_useflags()
@@ -173,5 +188,13 @@ def get_or_cache_useflags(cache_manager: CacheManager, force_refresh: bool = Fal
     # Cache the results
     cache_data = [useflag.to_dict() for useflag in useflags]
     cache_manager.set(CACHE_KEY_USEFLAGS, cache_data)
+    _useflags_memo = useflags
 
     return useflags
+
+
+def invalidate_useflags_memo() -> None:
+    """Forget the in-memory USE flags so they are decoded again."""
+    global _useflags_memo
+
+    _useflags_memo = None
