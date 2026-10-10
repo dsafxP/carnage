@@ -1,7 +1,7 @@
 """Package detail widget with tabbed views for the Browse tab."""
 
 from pathlib import Path
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from textual import work
 from textual._context import NoActiveAppError
@@ -19,7 +19,7 @@ from carnage.core.eix.search import Package, PackageVersion
 from carnage.core.formatting import format_package_details
 from carnage.core.gentoolkit.euse import euse_disable, euse_enable
 from carnage.core.gentoolkit.flag import get_all_cpv_usef
-from carnage.core.gentoolkit.package import GentoolkitPackage
+from carnage.core.gentoolkit.package import GentoolkitPackage, portage_lock
 from carnage.core.portage.emerge import (
     emerge_deselect,
     emerge_install,
@@ -28,6 +28,9 @@ from carnage.core.portage.emerge import (
 )
 from carnage.tui.widgets.cachetabbedcontent import CachedTabbedContent
 from carnage.tui.widgets.table import NavigableDataTable
+
+if TYPE_CHECKING:
+    from rich.console import RenderableType
 
 
 def default_version(package: Package) -> PackageVersion | None:
@@ -221,7 +224,11 @@ class PackageDetailWidget(Widget):
         table = self.query_one("#pkg-versions-table", DataTable)
         table.add_columns("Version", "Overlay")
 
-        self._populate_versions_table()
+        # The loads below all block on portage or the disk, so each runs in
+        # its own worker and fills its pane when done. Workers never cancel
+        # each other (separate groups); a worker whose version is no longer
+        # selected drops its result instead of painting stale data.
+        self._load_versions_table()
 
         self._load_use_flags()
         self._load_deps()
@@ -238,43 +245,68 @@ class PackageDetailWidget(Widget):
 
     def _load_ebuild(self) -> None:
         """Populate the Ebuild tab for the currently selected version."""
+        if self.selected_version is None:
+            from rich.text import Text
+
+            self.query_one("#pkg-ebuild-content", Static).update(Text.from_markup("[red]No version selected.[/]"))
+            return
+
+        self._fetch_ebuild(self.selected_version.id)
+
+    @work(thread=True, group="pkg-ebuild")
+    def _fetch_ebuild(self, version_id: str) -> None:
+        """Read and highlight the ebuild off the event loop."""
         from rich.console import Group
         from rich.syntax import Syntax
         from rich.text import Text
 
-        ebuild_widget: Static = self.query_one("#pkg-ebuild-content", Static)
+        try:
+            version = next((v for v in self.package.versions if v.id == version_id), None)
 
-        if self.selected_version is None:
-            ebuild_widget.update(Text.from_markup("[red]No version selected.[/]"))
+            if version is None:
+                return
+
+            # Portage is not thread-safe: serialize against the other workers.
+            with portage_lock:
+                gt_pkg: GentoolkitPackage = version.to_gentoolkit(self.package.category, self.package.name)
+                path_str: str | None = gt_pkg.ebuild_path()
+
+            if not path_str:
+                renderable = Text.from_markup(
+                    f"[red]{self.package.category}/{self.package.name} ebuild path not found.[/]"
+                )
+            else:
+                path = Path(path_str)
+                header: Text = Text.from_markup(f"[dim][link=file://{path}]{path}[/][/]\n")
+
+                if not path.exists():
+                    renderable = Group(header, Text.from_markup(f"[red]{path} does not exist.[/]"))
+                else:
+                    content: str = path.read_text(encoding="utf-8", errors="replace").strip()
+
+                    if not content:
+                        renderable = Group(header, Text.from_markup(f"[red]{path} is empty.[/]"))
+                    else:
+                        config: Configuration = get_config()
+                        renderable = Group(
+                            header,
+                            Syntax(content, "bash", theme=config.syntax_style, line_numbers=True, word_wrap=False),
+                        )
+
+            self.app.call_from_thread(self._show_ebuild, version_id, renderable)
+        except Exception as e:
+            self.app.call_from_thread(self.notify, f"Failed to load ebuild: {e}", severity="error")
+
+    def _show_ebuild(self, version_id: str, renderable: "RenderableType") -> None:
+        """Display a fetched ebuild unless the selection moved on (event loop only)."""
+        if self.selected_version is None or self.selected_version.id != version_id:
             return
 
-        gt_pkg: GentoolkitPackage = self.selected_version.to_gentoolkit(self.package.category, self.package.name)
-        path_str: str | None = gt_pkg.ebuild_path()
-
-        if not path_str:
-            ebuild_widget.update(
-                Text.from_markup(f"[red]{self.package.category}/{self.package.name} ebuild path not found.[/]")
-            )
-            return
-
-        path = Path(path_str)
-        header: Text = Text.from_markup(f"[dim][link=file://{path}]{path}[/][/]\n")
-
-        if not path.exists():
-            ebuild_widget.update(Group(header, Text.from_markup(f"[red]{path} does not exist.[/]")))
-            return
-
-        content: str = path.read_text(encoding="utf-8", errors="replace").strip()
-
-        if not content:
-            ebuild_widget.update(Group(header, Text.from_markup(f"[red]{path} is empty.[/]")))
-            return
-
-        config: Configuration = get_config()
-
-        ebuild_widget.update(
-            Group(header, Syntax(content, "bash", theme=config.syntax_style, line_numbers=True, word_wrap=False))
-        )
+        try:
+            self.query_one("#pkg-ebuild-content", Static).update(renderable)
+        except NoMatches:
+            # The widget was removed while the worker was reading.
+            pass
 
     def _load_use_flags(self) -> None:
         """Populate the USE Flags tab for the currently selected version."""
@@ -303,22 +335,44 @@ class PackageDetailWidget(Widget):
             use_list.disabled = True
             return
 
-        cpv_str: str = f"{self.package.category}/{self.package.name}-{self.selected_version.id}"
-
-        portage_enabled: set[str]
-
         # euse fails on a virtual version
         if self.selected_version.virtual:
             apply_btn.display = False
             use_list.disabled = True
-            portage_enabled = set()
-        else:
-            portage_enabled = set(get_all_cpv_usef(cpv_str)[0])
+            self._show_use_flags(self.selected_version.id, sorted(flags), set())
+            return
+
+        self._fetch_use_flags(self.selected_version.id, sorted(flags))
+
+    @work(thread=True, group="pkg-use-flags")
+    def _fetch_use_flags(self, version_id: str, flags: list[str]) -> None:
+        """Ask portage which flags are enabled, off the event loop."""
+        try:
+            cpv_str: str = f"{self.package.category}/{self.package.name}-{version_id}"
+
+            # Portage is not thread-safe: serialize against the other workers.
+            with portage_lock:
+                portage_enabled = set(get_all_cpv_usef(cpv_str)[0])
+
+            self.app.call_from_thread(self._show_use_flags, version_id, flags, portage_enabled)
+        except Exception as e:
+            self.app.call_from_thread(self.notify, f"Failed to load USE flags: {e}", severity="error")
+
+    def _show_use_flags(self, version_id: str, flags: list[str], portage_enabled: set[str]) -> None:
+        """Fill the checklist unless the selection moved on (event loop only)."""
+        if self.selected_version is None or self.selected_version.id != version_id:
+            return
+
+        try:
+            use_list: SelectionList = self.query_one("#pkg-use-list", SelectionList)
+        except NoMatches:
+            # The widget was removed while portage was answering.
+            return
 
         # Only consider flags eix knows about
-        enabled_set: set[str] = portage_enabled & flags
+        enabled_set: set[str] = portage_enabled & set(flags)
 
-        for flag in sorted(flags):
+        for flag in flags:
             enabled: bool = flag in enabled_set
             self._use_flag_originals[flag] = enabled
             use_list.add_option(Selection(flag, flag, initial_state=enabled))
@@ -366,7 +420,9 @@ class PackageDetailWidget(Widget):
         config: Configuration = get_config()
 
         try:
-            results = dep.graph_depends(max_depth=config.depth)
+            # Portage is not thread-safe: serialize against the other workers.
+            with portage_lock:
+                results = dep.graph_depends(max_depth=config.depth)
         except Exception:
             results = []
 
@@ -393,21 +449,44 @@ class PackageDetailWidget(Widget):
 
     def _load_installed_files(self) -> None:
         """Populate the Installed Files tab. Loaded once on mount; version-agnostic."""
-        tree: Tree[str] = self.query_one("#pkg-files-tree", Tree)
-
         installed = self.package.installed_version()
         if installed is None:
             return  # Tab is disabled; nothing to do
 
+        self._fetch_installed_files(installed.id)
+
+    @work(thread=True, group="pkg-installed-files")
+    def _fetch_installed_files(self, version_id: str) -> None:
+        """Read CONTENTS off the event loop; the tree itself builds on it."""
         from gentoolkit.cpv import CPV
 
-        cpv_str: str = f"{self.package.category}/{self.package.name}-{installed.id}"
-        gt_pkg = GentoolkitPackage(CPV(cpv_str))
+        try:
+            cpv_str: str = f"{self.package.category}/{self.package.name}-{version_id}"
+            gt_pkg = GentoolkitPackage(CPV(cpv_str))
+
+            # Portage is not thread-safe: serialize against the other workers.
+            with portage_lock:
+                try:
+                    contents: dict = gt_pkg.parsed_contents()
+                except Exception:
+                    contents = {}
+
+            self.app.call_from_thread(self._show_installed_files, version_id, contents)
+        except Exception as e:
+            self.app.call_from_thread(self.notify, f"Failed to load installed files: {e}", severity="error")
+
+    def _show_installed_files(self, version_id: str, contents: dict) -> None:
+        """Fill the files tree unless the install state moved on (event loop only)."""
+        installed = self.package.installed_version()
+
+        if installed is None or installed.id != version_id:
+            return
 
         try:
-            contents: dict = gt_pkg.parsed_contents()
-        except Exception:
-            contents = {}
+            tree: Tree[str] = self.query_one("#pkg-files-tree", Tree)
+        except NoMatches:
+            # The widget was removed while portage was answering.
+            return
 
         if not contents:
             tree.root.add_leaf("[dim]No installed files found.[/dim]")
@@ -417,19 +496,47 @@ class PackageDetailWidget(Widget):
         _build_file_tree(tree.root, "", contents)
         tree.root.expand()
 
-    def _populate_versions_table(self) -> None:
-        table = self.query_one("#pkg-versions-table", DataTable)
+    def _load_versions_table(self) -> None:
+        """Fill the versions table without blocking the event loop."""
+        self._fetch_versions_table()
+
+    @work(thread=True, group="pkg-versions")
+    def _fetch_versions_table(self) -> None:
+        """Resolve every row's availability mark off the event loop."""
+        try:
+            rows: list[tuple[str, str, str]] = []
+
+            non_virtual_ids: set[str] = {v.id for v in self.package.versions if not v.virtual}
+
+            # Portage is not thread-safe: serialize against the other workers.
+            with portage_lock:
+                for i, version in enumerate(self.package.versions):
+                    if version.virtual and version.id in non_virtual_ids:
+                        continue
+                    rows.append(
+                        (
+                            f"{version.id}-{i}",
+                            self._version_label(version, self.package),
+                            version.repository or "gentoo",
+                        )
+                    )
+
+            self.app.call_from_thread(self._show_versions_table, rows)
+        except Exception as e:
+            self.app.call_from_thread(self.notify, f"Failed to load versions: {e}", severity="error")
+
+    def _show_versions_table(self, rows: list[tuple[str, str, str]]) -> None:
+        """Replace the versions table content (event loop only)."""
+        try:
+            table = self.query_one("#pkg-versions-table", DataTable)
+        except NoMatches:
+            # The widget was removed while portage was answering.
+            return
 
         table.clear()
 
-        non_virtual_ids: set[str] = {v.id for v in self.package.versions if not v.virtual}
-
-        for i, version in enumerate(self.package.versions):
-            if version.virtual and version.id in non_virtual_ids:
-                continue
-            label: str = self._version_label(version, self.package)
-            overlay: str = version.repository or "gentoo"
-            table.add_row(label, overlay, key=f"{version.id}-{i}")
+        for key, label, overlay in rows:
+            table.add_row(label, overlay, key=key)
 
     @staticmethod
     def _version_label(version: PackageVersion, pkg: Package) -> str:
@@ -533,7 +640,7 @@ class PackageDetailWidget(Widget):
             v.installed = v.id == version_id
         self._load_world_file_status()
         self._load_installed_files()
-        self._populate_versions_table()
+        self._load_versions_table()
         # Re-enable the files tab
         self.query_one("#tab-files").disabled = False
 
@@ -548,7 +655,7 @@ class PackageDetailWidget(Widget):
             v.installed = False
         self._in_world_file = None
         self._update_buttons()
-        self._populate_versions_table()
+        self._load_versions_table()
         # Disable the files tab since nothing is installed anymore
         self.query_one("#tab-files").disabled = True
 
@@ -643,7 +750,7 @@ class PackageDetailWidget(Widget):
                         for v in self.package.versions:
                             v.installed = v.id == self.selected_version.id
 
-                        self._populate_versions_table()
+                        self._load_versions_table()
                 except NoMatches:
                     # Selected version no longer exists in the updated package data
                     pass
