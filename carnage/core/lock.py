@@ -127,15 +127,17 @@ class InstanceLock:
 
     def _is_stale(self) -> bool:
         """Check if the socket file exists but no process is listening."""
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+
         try:
-            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             sock.connect(str(self.socket_path))
-            sock.close()
             return False  # connected fine, someone is home
         except ConnectionRefusedError:
             return True  # socket file exists but process is dead
         except OSError:
             return False  # something else, don't assume stale
+        finally:
+            sock.close()
 
     def release(self) -> None:
         """Release the lock and clean up the socket file, if we still own it."""

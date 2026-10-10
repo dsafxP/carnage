@@ -41,3 +41,11 @@ notifications = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+filterwarnings = [
+    # Vendored portage reads config["ARCH"] instead of .get() on every GLSA
+    # it examines; not ours to fix.
+    "ignore:Passing nonexistent key 'ARCH'.*:DeprecationWarning",
+    # desktop_notifier touches asyncio.DefaultEventLoopPolicy at import;
+    # slated for removal in Python 3.16, upstream's problem.
+    "ignore:.*DefaultEventLoopPolicy.*is deprecated.*:DeprecationWarning",
+]
