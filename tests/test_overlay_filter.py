@@ -80,7 +80,10 @@ async def test_filter_is_debounced_and_clearing_is_immediate() -> None:
 
 
 async def test_rows_use_the_stored_installed_flag() -> None:
-    """No filesystem stat: a name that exists nowhere must still get its mark."""
+    (
+        """No filesystem stat: a name that exists nowhere must still get its mark."""
+        """No filesystem stat: a name that exists nowhere must still get its mark."""
+    )
     app = _Harness()
 
     async with app.run_test():
@@ -97,3 +100,24 @@ async def test_rows_use_the_stored_installed_flag() -> None:
         assert table.row_count == 2
         assert "✓" in str(table.get_cell_at(Coordinate(0, 0)))
         assert "✓" not in str(table.get_cell_at(Coordinate(1, 0)))
+
+
+async def test_remote_cache_notification_needs_no_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The probe result is handed in, so notifying never touches the loop."""
+    app = _Harness()
+
+    async with app.run_test():
+        tab = app.query_one(OverlaysTab)
+        monkeypatch.setattr(tab._config, "ignore_warnings", False)
+        tab.overlays = [_overlay(f"overlay-{i}", installed=False) for i in range(9)]
+        for overlay in tab.overlays:
+            overlay.package_count = 0
+
+        notices: list[str] = []
+        tab.notify = lambda message, *args, **kwargs: notices.append(str(message))  # type: ignore
+
+        tab._maybe_notify_remote_cache(True)
+        assert len(notices) == 1
+
+        tab._maybe_notify_remote_cache(False)
+        assert len(notices) == 1

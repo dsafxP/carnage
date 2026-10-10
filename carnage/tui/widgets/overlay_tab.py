@@ -172,7 +172,11 @@ class OverlaysTab(TableTab):
             # Update UI back on main thread
             self.app.call_from_thread(self._populate_table)
 
-            self.app.call_from_thread(self.check_remote_cache_notification)
+            # The probe runs here, in the worker: call_from_thread executes on
+            # the event loop, and a subprocess there would stall the UI just as
+            # the table is repopulating.
+            remote_cache_available: bool = has_remote_cache() if is_found() else False
+            self.app.call_from_thread(self._maybe_notify_remote_cache, remote_cache_available)
         except Exception as e:
             self.app.call_from_thread(self.notify, f"Failed to load overlays: {e}", severity="error")
 
@@ -180,11 +184,8 @@ class OverlaysTab(TableTab):
         finally:
             self.app.call_from_thread(self._hide_loading)
 
-    def check_remote_cache_notification(self) -> None:
-        """Check if we should notify about clearing cache for remote overlays."""
-        eix_available: bool = is_found()
-        eix_cache_available: bool = has_remote_cache() if eix_available else False
-
+    def _maybe_notify_remote_cache(self, eix_cache_available: bool) -> None:
+        """Suggest clearing the cache when many overlays report zero packages."""
         # Check if remote cache is available and we have loaded overlays
         if eix_cache_available and self.overlays and not self._config.ignore_warnings:
             zero_package_overlays = []
