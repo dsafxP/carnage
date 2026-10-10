@@ -339,16 +339,18 @@ def fetch_packages_by_query(query: list[str], append_cfg: bool = True) -> list[P
     # Append the search query arguments
     cmd.extend(query)
 
-    result: CompletedProcess[str] = tracked_run(cmd, text=True)
+    result: CompletedProcess[bytes] = tracked_run(cmd)
 
     # eix exits 1 when nothing matches, and prints diagnostics rather than XML
     # when the cache is broken. Neither is an error for us - and recovering from
     # non-XML used to leave root as None, which then crashed on the xpath below.
+    # Bytes go straight to lxml: decoding to str first only to re-encode here
+    # copied a multi-megabyte document twice per query.
     if not result.stdout.strip():
         return []
 
     parser = etree.XMLParser(recover=True, remove_comments=True)
-    root = etree.fromstring(result.stdout.encode("utf-8"), parser=parser)
+    root = etree.fromstring(result.stdout, parser=parser)
 
     if root is None:
         return []

@@ -10,7 +10,11 @@ import carnage.core.eix.search as search_module
 import carnage.core.eix.use as use_module
 
 
-def _fake_result(stdout: str, returncode: int = 0) -> CompletedProcess[str]:
+def _fake_result(stdout: str, returncode: int = 0) -> CompletedProcess[bytes]:
+    return CompletedProcess(["eix"], returncode, stdout.encode(), b"")
+
+
+def _fake_text_result(stdout: str, returncode: int = 0) -> CompletedProcess[str]:
     return CompletedProcess(["eix"], returncode, stdout, "")
 
 
@@ -47,7 +51,7 @@ def test_use_flag_listing_checks_the_exit_status(monkeypatch: pytest.MonkeyPatch
 
     def fake_tracked_run(*args, **kwargs):
         seen.update(kwargs)
-        return _fake_result("flag-a\nflag-b\n")
+        return _fake_text_result("flag-a\nflag-b\n")
 
     monkeypatch.setattr(use_module, "tracked_run", fake_tracked_run)
 
