@@ -2,7 +2,7 @@
 
 from collections.abc import Iterable
 from pathlib import PurePath
-from typing import ClassVar
+from typing import ClassVar, cast
 
 from textual.app import App, SystemCommand
 from textual.binding import Binding, BindingType
@@ -162,7 +162,7 @@ class CarnageApp(App[None]):
         yield SystemCommand(
             "Toggle log view pane",
             "Display or hide the logging output view pane",
-            lambda: self.screen._action_toggle_operation_log(),  # type: ignore
+            lambda: cast(MainScreen, self.screen)._action_toggle_operation_log(),
         )
 
         # Cancel all operations

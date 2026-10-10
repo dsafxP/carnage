@@ -7,7 +7,7 @@ from collections.abc import Callable
 from textual.app import App
 
 from carnage.core.commands_config import get_commands_config, is_valid_atom
-from carnage.core.operation import start_operation
+from carnage.core.operation import screen_log_callback, start_operation
 from carnage.core.process import tracked_run
 
 
@@ -34,7 +34,7 @@ def emerge_install(app: App, package_atom: str, on_complete: Callable[[bool], No
         return
 
     cmd_config = get_commands_config()
-    log = app.screen.log_operation_output  # type: ignore
+    log = screen_log_callback(app)
 
     def _predict() -> None:
         """Write the merge-time prediction to the log. Purely informational."""
@@ -49,7 +49,7 @@ def emerge_install(app: App, package_atom: str, on_complete: Callable[[bool], No
             # qlop is optional: missing, broken or hanging must not stop us.
             return
 
-        if result.stdout.strip():
+        if result.stdout.strip() and log is not None:
             app.call_from_thread(log, result.stdout)
             app.call_from_thread(log, b"\n")
 
