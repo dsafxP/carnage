@@ -10,7 +10,7 @@ from carnage.core.cache import get_cache_manager
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.search import Package, fetch_packages_by_query
 from carnage.core.portage.use import UseFlag, get_or_cache_useflags
-from carnage.tui.widgets.table import NavigableDataTable
+from carnage.tui.widgets.table import NavigableDataTable, row_key_value
 from carnage.tui.widgets.table_tab import TableTab
 
 
@@ -185,11 +185,12 @@ class UseFlagsTab(TableTab):
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection in the USE flags table."""
-        if event.row_key is None or event.data_table.id != "useflags-table":
+        key_value = row_key_value(event)
+        if key_value is None or event.data_table.id != "useflags-table":
             return
 
         # Find the selected USE flag using the row index
-        row_index = int(event.row_key.value)  # type: ignore
+        row_index = int(key_value)
         if 0 <= row_index < len(self.filtered_useflags):
             selected = self.filtered_useflags[row_index]
         else:

@@ -11,7 +11,7 @@ from carnage.core.config import Configuration, get_config
 from carnage.core.eix.search import Package, search_packages
 from carnage.core.formatting import package_row_label
 from carnage.tui.widgets.browse.package_detail import PackageDetailWidget, default_version
-from carnage.tui.widgets.table import NavigableDataTable
+from carnage.tui.widgets.table import NavigableDataTable, row_key_value
 from carnage.tui.widgets.table_tab import TableTab
 
 
@@ -193,10 +193,11 @@ class BrowseTab(TableTab):
         self.query_one("#browse-detail").mount(PackageDetailWidget(package))
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        if event.row_key is None or event.data_table.id != "browse-table":
+        key_value = row_key_value(event)
+        if key_value is None or event.data_table.id != "browse-table":
             return
 
-        row_index = int(event.row_key.value)  # type: ignore
+        row_index = int(key_value)
         if not (0 <= row_index < len(self.packages)):
             return
 

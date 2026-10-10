@@ -28,7 +28,7 @@ from carnage.core.portage.emerge import (
     emerge_uninstall,
 )
 from carnage.tui.widgets.cachetabbedcontent import CachedTabbedContent
-from carnage.tui.widgets.table import NavigableDataTable
+from carnage.tui.widgets.table import NavigableDataTable, row_key_value
 
 if TYPE_CHECKING:
     from rich.console import RenderableType
@@ -612,10 +612,11 @@ class PackageDetailWidget(Widget):
         return f"{label[:split]}[reverse]{label[split:]}[/]"
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        if event.row_key is None or event.data_table.id != "pkg-versions-table":
+        key_value = row_key_value(event)
+        if key_value is None or event.data_table.id != "pkg-versions-table":
             return
 
-        version_id = event.row_key.value.rsplit("-", 1)[0]  # type: ignore
+        version_id = key_value.rsplit("-", 1)[0]
         version = next((v for v in self.package.versions if v.id == version_id), None)
         if version is None:
             return

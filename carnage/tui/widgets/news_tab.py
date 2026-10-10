@@ -11,7 +11,7 @@ from textual.widgets import Button, DataTable, LoadingIndicator, Rule, Static
 
 from carnage.core import News, get_news, mark_all_news_read, mark_news_read, purge_read_news
 from carnage.core.gentoolkit import portage_lock
-from carnage.tui.widgets.table import NavigableDataTable
+from carnage.tui.widgets.table import NavigableDataTable, row_key_value
 from carnage.tui.widgets.table_tab import TableTab
 
 
@@ -105,11 +105,12 @@ class NewsTab(TableTab):
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection in the news table."""
-        if event.row_key is None:
+        key_value = row_key_value(event)
+        if key_value is None:
             return
 
         # Find the selected news item
-        news_index = int(event.row_key.value)  # type: ignore
+        news_index = int(key_value)
         self.selected_news = next((n for n in self.news_items if n.index == news_index), None)
 
         if self.selected_news is None:

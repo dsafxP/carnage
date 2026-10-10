@@ -23,7 +23,7 @@ from carnage.core.portage.overlays import (
     remove_overlay,
     sync_overlay,
 )
-from carnage.tui.widgets.table import NavigableDataTable
+from carnage.tui.widgets.table import NavigableDataTable, row_key_value
 from carnage.tui.widgets.table_tab import TableTab
 
 
@@ -276,11 +276,12 @@ class OverlaysTab(TableTab):
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection in the overlays table."""
-        if event.row_key is None:
+        key_value = row_key_value(event)
+        if key_value is None:
             return
 
         # Find the selected overlay using the row index from filtered overlays
-        row_index = int(event.row_key.value)  #  type: ignore
+        row_index = int(key_value)
         if 0 <= row_index < len(self.filtered_overlays):
             self.selected_overlay = self.filtered_overlays[row_index]
         else:

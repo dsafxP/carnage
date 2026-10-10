@@ -359,6 +359,8 @@ class Operation:
                 app.notify("An operation is already running.", severity="warning")
                 return
 
+            # Direct assignment: the reactive machinery behind blocked must
+            # run, and App does not declare the flag (it lives on CarnageApp).
             app.blocked = True  # type: ignore
 
         _active_operations.append(self)
