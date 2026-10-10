@@ -94,3 +94,18 @@ async def test_highlight_follows_selection() -> None:
         assert widget.selected_version.id == "9.0.0"
         assert "[reverse]" in _cell(widget, 0)
         assert "[reverse]" not in _cell(widget, 1)
+        # The status area itself is never reversed.
+        assert not _cell(widget, 0).startswith("[reverse]")
+
+
+def test_mark_selected_skips_the_status_area() -> None:
+    """The tick/space prefix keeps its own styling; only the version reverses."""
+    mark = PackageDetailWidget._mark_selected
+
+    assert mark("[green]✓[/green] 9.2.1152") == "[green]✓[/green] [reverse]9.2.1152[/]"
+    assert mark("[red]✗[/red] 9999 (Virtual)") == "[red]✗[/red] [reverse]9999 (Virtual)[/]"
+    assert mark("  9.0.0") == "  [reverse]9.0.0[/]"
+
+
+def test_mark_selected_falls_back_to_the_whole_label() -> None:
+    assert PackageDetailWidget._mark_selected("9.0.0") == "[reverse]9.0.0[/]"

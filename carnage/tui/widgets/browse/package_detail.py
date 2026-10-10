@@ -579,7 +579,8 @@ class PackageDetailWidget(Widget):
 
         for row, (key, label, _overlay) in enumerate(self._version_rows):
             marked = key.rsplit("-", 1)[0] == selected_id
-            table.update_cell_at(Coordinate(row, 0), f"[reverse]{label}[/]" if marked else label)
+            cell = PackageDetailWidget._mark_selected(label) if marked else label
+            table.update_cell_at(Coordinate(row, 0), cell)
 
     @staticmethod
     def _version_label(version: PackageVersion, pkg: Package) -> str:
@@ -590,6 +591,25 @@ class PackageDetailWidget(Widget):
         if not gt_pkg.available:
             return f"[red]✗[/red] {version.id}{suffix}"
         return f"  {version.id}{suffix}"
+
+    @staticmethod
+    def _mark_selected(label: str) -> str:
+        """Wrap everything after the status area in reverse video.
+
+        Labels always start with a two-character status area: a marked glyph
+        plus a space ("[green]✓[/green] ...") or two literal spaces. Only the
+        version text is highlighted; the status mark keeps its own color.
+        """
+        if label.startswith("  "):
+            return f"  [reverse]{label[2:]}[/]"
+
+        split = label.find("] ")
+
+        if split < 0:
+            return f"[reverse]{label}[/]"
+
+        split += 2
+        return f"{label[:split]}[reverse]{label[split:]}[/]"
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         if event.row_key is None or event.data_table.id != "pkg-versions-table":
