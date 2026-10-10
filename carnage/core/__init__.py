@@ -7,7 +7,7 @@ from carnage.core.cache import CacheManager
 from carnage.core.config import Configuration, get_config
 
 # GLSA management
-from carnage.core.portage.glsas import GLSA, fetch_glsas, fix_glsas
+from carnage.core.portage.glsas import GLSA, fetch_glsas, fix_glsas, fix_glsas_by_ids
 
 # News management
 from carnage.core.portage.news import (
@@ -58,6 +58,7 @@ __all__ = [  # noqa: RUF022
     "GLSA",
     "fetch_glsas",
     "fix_glsas",
+    "fix_glsas_by_ids",
     # News
     "News",
     "get_news",

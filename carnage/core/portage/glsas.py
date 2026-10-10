@@ -289,6 +289,30 @@ def get_vulnerable_glsas_async(app: App, on_result: Callable[[list[str]], None])
         app.call_from_thread(on_result, vulnerable_ids)
 
 
+def fix_glsas_by_ids(app: App, vulnerable_ids: list[str], on_complete: Callable[[bool], None] | None = None) -> None:
+    """
+    Fix the given GLSAs without re-scanning for them first.
+
+    The tab already holds exactly the vulnerable ids, so rescanning all
+    several thousand advisories before fixing would only repeat the same
+    ~2.5 s of XML parsing.
+
+    Args:
+        app: The Textual App instance
+        vulnerable_ids: GLSA ids to fix
+        on_complete: Optional callback when operation finishes (receives success bool)
+    """
+    if not vulnerable_ids:
+        if on_complete:
+            on_complete(True)
+        return
+
+    # Pass the ids as separate arguments: glsa-check takes one positional
+    # id per operand, so joining them produced a single bogus token and the
+    # fix failed whenever more than one advisory was vulnerable.
+    start_operation(app, "glsa.fix", args=list(vulnerable_ids), default_privilege=True, on_complete=on_complete)
+
+
 def fix_glsas(app: App, on_complete: Callable[[bool], None] | None = None) -> None:
     """
     Fix all GLSAs affecting the system.
@@ -300,14 +324,6 @@ def fix_glsas(app: App, on_complete: Callable[[bool], None] | None = None) -> No
 
     def on_vulnerable_ids(vulnerable_ids: list[str]) -> None:
         """Called when vulnerable GLSA IDs are ready."""
-        if not vulnerable_ids:
-            if on_complete:
-                on_complete(True)
-            return
-
-        # Pass the ids as separate arguments: glsa-check takes one positional
-        # id per operand, so joining them produced a single bogus token and the
-        # fix failed whenever more than one advisory was vulnerable.
-        start_operation(app, "glsa.fix", args=list(vulnerable_ids), default_privilege=True, on_complete=on_complete)
+        fix_glsas_by_ids(app, vulnerable_ids, on_complete=on_complete)
 
     get_vulnerable_glsas_async(app, on_vulnerable_ids)

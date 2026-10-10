@@ -7,7 +7,7 @@ from textual.widgets import Button, DataTable, LoadingIndicator, Rule, Static, T
 
 from carnage.core.config import Configuration, get_config
 from carnage.core.formatting import format_glsa_details, format_glsa_header
-from carnage.core.portage.glsas import GLSA, fetch_glsas, fix_glsas
+from carnage.core.portage.glsas import GLSA, fetch_glsas, fix_glsas_by_ids
 from carnage.tui.widgets.table import NavigableDataTable
 from carnage.tui.widgets.table_tab import TableTab
 
@@ -148,7 +148,9 @@ class GLSATab(TableTab):
             self.update_button_states()
             self.app.bell()
 
-        fix_glsas(self.app, on_complete=on_complete)
+        # The tab already holds exactly the vulnerable ids, so hand them over
+        # directly instead of re-scanning every advisory first.
+        fix_glsas_by_ids(self.app, [glsa.id for glsa in self.glsa_items], on_complete=on_complete)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
