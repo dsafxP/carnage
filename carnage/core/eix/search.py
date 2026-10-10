@@ -210,15 +210,15 @@ class Package:
 def _parse_version(version_elem: etree._Element) -> PackageVersion:
     """Parse a version element from eix XML."""
     # Parse IUSE flags
-    iuse_elems = version_elem.xpath("iuse")
     iuse: list[str] = []
     iuse_default: list[str] = []
 
-    for iuse_elem in iuse_elems:
+    for iuse_elem in version_elem.findall("iuse"):
+        is_default = iuse_elem.get("default") == "1"
         flags = iuse_elem.text.split() if iuse_elem.text else []
         for flag in flags:
             iuse.append(flag)
-            if iuse_elem.get("default") == "1":
+            if is_default:
                 iuse_default.append(flag)
 
     # Parse masks and unmasks
@@ -232,19 +232,23 @@ def _parse_version(version_elem: etree._Element) -> PackageVersion:
     restricts = version_elem.xpath("restrict/@flag")
 
     # Parse use flags
-    use_enabled_elems = version_elem.xpath('use[@enabled="1"]')
-    use_disabled_elems = version_elem.xpath('use[@enabled="0"]')
+    use_enabled_elem = next(
+        (use_elem for use_elem in version_elem.findall("use") if use_elem.get("enabled") == "1"), None
+    )
+    use_disabled_elem = next(
+        (use_elem for use_elem in version_elem.findall("use") if use_elem.get("enabled") == "0"), None
+    )
 
-    use_enabled = use_enabled_elems[0].text.split() if use_enabled_elems and use_enabled_elems[0].text else []
-    use_disabled = use_disabled_elems[0].text.split() if use_disabled_elems and use_disabled_elems[0].text else []
+    use_enabled = use_enabled_elem.text.split() if use_enabled_elem is not None and use_enabled_elem.text else []
+    use_disabled = use_disabled_elem.text.split() if use_disabled_elem is not None and use_disabled_elem.text else []
 
     # Get depend fields
-    depend_elem = version_elem.xpath("depend")[0] if version_elem.xpath("depend") else None
-    rdepend_elem = version_elem.xpath("rdepend")[0] if version_elem.xpath("rdepend") else None
-    bdepend_elem = version_elem.xpath("bdepend")[0] if version_elem.xpath("bdepend") else None
-    pdepend_elem = version_elem.xpath("pdepend")[0] if version_elem.xpath("pdepend") else None
-    idepend_elem = version_elem.xpath("idepend")[0] if version_elem.xpath("idepend") else None
-    required_use_elem = version_elem.xpath("required_use")[0] if version_elem.xpath("required_use") else None
+    depend_elem = version_elem.find("depend")
+    rdepend_elem = version_elem.find("rdepend")
+    bdepend_elem = version_elem.find("bdepend")
+    pdepend_elem = version_elem.find("pdepend")
+    idepend_elem = version_elem.find("idepend")
+    required_use_elem = version_elem.find("required_use")
 
     return PackageVersion(
         id=version_elem.get("id", ""),
@@ -287,9 +291,9 @@ def _parse_package(package_elem: etree._Element, category: str) -> Package | Non
     if not is_valid_component(category) or not is_valid_component(name):
         return None
 
-    desc_elem = package_elem.xpath("description")[0] if package_elem.xpath("description") else None
-    homepage_elem = package_elem.xpath("homepage")[0] if package_elem.xpath("homepage") else None
-    licenses_elem = package_elem.xpath("licenses")[0] if package_elem.xpath("licenses") else None
+    desc_elem = package_elem.find("description")
+    homepage_elem = package_elem.find("homepage")
+    licenses_elem = package_elem.find("licenses")
 
     # Parse licenses
     licenses: list[str] = []
@@ -297,8 +301,7 @@ def _parse_package(package_elem: etree._Element, category: str) -> Package | Non
         licenses = licenses_elem.text.split()
 
     # Parse versions
-    version_elems = package_elem.xpath("version")
-    versions: list[PackageVersion] = [_parse_version(version_elem) for version_elem in version_elems]
+    versions: list[PackageVersion] = [_parse_version(version_elem) for version_elem in package_elem.findall("version")]
 
     return Package(
         category=category,
