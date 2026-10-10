@@ -85,6 +85,15 @@ class MainScreen(Screen):
         # feel sluggish.
         self._log_pane = log_pane
 
+        # The active tab may be a deferred one (restored from cache): make
+        # sure its first load starts even if no activation fires for it.
+        self.call_later(self._ensure_initial_tab_loaded)
+
+    def _ensure_initial_tab_loaded(self) -> None:
+        """Start the active tab's deferred load, if it has one."""
+        tabbed_content: TabbedContent = self.query_one(TabbedContent)
+        self._ensure_tab_loaded(tabbed_content.active)
+
     def log_operation_output(self, raw_line: bytes) -> None:
         """Add raw output (with ANSI codes) to the RichLog widget."""
         log_pane = self._log_pane
@@ -144,7 +153,17 @@ class MainScreen(Screen):
         if tab_id is None:
             return
 
+        self._ensure_tab_loaded(tab_id)
         self._update_search_state(tab_id)
+
+    def _ensure_tab_loaded(self, tab_id: str) -> None:
+        """Start a deferred tab's first load (event loop only)."""
+        tabbed_content: TabbedContent = self.query_one(TabbedContent)
+
+        if tab_id == "glsas":
+            tabbed_content.query_one("#glsas", TabPane).query_one(GLSATab).ensure_loaded()
+        elif tab_id == "overlays":
+            tabbed_content.query_one("#overlays", TabPane).query_one(OverlaysTab).ensure_loaded()
 
     def _update_search_state(self, tab_id: str) -> None:
         """Update the search bar placeholder and state for the active tab."""

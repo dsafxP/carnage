@@ -46,6 +46,7 @@ class OverlaysTab(TableTab):
         self.cache_manager = get_cache_manager()
         self._current_filter: str = ""
         self._filter_timer: Timer | None = None
+        self._loaded = False
         self._config = get_config()
         self.should_skip_pkg_count = self._config.skip_package_counting or not is_found()
 
@@ -65,9 +66,7 @@ class OverlaysTab(TableTab):
                     yield Button("Remove", id="remove-btn", variant="error")
 
     def on_mount(self) -> None:
-        """Load overlays when widget is mounted."""
-        self.load_overlays()
-
+        """Set up the table; data loads on first activation."""
         table: DataTable = self.query_one("#overlays-table", DataTable)
 
         # Only show package count column if counting is enabled
@@ -75,6 +74,12 @@ class OverlaysTab(TableTab):
             table.add_columns("Name", "Description")
         else:
             table.add_columns("Name", "Packages", "Description")
+
+    def ensure_loaded(self) -> None:
+        """Start the first load, once, instead of at mount."""
+        if not self._loaded:
+            self._loaded = True
+            self.load_overlays()
 
     def apply_filter(self, filter_text: str) -> None:
         """Apply search filter to overlays and update the table."""

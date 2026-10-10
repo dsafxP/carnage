@@ -28,6 +28,7 @@ class GLSATab(TableTab):
         super().__init__()
         self.glsa_items: list[GLSA] = []
         self.selected_glsa: GLSA | None = None
+        self._loaded = False
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
@@ -45,12 +46,16 @@ class GLSATab(TableTab):
                     yield Button("Apply fixes", id="fix-glsa-btn", variant="primary")
 
     def on_mount(self) -> None:
-        """Load GLSAs when widget is mounted."""
-        self.load_glsas()
-
+        """Set up the table; data loads on first activation."""
         table: DataTable = self.query_one("#glsa-table", DataTable)
 
         table.add_columns("ID", "Product", "Title")
+
+    def ensure_loaded(self) -> None:
+        """Start the first load, once, instead of at mount."""
+        if not self._loaded:
+            self._loaded = True
+            self.load_glsas()
 
     @work(exclusive=True, thread=True)
     def load_glsas(self) -> None:
