@@ -64,3 +64,14 @@ def test_parse_package_reads_every_field_once() -> None:
     assert packages[0].description == "Vi IMproved"
     assert packages[0].homepage == "https://example.invalid"
     assert packages[0].licenses == ["vim"]
+
+
+def test_to_gentoolkit_reuses_the_instance_per_cpv() -> None:
+    """Repeated conversions must not rebuild (and re-query) per call."""
+    from carnage.core.eix.search import _gentoolkit_package
+
+    first = _gentoolkit_package("app-editors/vim-9.0.0")
+    second = _gentoolkit_package("app-editors/vim-9.0.0")
+
+    assert first is second
+    assert _gentoolkit_package.cache_info().currsize >= 1

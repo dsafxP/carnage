@@ -2,6 +2,7 @@
 
 import subprocess
 from dataclasses import dataclass, field
+from functools import lru_cache
 from subprocess import CompletedProcess
 
 from gentoolkit.cpv import CPV
@@ -11,6 +12,20 @@ from carnage.core.commands_config import CommandsConfiguration, get_commands_con
 from carnage.core.eix.eix import has_remote_cache
 from carnage.core.gentoolkit.package import GentoolkitPackage
 from carnage.core.process import tracked_run
+
+
+@lru_cache(maxsize=1024)
+def _gentoolkit_package(cpv_str: str) -> GentoolkitPackage:
+    """
+    Build a gentoolkit Package once per CPV string.
+
+    Every to_gentoolkit() call used to construct a fresh instance, so the
+    exists_f/available cached_property never survived the call and the same
+    portage query ran again on every row selection. Masking answers can go
+    stale mid-session, but installs flip the version's own installed flag
+    (from fresh eix data), which is what the views key off.
+    """
+    return GentoolkitPackage(CPV(cpv_str))
 
 
 @dataclass
@@ -52,7 +67,7 @@ class PackageVersion:
             GentoolkitPackage for this CPV
         """
         cpv_str: str = f"{category}/{name}-{self.id}"
-        return GentoolkitPackage(CPV(cpv_str))
+        return _gentoolkit_package(cpv_str)
 
     def all_deps(self) -> list[str]:
         """
@@ -178,7 +193,7 @@ class Package:
         """
         cpv_str: str = self.full_name
 
-        return GentoolkitPackage(CPV(cpv_str))
+        return _gentoolkit_package(cpv_str)
 
     def is_in_world_file(self) -> bool:
         """
