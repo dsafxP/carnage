@@ -3,6 +3,7 @@
 from typing import ClassVar
 
 from rich.markup import MarkupError, escape
+from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal
@@ -63,17 +64,11 @@ class MainScreen(Screen):
 
     def on_mount(self) -> None:
         """Check eix availability when screen is mounted."""
-        self.eix_available = is_found()
-        self.eix_cache_available = has_cache() if self.eix_available else False
-
-        tabbed_content: TabbedContent = self.query_one(TabbedContent)
-
-        # Enable/disable tabs based on eix availability
-        if self.eix_available and self.eix_cache_available:
-            # Enable Browse and USE tabs
-            for tab in tabbed_content.query(TabPane):
-                if tab.id in ("browse", "use"):
-                    tab.disabled = False
+        # The probe spawns a subprocess, so it runs in a worker: the first
+        # frame must not wait for it, and neither must the screen swaps after
+        # an update (when the cache is coldest). Tabs and search state are
+        # enabled when it reports back.
+        self._probe_eix_availability()
 
         config: Configuration = get_config()
 
@@ -120,13 +115,40 @@ class MainScreen(Screen):
             # falls back to literal text.
             log_pane.write(escape(line))
 
+    @work(thread=True)
+    def _probe_eix_availability(self) -> None:
+        """Probe for eix off the event loop, then enable what it allows."""
+        available = is_found()
+        cache_available = has_cache() if available else False
+
+        self.app.call_from_thread(self._apply_eix_availability, available, cache_available)
+
+    def _apply_eix_availability(self, available: bool, cache_available: bool) -> None:
+        """Enable eix tabs and refresh the search state (event loop only)."""
+        self.eix_available = available
+        self.eix_cache_available = cache_available
+
+        if available and cache_available:
+            # Enable Browse and USE tabs
+            for tab in self.query_one(TabbedContent).query(TabPane):
+                if tab.id in ("browse", "use"):
+                    tab.disabled = False
+
+        tabbed_content: TabbedContent = self.query_one(TabbedContent)
+        self._update_search_state(tabbed_content.active)
+
     def _on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
         """Handle tab changes to update search bar."""
-        search_input: Input = self.query_one("#search-input", Input)
         tab_id: str | None = event.tab.id
 
         if tab_id is None:
             return
+
+        self._update_search_state(tab_id)
+
+    def _update_search_state(self, tab_id: str) -> None:
+        """Update the search bar placeholder and state for the active tab."""
+        search_input: Input = self.query_one("#search-input", Input)
 
         # Update placeholder and state based on active tab
         if "overlays" in tab_id:

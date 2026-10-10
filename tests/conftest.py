@@ -27,6 +27,7 @@ def _reset_state() -> None:
     operation_module._active_operations.clear()
     process_module.TrackedProcess._running_processes.clear()
     eix_module._remote_cache_available = None
+    eix_module._cache_available = None
 
 
 @pytest.fixture(autouse=True)

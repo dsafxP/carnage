@@ -5,7 +5,7 @@ from textual.screen import Screen
 
 from carnage.core import Configuration, get_config
 from carnage.core.cache import get_cache_manager
-from carnage.core.eix.eix import has_cache, has_remote_cache, invalidate_remote_cache
+from carnage.core.eix.eix import has_cache, has_remote_cache, invalidate_cache, invalidate_remote_cache
 from carnage.core.operation import start_operation
 from carnage.tui.screens.main_screen import MainScreen
 
@@ -31,6 +31,9 @@ def eix_update(app: App) -> None:
 
     def on_complete(success: bool) -> None:
         if success:
+            # The probe is memoized: without this, a freshly built cache
+            # would stay reported as missing until the app is restarted.
+            invalidate_cache()
             app.switch_screen(MainScreen())
 
         app.bell()

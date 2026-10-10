@@ -2,11 +2,18 @@
 
 import shutil
 import subprocess
-from subprocess import CompletedProcess
 
 from carnage.core.process import tracked_run
 
 _remote_cache_available: bool | None = None
+_cache_available: bool | None = None
+
+
+def invalidate_cache() -> None:
+    """Forget the cached has_cache() answer so it is probed again."""
+    global _cache_available
+
+    _cache_available = None
 
 
 def is_found() -> bool:
@@ -23,16 +30,25 @@ def has_cache() -> bool:
     """
     Check if eix cache exists and is valid.
 
+    Uses global caching to avoid repeated subprocess calls.
+
     Returns:
         True if cache exists, False otherwise (including when eix could not be
         run at all)
     """
-    try:
-        result: CompletedProcess[str] = tracked_run(["eix", "-Qq0"], text=True)
-    except (subprocess.SubprocessError, OSError):
-        return False
+    global _cache_available
 
-    return result.returncode == 0
+    if _cache_available is None:
+        try:
+            result = tracked_run(["eix", "-Qq0"], text=True)
+        except (subprocess.SubprocessError, OSError):
+            result = None
+
+        # A probe that could not run counts as "no cache", same as the remote
+        # probe below. Both are invalidated after the matching update command.
+        _cache_available = result is not None and result.returncode == 0
+
+    return _cache_available
 
 
 def count_matches(stdout: bytes) -> int:
