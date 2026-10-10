@@ -9,6 +9,7 @@ from textual._context import NoActiveAppError
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Vertical, VerticalScroll
+from textual.coordinate import Coordinate
 from textual.css.query import NoMatches
 from textual.widget import Widget
 from textual.widgets import Button, DataTable, SelectionList, Static, TabPane, Tree
@@ -184,6 +185,7 @@ class PackageDetailWidget(Widget):
         self.selected_version: PackageVersion | None = default_version(package)
         self._in_world_file: bool | None = None  # None = not yet loaded
         self._use_flag_originals: dict[str, bool] = {}  # flag -> enabled at load time
+        self._version_rows: list[tuple[str, str, str]] = []  # (key, label, overlay) without selection marks
 
     def _post_to_loop(self, callback: Callable[..., object], *args: object, **kwargs: object) -> bool:
         """
@@ -554,10 +556,30 @@ class PackageDetailWidget(Widget):
             # The widget was removed while portage was answering.
             return
 
+        self._version_rows = rows
+
         table.clear()
 
         for key, label, overlay in rows:
             table.add_row(label, overlay, key=key)
+
+        self._apply_version_selection_marks()
+
+    def _apply_version_selection_marks(self) -> None:
+        """Highlight the selected version's rows with reverse video (event loop only)."""
+        if not self._version_rows:
+            return
+
+        try:
+            table = self.query_one("#pkg-versions-table", DataTable)
+        except NoMatches:
+            return
+
+        selected_id = self.selected_version.id if self.selected_version else None
+
+        for row, (key, label, _overlay) in enumerate(self._version_rows):
+            marked = key.rsplit("-", 1)[0] == selected_id
+            table.update_cell_at(Coordinate(row, 0), f"[reverse]{label}[/]" if marked else label)
 
     @staticmethod
     def _version_label(version: PackageVersion, pkg: Package) -> str:
@@ -579,6 +601,7 @@ class PackageDetailWidget(Widget):
             return
 
         self.selected_version = version
+        self._apply_version_selection_marks()
         self._load_use_flags()
         self._load_deps()
         self._load_ebuild()
