@@ -259,12 +259,13 @@ class Configuration:
         self._set_nested_value(keys, value)
 
         if self._toml_doc:
-            current = self._toml_doc
-            for key in keys[:-1]:  # type: ignore
-                if key not in current:  # type: ignore
-                    current[key] = {}  # type: ignore
-                current = current[key]  # type: ignore
-            current[keys[-1]] = value  # type: ignore
+            # Untyped on purpose: this mirrors an arbitrary TOML document.
+            current: Any = self._toml_doc
+            for key in keys[:-1]:
+                if key not in current:
+                    current[key] = {}
+                current = current[key]
+            current[keys[-1]] = value
 
         self._save_config()
 
