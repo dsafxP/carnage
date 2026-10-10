@@ -204,7 +204,7 @@ async def test_browse_table_draws_before_marks(monkeypatch: pytest.MonkeyPatch) 
         assert "✗" in str(tab.table.get_cell_at(Coordinate(1, 0)))
 
 
-async def test_reselecting_the_same_use_flag_is_a_noop() -> None:
+async def test_reselecting_the_same_use_flag_is_a_noop(monkeypatch: pytest.MonkeyPatch) -> None:
     """Clicking the displayed flag again must not re-run its eix subprocess."""
     from textual.widgets import DataTable
 
@@ -221,7 +221,7 @@ async def test_reselecting_the_same_use_flag_is_a_noop() -> None:
             tab.on_data_table_row_selected(DataTable.RowSelected(data_table=table, cursor_row=0, row_key=key))
 
         calls: list[str] = []
-        tab._load_useflag_details = lambda useflag: calls.append(useflag.name)  # type: ignore[method-assign]
+        monkeypatch.setattr(tab, "_load_useflag_details", lambda useflag: calls.append(useflag.name))
 
         select()
         await pilot.pause(0.3)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from textual.app import App, ComposeResult
 from textual.coordinate import Coordinate
 from textual.widgets import DataTable
@@ -111,7 +112,7 @@ def test_mark_selected_falls_back_to_the_whole_label() -> None:
     assert PackageDetailWidget._mark_selected("9.0.0") == "[reverse]9.0.0[/]"
 
 
-async def test_reselecting_the_same_version_is_a_noop() -> None:
+async def test_reselecting_the_same_version_is_a_noop(monkeypatch: pytest.MonkeyPatch) -> None:
     """Clicking the displayed version again restarts nothing and notifies nothing."""
     app = _Harness(_package())
     async with app.run_test() as pilot:
@@ -130,10 +131,10 @@ async def test_reselecting_the_same_version_is_a_noop() -> None:
 
         calls: list[str] = []
         notes: list[str] = []
-        widget._load_use_flags = lambda: calls.append("use")  # type: ignore[method-assign]
-        widget._load_deps = lambda: calls.append("deps")  # type: ignore[method-assign]
-        widget._load_ebuild = lambda: calls.append("ebuild")  # type: ignore[method-assign]
-        widget.notify = lambda *args, **kwargs: notes.append(str(args[0]))  # type: ignore[method-assign]
+        monkeypatch.setattr(widget, "_load_use_flags", lambda: calls.append("use"))
+        monkeypatch.setattr(widget, "_load_deps", lambda: calls.append("deps"))
+        monkeypatch.setattr(widget, "_load_ebuild", lambda: calls.append("ebuild"))
+        monkeypatch.setattr(widget, "notify", lambda *args, **kwargs: notes.append(str(args[0])))
 
         select()
         await pilot.pause(0.5)

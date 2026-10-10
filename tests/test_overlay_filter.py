@@ -114,7 +114,7 @@ async def test_remote_cache_notification_needs_no_subprocess(monkeypatch: pytest
             overlay.package_count = 0
 
         notices: list[str] = []
-        tab.notify = lambda message, *args, **kwargs: notices.append(str(message))  # type: ignore
+        monkeypatch.setattr(tab, "notify", lambda message, *args, **kwargs: notices.append(str(message)))
 
         tab._maybe_notify_remote_cache(True)
         assert len(notices) == 1

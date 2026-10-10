@@ -20,7 +20,7 @@ def test_log_output_reuses_the_resolved_pane(monkeypatch) -> None:
         queries.append(selector)
         return pane
 
-    screen.query_one = fake_query_one  # type: ignore[method-assign]
+    monkeypatch.setattr(screen, "query_one", fake_query_one)
 
     screen.log_operation_output(b"first\n")
     screen.log_operation_output(b"second\n")
@@ -36,7 +36,7 @@ def test_log_output_auto_shows_the_pane(monkeypatch) -> None:
     screen = main_screen_module.MainScreen()
     pane = Mock()
     pane.display = False
-    screen.query_one = lambda selector, _type=None: pane  # type: ignore[method-assign]
+    monkeypatch.setattr(screen, "query_one", lambda selector, _type=None: pane)
 
     screen.log_operation_output(b"hi\n")
 
