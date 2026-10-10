@@ -1,5 +1,6 @@
 """Package detail widget with tabbed views for the Browse tab."""
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
@@ -184,6 +185,21 @@ class PackageDetailWidget(Widget):
         self._in_world_file: bool | None = None  # None = not yet loaded
         self._use_flag_originals: dict[str, bool] = {}  # flag -> enabled at load time
 
+    def _post_to_loop(self, callback: Callable[..., object], *args: object, **kwargs: object) -> bool:
+        """
+        Hand a callback to the event loop, tolerating a detached widget.
+
+        Workers outlive the widget whenever the user selects another package
+        (or clears the search) mid-load: the DOM is gone and self.app no
+        longer resolves. Dropping the update is correct; raising out of the
+        worker kills the app through exit_on_error, so never do that.
+        """
+        try:
+            self.app.call_from_thread(callback, *args, **kwargs)
+        except (NoActiveAppError, RuntimeError):
+            return False
+        return True
+
     def compose(self) -> ComposeResult:
         with CachedTabbedContent(cache_key="package_tabs"):
             with TabPane("Details", id="tab-details"):
@@ -294,9 +310,9 @@ class PackageDetailWidget(Widget):
                             Syntax(content, "bash", theme=config.syntax_style, line_numbers=True, word_wrap=False),
                         )
 
-            self.app.call_from_thread(self._show_ebuild, version_id, renderable)
+            self._post_to_loop(self._show_ebuild, version_id, renderable)
         except Exception as e:
-            self.app.call_from_thread(self.notify, f"Failed to load ebuild: {e}", severity="error")
+            self._post_to_loop(self.notify, f"Failed to load ebuild: {e}", severity="error")
 
     def _show_ebuild(self, version_id: str, renderable: "RenderableType") -> None:
         """Display a fetched ebuild unless the selection moved on (event loop only)."""
@@ -357,9 +373,9 @@ class PackageDetailWidget(Widget):
             with portage_lock:
                 portage_enabled = set(get_all_cpv_usef(cpv_str)[0])
 
-            self.app.call_from_thread(self._show_use_flags, version_id, flags, portage_enabled)
+            self._post_to_loop(self._show_use_flags, version_id, flags, portage_enabled)
         except Exception as e:
-            self.app.call_from_thread(self.notify, f"Failed to load USE flags: {e}", severity="error")
+            self._post_to_loop(self.notify, f"Failed to load USE flags: {e}", severity="error")
 
     def _show_use_flags(self, version_id: str, flags: list[str], portage_enabled: set[str]) -> None:
         """Fill the checklist unless the selection moved on (event loop only)."""
@@ -432,7 +448,7 @@ class PackageDetailWidget(Widget):
         if not results:
             results = [(1, atom) for atom in self.selected_version.all_deps()]
 
-        self.app.call_from_thread(self._populate_dep_tree, results)
+        self._post_to_loop(self._populate_dep_tree, results)
 
     def _populate_dep_tree(self, results: list) -> None:
         """Update the dep tree widget on the main thread."""
@@ -476,9 +492,9 @@ class PackageDetailWidget(Widget):
                 except Exception:
                     contents = {}
 
-            self.app.call_from_thread(self._show_installed_files, version_id, contents)
+            self._post_to_loop(self._show_installed_files, version_id, contents)
         except Exception as e:
-            self.app.call_from_thread(self.notify, f"Failed to load installed files: {e}", severity="error")
+            self._post_to_loop(self.notify, f"Failed to load installed files: {e}", severity="error")
 
     def _show_installed_files(self, version_id: str, contents: dict) -> None:
         """Fill the files tree unless the install state moved on (event loop only)."""
@@ -526,9 +542,9 @@ class PackageDetailWidget(Widget):
                         )
                     )
 
-            self.app.call_from_thread(self._show_versions_table, rows)
+            self._post_to_loop(self._show_versions_table, rows)
         except Exception as e:
-            self.app.call_from_thread(self.notify, f"Failed to load versions: {e}", severity="error")
+            self._post_to_loop(self.notify, f"Failed to load versions: {e}", severity="error")
 
     def _show_versions_table(self, rows: list[tuple[str, str, str]]) -> None:
         """Replace the versions table content (event loop only)."""
@@ -582,11 +598,7 @@ class PackageDetailWidget(Widget):
         """Check world file membership in a thread then refresh buttons."""
         self._in_world_file = self.package.is_in_world_file()
 
-        try:
-            self.app.call_from_thread(self._update_buttons)
-        except NoActiveAppError:
-            # App is no longer active, widget detached
-            pass
+        self._post_to_loop(self._update_buttons)
 
     def _update_buttons(self) -> None:
         """Synchronise button visibility with selected_version and world file state."""
