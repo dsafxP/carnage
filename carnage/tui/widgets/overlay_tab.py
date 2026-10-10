@@ -7,6 +7,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Vertical, VerticalScroll
 from textual.coordinate import Coordinate
+from textual.timer import Timer
 from textual.widgets import Button, DataTable, LoadingIndicator, Static
 
 from carnage.core.cache import get_cache_manager
@@ -44,6 +45,7 @@ class OverlaysTab(TableTab):
         self.selected_overlay: Overlay | None = None
         self.cache_manager = get_cache_manager()
         self._current_filter: str = ""
+        self._filter_timer: Timer | None = None
         self._config = get_config()
         self.should_skip_pkg_count = self._config.skip_package_counting or not is_found()
 
@@ -76,7 +78,29 @@ class OverlaysTab(TableTab):
 
     def apply_filter(self, filter_text: str) -> None:
         """Apply search filter to overlays and update the table."""
-        self._current_filter = filter_text.lower().strip()
+        normalized = filter_text.lower().strip()
+
+        if normalized == self._current_filter and self._filter_timer is None:
+            return
+
+        if self._filter_timer is not None:
+            self._filter_timer.stop()
+            self._filter_timer = None
+
+        if not normalized:
+            # Clearing the box shows everything at once.
+            self._apply_filter_now("")
+            return
+
+        # Debounce like the browse and USE tabs: rebuilding the whole table
+        # on every keystroke is what made typing stutter.
+        pending = normalized
+        self._filter_timer = self.set_timer(0.3, lambda: self._apply_filter_now(pending))
+
+    def _apply_filter_now(self, normalized: str) -> None:
+        """Filter and rebuild the table (event loop only)."""
+        self._filter_timer = None
+        self._current_filter = normalized
 
         if not self._current_filter:
             # No filter, show all overlays
@@ -108,7 +132,11 @@ class OverlaysTab(TableTab):
 
         for i, overlay in enumerate(self.filtered_overlays):
             name: str = f"[italic]{overlay.name}[/]" if overlay.status == OverlayStatus.OFFICIAL else overlay.name
-            label: str = f"{'[green]✓[/]' if overlay.is_installed() else ' '} {name}"
+            # The flag is populated at fetch and kept up to date by the
+            # enable/sync/remove actions: re-statting the filesystem per row
+            # per keystroke only repeated the same answer ~866 syscalls at a
+            # time.
+            label: str = f"{'[green]✓[/]' if overlay.installed else ' '} {name}"
 
             if self.should_skip_pkg_count:
                 # Skip package count display
