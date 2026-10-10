@@ -111,36 +111,52 @@ def _build_file_tree(node: TreeNode[str], prefix: str, contents: dict) -> None:
     from rich.markup import escape
     from rich.text import Text
 
-    seen: set[str] = set()
     config: Configuration = get_config()
 
-    for path in sorted(contents):
-        if not path.startswith(prefix + "/"):
-            continue
-        remainder = path[len(prefix) + 1 :]
-        child_name = remainder.split("/")[0]
-        if child_name in seen:
-            continue
-        seen.add(child_name)
+    # Group once: parent path -> child names, plus every directory that owns
+    # at least one entry. The old code re-sorted the whole dict and re-scanned
+    # every path at every directory node, which is O(dirs x files). Intermediate
+    # directories are usually not entries themselves, so synthesize the links.
+    children: dict[str, list[str]] = {}
+    dir_paths: set[str] = set()
 
-        child_path: str = f"{prefix}/{child_name}"
-        entry_type = contents.get(child_path, [None])[0]
-        is_dir = entry_type == "dir" or any(p.startswith(child_path + "/") for p in contents)
+    for path in contents:
+        stripped = path.strip("/")
 
-        if is_dir:
-            label = Text("📂 ", style="dim")
-            label.append(escape(child_name), style=f"bold magenta link file://{child_path}")
-            branch: TreeNode[str] = node.add(label, expand=config.expand)
-            _build_file_tree(branch, child_path, contents)
-        elif entry_type == "sym":
-            label = Text("🔗 ", style="")
-            label.append(escape(child_name), style=f"cyan link file://{child_path}")
-            node.add_leaf(label)
-        else:
-            label = Text("📄 ", style="")
-            label.append(escape(child_name), style=f"green link file://{child_path}")
-            label.highlight_regex(r"\.[^/]+$", "bold red")
-            node.add_leaf(label)
+        if not stripped:
+            continue
+
+        parts = stripped.split("/")
+
+        for i, name in enumerate(parts):
+            parent = "" if i == 0 else "/" + "/".join(parts[:i])
+            children.setdefault(parent, []).append(name)
+
+            if i < len(parts) - 1:
+                dir_paths.add(f"{parent}/{name}" if parent else f"/{name}")
+
+    def _add_children(node: TreeNode[str], prefix: str) -> None:
+        for child_name in sorted(set(children.get(prefix, []))):
+            child_path: str = f"{prefix}/{child_name}"
+            entry_type = contents.get(child_path, [None])[0]
+            is_dir = entry_type == "dir" or child_path in dir_paths
+
+            if is_dir:
+                label = Text("📂 ", style="dim")
+                label.append(escape(child_name), style=f"bold magenta link file://{child_path}")
+                branch: TreeNode[str] = node.add(label, expand=config.expand)
+                _add_children(branch, child_path)
+            elif entry_type == "sym":
+                label = Text("🔗 ", style="")
+                label.append(escape(child_name), style=f"cyan link file://{child_path}")
+                node.add_leaf(label)
+            else:
+                label = Text("📄 ", style="")
+                label.append(escape(child_name), style=f"green link file://{child_path}")
+                label.highlight_regex(r"\.[^/]+$", "bold red")
+                node.add_leaf(label)
+
+    _add_children(node, prefix)
 
 
 class PackageDetailWidget(Widget):
