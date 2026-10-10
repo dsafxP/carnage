@@ -148,9 +148,13 @@ class MainScreen(Screen):
 
     def _on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
         """Handle tab changes to update search bar."""
-        tab_id: str | None = event.tab.id
+        # event.tab is the tab button, whose id carries Textual's prefix
+        # (e.g. "--content-tab-overlays"); active holds the pane id the rest
+        # of the screen works with, and is already updated when this runs.
+        tabbed_content: TabbedContent = self.query_one(TabbedContent)
+        tab_id: str = tabbed_content.active
 
-        if tab_id is None:
+        if not tab_id:
             return
 
         self._ensure_tab_loaded(tab_id)
