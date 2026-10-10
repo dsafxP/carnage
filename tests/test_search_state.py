@@ -151,3 +151,54 @@ def test_useflag_details_render_packages() -> None:
     empty = UseFlagsTab._format_useflag_details(UseFlag(name="gui", description=None), 0, [])
 
     assert empty == "[r]gui[/]\n\n[b]Packages:[/] 0\n[red]No packages found with this flag[/]\n"
+
+
+async def test_browse_table_draws_before_marks(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Rows appear from the search; the repo-missing marks land afterwards."""
+    from textual.coordinate import Coordinate
+
+    from carnage.core.eix.search import Package, PackageVersion
+
+    def _package(name: str) -> Package:
+        version = PackageVersion(
+            id="1.0",
+            eapi="8",
+            repository="gentoo",
+            virtual=False,
+            installed=False,
+            install_date=None,
+            install_eapi=None,
+            src_uri=None,
+            iuse=[],
+            iuse_default=[],
+            required_use=None,
+            depend=None,
+            rdepend=None,
+            bdepend=None,
+            pdepend=None,
+            idepend=None,
+            masks=[],
+            unmasks=[],
+            properties=[],
+            restricts=[],
+            use_enabled=[],
+            use_disabled=[],
+        )
+        return Package(
+            category="app-editors", name=name, description="d", homepage=None, licenses=[], versions=[version]
+        )
+
+    packages = [_package("here"), _package("ghost")]
+    monkeypatch.setattr(browse_tab_module, "search_packages", lambda query: packages)
+    monkeypatch.setattr(browse_tab_module, "_exists_in_repo", lambda package: package.name != "ghost")
+
+    async with _BrowseTabHarness().run_test() as pilot:
+        tab = pilot.app.query_one(BrowseTab)
+        tab._current_search = "e"
+        tab._perform_search("e")
+        await pilot.pause(0.5)
+
+        assert len(tab.packages) == 2
+        assert tab._missing_packages == frozenset({"app-editors/ghost"})
+        assert "✗" not in str(tab.table.get_cell_at(Coordinate(0, 0)))
+        assert "✗" in str(tab.table.get_cell_at(Coordinate(1, 0)))

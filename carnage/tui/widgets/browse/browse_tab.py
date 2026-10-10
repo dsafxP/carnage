@@ -3,6 +3,7 @@
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical
+from textual.coordinate import Coordinate
 from textual.timer import Timer
 from textual.widgets import DataTable, LoadingIndicator
 
@@ -94,15 +95,20 @@ class BrowseTab(TableTab):
         try:
             packages = search_packages(query)
 
-            # Resolve the "missing from every repo" mark here: it runs a
-            # portage query per row, which would stall the UI in the
-            # populate call below.
+            if self._cancel_search or self._current_search != query:
+                return
+
+            # Draw first, marks after: resolving "missing from every repo"
+            # runs a portage query per row, and a broad query would otherwise
+            # add seconds before the first row appears.
+            self.app.call_from_thread(self._populate_table, packages, frozenset())
+
             missing = frozenset(
                 package.full_name for package in packages if not package.is_installed() and not _exists_in_repo(package)
             )
 
             if not self._cancel_search and self._current_search == query:
-                self.app.call_from_thread(self._populate_table, packages, missing)
+                self.app.call_from_thread(self._patch_missing_marks, missing)
         except Exception as e:
             if not self._cancel_search:
                 self.app.call_from_thread(self.notify, f"Search failed: {e}", severity="error")
@@ -162,6 +168,22 @@ class BrowseTab(TableTab):
                 key=str(i),
             )
 
+    def _patch_missing_marks(self, missing: frozenset[str]) -> None:
+        """Apply the "missing from every repo" marks (event loop only)."""
+        self._missing_packages = missing
+
+        if not missing:
+            return
+
+        table: DataTable = self.query_one("#browse-table", DataTable)
+
+        for i, package in enumerate(self.packages):
+            if package.full_name in missing and not package.is_installed():
+                table.update_cell_at(
+                    Coordinate(i, 0),
+                    package_row_label(package, installed=False, exists=False),
+                )
+
     def _remove_detail_widget(self) -> None:
         for widget in self.query(PackageDetailWidget):
             widget.remove()
@@ -215,8 +237,6 @@ class BrowseTab(TableTab):
         )
 
         try:
-            from textual.coordinate import Coordinate
-
             table.update_cell_at(Coordinate(row_key, 0), name_cell)
         except Exception:
             self._populate_table(self.packages)
