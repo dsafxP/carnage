@@ -10,6 +10,7 @@ from textual.coordinate import Coordinate
 from textual.widgets import Button, DataTable, LoadingIndicator, Rule, Static
 
 from carnage.core import News, get_news, mark_all_news_read, mark_news_read, purge_read_news
+from carnage.core.gentoolkit import portage_lock
 from carnage.tui.widgets.table import NavigableDataTable
 from carnage.tui.widgets.table_tab import TableTab
 
@@ -63,8 +64,11 @@ class NewsTab(TableTab):
         self.app.call_from_thread(self._show_loading)
 
         try:
-            # This runs in a thread, so it won't block the UI
-            news_items: list[News] = get_news()
+            # This runs in a thread, so it won't block the UI. Portage is not
+            # thread-safe: serialize against the other workers initializing
+            # the same trees.
+            with portage_lock:
+                news_items: list[News] = get_news()
 
             # Update UI back on main thread
             self.app.call_from_thread(self._populate_table, news_items)
