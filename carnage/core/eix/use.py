@@ -1,10 +1,8 @@
 """USE flag functionality using eix."""
 
-import os
-import subprocess
 from subprocess import CompletedProcess
 
-from carnage.core.eix.eix import count_matches, has_remote_cache
+from carnage.core.eix.eix import has_remote_cache
 from carnage.core.process import tracked_run
 
 
@@ -64,34 +62,3 @@ def get_all_useflags() -> list[str]:
             cleaned_useflags.append(cleaned_flag)
 
     return cleaned_useflags
-
-
-def get_package_count_for_useflag(useflag: str) -> int:
-    """
-    Get the number of packages that have a specific USE flag.
-
-    Args:
-        useflag: USE flag name to count packages for
-
-    Returns:
-        Number of packages with this USE flag, or -1 if error occurs
-    """
-    # Set environment to disable limits
-    env: dict[str, str] = os.environ.copy()
-    env["EIX_LIMIT"] = "0"
-
-    # Build command based on remote cache availability
-    if has_remote_cache():
-        cmd: list[str] = ["eix", "-RQ*", "--format", "1", "--use", useflag]
-    else:
-        cmd = ["eix", "-Q*", "--format", "1", "--use", useflag]
-
-    try:
-        result: CompletedProcess[bytes] = tracked_run(cmd, env=env)
-
-        if result.returncode == 0:
-            return count_matches(result.stdout)
-        else:
-            return 0
-    except (subprocess.SubprocessError, OSError):
-        return -1

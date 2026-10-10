@@ -9,7 +9,6 @@ from textual.widgets import DataTable, LoadingIndicator, Static
 from carnage.core.cache import get_cache_manager
 from carnage.core.config import Configuration, get_config
 from carnage.core.eix.search import Package, fetch_packages_by_query
-from carnage.core.eix.use import get_package_count_for_useflag
 from carnage.core.portage.use import UseFlag, get_or_cache_useflags
 from carnage.tui.widgets.table import NavigableDataTable
 from carnage.tui.widgets.table_tab import TableTab
@@ -211,9 +210,11 @@ class UseFlagsTab(TableTab):
     async def _load_useflag_details_worker(self, useflag: UseFlag) -> None:
         """Worker thread to load USE flag details."""
         try:
-            # Get package count and packages for this USE flag
-            package_count: int = get_package_count_for_useflag(useflag.name)
+            # One eix scan: the count is the length of the list shown below.
+            # A separate `--format 1` count query used to re-scan the whole
+            # cache for the same fact.
             packages: list[Package] = fetch_packages_by_query(["--use", useflag.name], False)
+            package_count: int = len(packages)
 
             # Format details on main thread
             self.app.call_from_thread(self._display_useflag_details, useflag, package_count, packages)
