@@ -318,10 +318,17 @@ def _parse_package(package_elem: etree._Element, category: str) -> Package | Non
     homepage_elem = package_elem.find("homepage")
     licenses_elem = package_elem.find("licenses")
 
-    # Parse licenses
+    # Parse licenses. eix hands over the raw LICENSE expression, operators
+    # included ("|| ( Ruby-BSD BSD-2 )"), so keep only the license names.
     licenses: list[str] = []
     if licenses_elem is not None and licenses_elem.text:
-        licenses = licenses_elem.text.split()
+        seen_licenses: set[str] = set()
+        for token in licenses_elem.text.split():
+            name_token = token.strip("()")
+            if not name_token or name_token == "||" or name_token in seen_licenses:
+                continue
+            seen_licenses.add(name_token)
+            licenses.append(name_token)
 
     # Parse versions
     versions: list[PackageVersion] = [_parse_version(version_elem) for version_elem in package_elem.findall("version")]

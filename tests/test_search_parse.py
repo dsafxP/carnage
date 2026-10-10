@@ -27,6 +27,9 @@ XML = """<eix>
       </version>
     </package>
     <package name="-evil"/>
+    <package name="ruby">
+      <licenses>|| ( Ruby-BSD BSD-2 Ruby-BSD )</licenses>
+    </package>
   </category>
 </eix>
 """
@@ -43,7 +46,7 @@ def test_parse_package_reads_every_field_once() -> None:
         if package is not None
     ]
 
-    assert [package.full_name for package in packages] == ["app-editors/vim"]
+    assert [package.full_name for package in packages] == ["app-editors/vim", "app-editors/ruby"]
 
     (version,) = packages[0].versions
     assert version.id == "9.0.0"
@@ -64,6 +67,8 @@ def test_parse_package_reads_every_field_once() -> None:
     assert packages[0].description == "Vi IMproved"
     assert packages[0].homepage == "https://example.invalid"
     assert packages[0].licenses == ["vim"]
+    # License choice operators never reach the details pane, deduplicated.
+    assert packages[1].licenses == ["Ruby-BSD", "BSD-2"]
 
 
 def test_to_gentoolkit_reuses_the_instance_per_cpv() -> None:
