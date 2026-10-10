@@ -55,6 +55,10 @@ class GLSATab(TableTab):
 
         table.add_columns("ID", "Product", "Title")
 
+        # Nothing is selected yet: park the button instead of showing the
+        # compose-time default over an empty table.
+        self.update_button_states()
+
     def ensure_loaded(self) -> None:
         """Start the first load, once, instead of at mount."""
         if self._loaded:

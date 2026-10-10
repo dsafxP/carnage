@@ -80,6 +80,10 @@ class OverlaysTab(TableTab):
         else:
             table.add_columns("Name", "Packages", "Description")
 
+        # Nothing is selected yet: park the buttons instead of showing the
+        # compose-time defaults over an empty table.
+        self.update_button_states()
+
     def ensure_loaded(self) -> None:
         """Start the first load, once, instead of at mount."""
         if self._loaded:

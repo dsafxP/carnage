@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from textual.app import App, ComposeResult
+from textual.widgets import Button
 
 import carnage.tui.widgets.glsa_tab as glsa_tab_module
 import carnage.tui.widgets.overlay_tab as overlay_tab_module
@@ -51,9 +52,13 @@ async def test_overlays_mount_starts_no_load_but_ensure_does_once(monkeypatch: p
         await pilot.pause(0.3)
 
         assert calls == []
-        # No load runs, so no spinner either: the table sits visible.
+        # No load runs, so no spinner either: the table sits visible and the
+        # buttons stay parked until a row is selected.
         assert tab.query_one("#overlays-loading").display is False
         assert tab.query_one("#overlays-table").display is True
+        assert tab.query_one("#enable-sync-btn", Button).display is False
+        assert tab.query_one("#sync-btn", Button).display is False
+        assert tab.query_one("#remove-btn", Button).display is False
 
         tab.ensure_loaded()
         tab.ensure_loaded()
@@ -114,6 +119,7 @@ async def test_glsa_mount_starts_no_load_but_ensure_does_once(monkeypatch: pytes
         assert calls == []
         assert tab.query_one("#glsa-loading").display is False
         assert tab.query_one("#glsa-table").display is True
+        assert tab.query_one("#fix-glsa-btn", Button).display is False
 
         tab.ensure_loaded()
         tab.ensure_loaded()
