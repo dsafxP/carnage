@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+from typing import ClassVar
 
 from textual.app import App, ComposeResult
 from textual.widgets import DataTable, LoadingIndicator
@@ -22,6 +23,7 @@ class _Bare(TableTab):
 
     TABLE_ID = "bare-table"
     LOADING_ID = "bare-loading"
+    _SORT_KEYS: ClassVar[dict] = {"Name": lambda item: item}
 
     def compose(self) -> ComposeResult:
         yield LoadingIndicator(id="bare-loading")
@@ -70,3 +72,46 @@ def test_subclasses_inherit_the_loading_helpers() -> None:
     for widget_cls in _TABS:
         assert widget_cls._show_loading is TableTab._show_loading, widget_cls.__name__
         assert widget_cls._hide_loading is TableTab._hide_loading, widget_cls.__name__
+
+
+async def test_cycle_sort_toggles_and_rejects_unknown() -> None:
+    app = _Harness()
+
+    async with app.run_test():
+        tab = app.query_one(_Bare)
+
+        assert tab._cycle_sort("Unknown") is False
+        assert tab._sort_column is None
+
+        assert tab._cycle_sort("Name") is True
+        assert (tab._sort_column, tab._sort_reverse) == ("Name", False)
+
+        assert tab._cycle_sort("Name") is True
+        assert (tab._sort_column, tab._sort_reverse) == ("Name", True)
+
+
+async def test_mark_sorted_column_shows_direction() -> None:
+    app = _Harness()
+
+    async with app.run_test():
+        tab = app.query_one(_Bare)
+        table = tab.table
+        table.add_columns("Name", "Description")
+        tab._capture_header_labels()
+
+        tab._sort_column = "Name"
+        tab._sort_reverse = False
+        tab._mark_sorted_column()
+
+        assert str(table.ordered_columns[0].label) == "Name ▲"
+        assert str(table.ordered_columns[1].label) == "Description"
+
+        tab._sort_reverse = True
+        tab._mark_sorted_column()
+
+        assert str(table.ordered_columns[0].label) == "Name ▼"
+
+        tab._sort_column = None
+        tab._mark_sorted_column()
+
+        assert str(table.ordered_columns[0].label) == "Name"
