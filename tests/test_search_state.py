@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from textual.app import App, ComposeResult
+from textual.widgets import DataTable
 
 import carnage.tui.widgets.browse.browse_tab as browse_tab_module
 import carnage.tui.widgets.use_tab as use_tab_module
@@ -229,3 +230,58 @@ async def test_reselecting_the_same_use_flag_is_a_noop(monkeypatch: pytest.Monke
         await pilot.pause(0.3)
 
         assert calls == ["gui"]
+
+
+def _header_event(table: DataTable, index: int) -> DataTable.HeaderSelected:
+    column = table.ordered_columns[index]
+    return DataTable.HeaderSelected(data_table=table, column_key=column.key, column_index=index, label=column.label)
+
+
+async def test_use_header_click_sorts_and_toggles() -> None:
+    async with _UseTabHarness().run_test() as pilot:
+        tab = pilot.app.query_one(UseFlagsTab)
+        tab._populate_table(
+            [
+                UseFlag(name="python", description="Zebra"),
+                UseFlag(name="alsa", description="Middle"),
+                UseFlag(name="gui", description="Apple"),
+            ]
+        )
+        await pilot.pause(0.1)
+        table = tab.query_one("#useflags-table", DataTable)
+
+        tab.on_data_table_header_selected(_header_event(table, 0))
+        await pilot.pause(0.1)
+        assert [flag.name for flag in tab.filtered_useflags] == ["alsa", "gui", "python"]
+        assert str(table.ordered_columns[0].label) == "USE Flag ▲"
+
+        tab.on_data_table_header_selected(_header_event(table, 0))
+        await pilot.pause(0.1)
+        assert [flag.name for flag in tab.filtered_useflags] == ["python", "gui", "alsa"]
+        assert str(table.ordered_columns[0].label) == "USE Flag ▼"
+
+        tab.on_data_table_header_selected(_header_event(table, 1))
+        await pilot.pause(0.1)
+        assert [flag.name for flag in tab.filtered_useflags] == ["gui", "alsa", "python"]
+        assert str(table.ordered_columns[0].label) == "USE Flag"
+        assert str(table.ordered_columns[1].label) == "Description ▲"
+
+
+async def test_use_sort_survives_repopulate() -> None:
+    async with _UseTabHarness().run_test() as pilot:
+        tab = pilot.app.query_one(UseFlagsTab)
+        flags = [UseFlag(name="python", description=None), UseFlag(name="alsa", description=None)]
+        tab._populate_table(list(flags))
+        await pilot.pause(0.1)
+
+        table = tab.query_one("#useflags-table", DataTable)
+        column = table.ordered_columns[0]
+        tab.on_data_table_header_selected(
+            DataTable.HeaderSelected(data_table=table, column_key=column.key, column_index=0, label=column.label)
+        )
+        await pilot.pause(0.1)
+
+        tab._populate_table(list(reversed(flags)))
+        await pilot.pause(0.1)
+
+        assert [flag.name for flag in tab.filtered_useflags] == ["alsa", "python"]

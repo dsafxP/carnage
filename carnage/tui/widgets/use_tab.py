@@ -1,5 +1,8 @@
 """USE flags tab widget for browsing Gentoo USE flags."""
 
+from collections.abc import Callable
+from typing import Any, ClassVar
+
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
@@ -19,6 +22,11 @@ class UseFlagsTab(TableTab):
 
     TABLE_ID = "useflags-table"
     LOADING_ID = "useflags-loading"
+
+    _SORT_KEYS: ClassVar[dict[str, Callable[[UseFlag], Any]]] = {
+        "USE Flag": lambda useflag: useflag.name.lower(),
+        "Description": lambda useflag: (useflag.description or "").lower(),
+    }
 
     def __init__(self) -> None:
         super().__init__()
@@ -49,6 +57,7 @@ class UseFlagsTab(TableTab):
         table: DataTable = self.query_one("#useflags-table", DataTable)
 
         table.add_columns("USE Flag", "Description")
+        self._capture_header_labels()
 
     def search_useflags(self, query: str) -> None:
         """Debounced USE flag search — called by the parent on input changes."""
@@ -106,6 +115,25 @@ class UseFlagsTab(TableTab):
             if self._current_search == query:
                 self.app.call_from_thread(self._hide_loading)
 
+    def on_data_table_header_selected(self, event: DataTable.HeaderSelected) -> None:
+        """Sort by the clicked column; repeat clicks toggle direction."""
+        index = event.column_index
+        if not 0 <= index < len(self._header_labels):
+            return
+
+        if not self._cycle_sort(self._header_labels[index]):
+            return
+
+        self._populate_table(self.filtered_useflags)
+        self._mark_sorted_column()
+
+    def _apply_sort(self) -> None:
+        """Order the displayed flags by the active sort spec."""
+        if self._sort_column is None:
+            return
+
+        self.filtered_useflags.sort(key=self._SORT_KEYS[self._sort_column], reverse=self._sort_reverse)
+
     @staticmethod
     def _filter_useflags(useflags: list[UseFlag], query: str) -> list[UseFlag]:
         """Filter USE flags by name and description."""
@@ -142,6 +170,7 @@ class UseFlagsTab(TableTab):
     def _populate_table(self, useflags: list[UseFlag]) -> None:
         """Populate the table with USE flag search results."""
         self.filtered_useflags = useflags
+        self._apply_sort()
 
         table: DataTable = self.query_one("#useflags-table", DataTable)
 
