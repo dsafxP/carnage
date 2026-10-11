@@ -1,6 +1,7 @@
 """News tab widget for displaying Gentoo repository news."""
 
-from typing import ClassVar
+from collections.abc import Callable
+from typing import Any, ClassVar
 
 from textual import work
 from textual.app import ComposeResult
@@ -20,6 +21,12 @@ class NewsTab(TableTab):
 
     TABLE_ID = "news-table"
     LOADING_ID = "news-loading"
+
+    _SORT_KEYS: ClassVar[dict[str, Callable[[News], Any]]] = {
+        "Status": lambda news: news.read,
+        "Date": lambda news: news.date,
+        "Title": lambda news: news.title.lower(),
+    }
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("r", "mark_read", "Mark Read", show=True),
@@ -56,6 +63,26 @@ class NewsTab(TableTab):
         table: DataTable = self.query_one("#news-table", DataTable)
 
         table.add_columns("Status", "Date", "Title")
+        self._capture_header_labels()
+
+    def on_data_table_header_selected(self, event: DataTable.HeaderSelected) -> None:
+        """Sort by the clicked column; repeat clicks toggle direction."""
+        index = event.column_index
+        if not 0 <= index < len(self._header_labels):
+            return
+
+        if not self._cycle_sort(self._header_labels[index]):
+            return
+
+        self._populate_table(self.news_items)
+        self._mark_sorted_column()
+
+    def _apply_sort(self) -> None:
+        """Order the displayed items by the active sort spec."""
+        if self._sort_column is None:
+            return
+
+        self.news_items.sort(key=self._SORT_KEYS[self._sort_column], reverse=self._sort_reverse)
 
     @work(exclusive=True, thread=True)
     def load_news(self) -> None:
@@ -80,6 +107,8 @@ class NewsTab(TableTab):
     def _populate_table(self, news_items: list[News]) -> None:
         """Populate the table with news items (runs on main thread)."""
         self.news_items = news_items
+        self._apply_sort()
+
         table: DataTable = self.query_one("#news-table", DataTable)
 
         table.clear()

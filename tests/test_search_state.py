@@ -344,3 +344,50 @@ async def test_browse_header_click_sorts_packages() -> None:
 
         assert [p.full_name for p in tab.packages] == ["sys-apps/zebra", "app-editors/apple"]
         assert str(table.ordered_columns[2].label) == "Description ▲"
+
+
+def _news_item(index: int, date: str, title: str, read: bool):
+    from carnage.core.portage.news import News
+
+    return News(index=index, name=f"item-{index}", date=date, title=title, read=read)
+
+
+class _NewsHarness(App[None]):
+    blocked = False
+
+    def compose(self) -> ComposeResult:
+        from carnage.tui.widgets.news_tab import NewsTab
+
+        yield NewsTab()
+
+
+async def test_news_header_click_sorts_items(monkeypatch: pytest.MonkeyPatch) -> None:
+    from textual.widgets import DataTable
+
+    from carnage.tui.widgets.news_tab import NewsTab
+
+    monkeypatch.setattr(NewsTab, "load_news", lambda self: None)
+
+    async with _NewsHarness().run_test() as pilot:
+        tab = pilot.app.query_one(NewsTab)
+        tab._populate_table(
+            [
+                _news_item(1, "2024-03-01", "Zulu", True),
+                _news_item(2, "2024-01-15", "Mike", False),
+                _news_item(3, "2024-02-10", "Alpha", False),
+            ]
+        )
+        await pilot.pause(0.1)
+        table = tab.query_one("#news-table", DataTable)
+
+        tab.on_data_table_header_selected(_header_event(table, 1))
+        await pilot.pause(0.1)
+        assert [n.date for n in tab.news_items] == ["2024-01-15", "2024-02-10", "2024-03-01"]
+
+        tab.on_data_table_header_selected(_header_event(table, 2))
+        await pilot.pause(0.1)
+        assert [n.title for n in tab.news_items] == ["Alpha", "Mike", "Zulu"]
+
+        tab.on_data_table_header_selected(_header_event(table, 0))
+        await pilot.pause(0.1)
+        assert [n.read for n in tab.news_items] == [False, False, True]
