@@ -27,6 +27,25 @@ from carnage.tui.widgets.table import NavigableDataTable, row_key_value
 from carnage.tui.widgets.table_tab import TableTab
 
 
+def _has_no_packages(overlay: Overlay) -> bool:
+    """Whether the overlay shows a zero package count.
+
+    Unknown counts (None) read as zero, exactly like the table renders them.
+    """
+    return (overlay.package_count or 0) == 0
+
+
+def _overlay_label(overlay: Overlay, *, installed: bool) -> str:
+    """Row label with checkmark, official styling, and dimming for empty overlays."""
+    name: str = f"[italic]{overlay.name}[/]" if overlay.status == OverlayStatus.OFFICIAL else overlay.name
+    label: str = f"{'[green]✓[/]' if installed else ' '} {name}"
+
+    if _has_no_packages(overlay):
+        label = f"[dim]{label}[/]"
+
+    return label
+
+
 class OverlaysTab(TableTab):
     """Widget for displaying and managing Gentoo overlays."""
 
@@ -143,6 +162,10 @@ class OverlaysTab(TableTab):
 
     def _populate_table(self) -> None:
         """Populate the table with filtered overlays."""
+        # Empty overlays sink to the bottom, stably: row indices map back
+        # into filtered_overlays on selection, so the list itself is ordered.
+        self.filtered_overlays.sort(key=_has_no_packages)
+
         table: DataTable = self.query_one("#overlays-table", DataTable)
 
         # Clear current selection when filtering
@@ -153,12 +176,11 @@ class OverlaysTab(TableTab):
         table.clear()
 
         for i, overlay in enumerate(self.filtered_overlays):
-            name: str = f"[italic]{overlay.name}[/]" if overlay.status == OverlayStatus.OFFICIAL else overlay.name
             # The flag is populated at fetch and kept up to date by the
             # enable/sync/remove actions: re-statting the filesystem per row
             # per keystroke only repeated the same answer ~866 syscalls at a
             # time.
-            label: str = f"{'[green]✓[/]' if overlay.installed else ' '} {name}"
+            label: str = _overlay_label(overlay, installed=bool(overlay.installed))
 
             if self.should_skip_pkg_count:
                 # Skip package count display
@@ -216,13 +238,14 @@ class OverlaysTab(TableTab):
         """Suggest clearing the cache when many overlays report zero packages."""
         # Check if remote cache is available and we have loaded overlays
         if eix_cache_available and self.overlays and not self._config.ignore_warnings:
-            zero_package_overlays = []
-            for overlay in self.overlays:
-                if overlay.package_count == 0:
-                    zero_package_overlays.append(overlay.name)
+            zero_package_overlays = [overlay.name for overlay in self.overlays if _has_no_packages(overlay)]
 
-            # If we have overlays with 0 packages, suggest clearing cache
-            if zero_package_overlays and len(zero_package_overlays) > 8:  # Only notify if significant number
+            # Only notify if the count is significant: scaled to the full
+            # overlay list so legitimate empty overlays never trip it, with
+            # a floor for tiny lists.
+            threshold = max(8, len(self.overlays) // 4)
+
+            if len(zero_package_overlays) > threshold:
                 self.notify(
                     f"Found {len(zero_package_overlays)} overlays with 0 packages. "
                     "Remote cache is available - clear cache to count remote overlays?",
@@ -264,8 +287,7 @@ class OverlaysTab(TableTab):
 
         # Get the overlay and format the new label
         overlay = self.filtered_overlays[row_index]
-        name: str = f"[italic]{overlay.name}[/]" if overlay.status == OverlayStatus.OFFICIAL else overlay.name
-        label: str = f"{'[green]✓[/]' if installed else ' '} {name}"
+        label: str = _overlay_label(overlay, installed=installed)
 
         # Update the first column
         try:
