@@ -79,7 +79,7 @@ For example, searching for \-\-installed will display all installed packages, ig
 
 | Key                    | Type   | Description                                        | Default                                            |
 |------------------------|--------|----------------------------------------------------|----------------------------------------------------|
-| skip_package\_counting | bool   | Skip counting packages for faster overlay loading. | true                                               |
+| skip_package\_counting | bool   | Skip counting packages for faster overlay loading. | false                                              |
 | cache_max\_age         | int    | Maximum overlay cache age (hours).                 | 72                                                 |
 | overlay_source         | string | URL to fetch overlay metadata.                     | "https://api.gentoo.org/overlays/repositories.xml" |
 

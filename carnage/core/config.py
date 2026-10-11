@@ -26,7 +26,7 @@ _DEFAULT_CONFIG: Final[dict[str, Any]] = {
         "depth": 1,
     },
     "overlays": {
-        "skip_package_counting": True,
+        "skip_package_counting": False,
         "cache_max_age": 72,
         "overlay_source": "https://api.gentoo.org/overlays/repositories.xml",
     },
@@ -166,8 +166,8 @@ class Configuration:
         # Overlays section
         overlays_section: Table = tomlkit.table()
         overlays_section.add(tomlkit.comment("Skip counting packages in overlays (faster but less informative)"))
-        overlays_section.add(tomlkit.comment("When false, package counts will be fetched but may take longer"))
-        overlays_section.add("skip_package_counting", True)
+        overlays_section.add(tomlkit.comment("When false, package counts are fetched with a single eix query"))
+        overlays_section.add("skip_package_counting", False)
         overlays_section.add(tomlkit.nl())
         overlays_section.add(tomlkit.comment("Maximum age for overlay cache in hours"))
         overlays_section.add(tomlkit.comment("Overlay data will be refreshed after this time"))
