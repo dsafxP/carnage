@@ -1,6 +1,7 @@
 """Overlays tab widget for managing Gentoo overlays."""
 
-from typing import ClassVar
+from collections.abc import Callable
+from typing import Any, ClassVar
 
 from textual import work
 from textual.app import ComposeResult
@@ -52,6 +53,12 @@ class OverlaysTab(TableTab):
     TABLE_ID = "overlays-table"
     LOADING_ID = "overlays-loading"
 
+    _SORT_KEYS: ClassVar[dict[str, Callable[[Overlay], Any]]] = {
+        "Name": lambda overlay: overlay.name.lower(),
+        "Packages": lambda overlay: overlay.package_count or 0,
+        "Description": lambda overlay: (overlay.description or "").lower(),
+    }
+
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("r", "remove", "Remove", show=True),
         Binding("e", "enable_sync", "Enable & Sync", show=True),
@@ -98,10 +105,31 @@ class OverlaysTab(TableTab):
             table.add_columns("Name", "Description")
         else:
             table.add_columns("Name", "Packages", "Description")
+        self._capture_header_labels()
 
         # Nothing is selected yet: park the buttons instead of showing the
         # compose-time defaults over an empty table.
         self.update_button_states()
+
+    def on_data_table_header_selected(self, event: DataTable.HeaderSelected) -> None:
+        """Sort by the clicked column; repeat clicks toggle direction."""
+        index = event.column_index
+        if not 0 <= index < len(self._header_labels):
+            return
+
+        if not self._cycle_sort(self._header_labels[index]):
+            return
+
+        self._populate_table()
+        self._mark_sorted_column()
+
+    def _apply_sort(self) -> None:
+        """Order the displayed overlays by the active sort spec."""
+        if self._sort_column is not None:
+            self.filtered_overlays.sort(key=self._SORT_KEYS[self._sort_column], reverse=self._sort_reverse)
+
+        # Empty overlays stay sunk whatever the column order.
+        self.filtered_overlays.sort(key=_has_no_packages)
 
     def ensure_loaded(self) -> None:
         """Start the first load, once, instead of at mount."""
@@ -162,9 +190,9 @@ class OverlaysTab(TableTab):
 
     def _populate_table(self) -> None:
         """Populate the table with filtered overlays."""
-        # Empty overlays sink to the bottom, stably: row indices map back
-        # into filtered_overlays on selection, so the list itself is ordered.
-        self.filtered_overlays.sort(key=_has_no_packages)
+        # Row indices map back into filtered_overlays on selection, so the
+        # list itself is ordered, not just the display.
+        self._apply_sort()
 
         table: DataTable = self.query_one("#overlays-table", DataTable)
 

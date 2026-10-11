@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from textual.app import App, ComposeResult
 from textual.coordinate import Coordinate
+from textual.widgets import DataTable
 
 import carnage.tui.widgets.overlay_tab as overlay_tab_module
 from carnage.core.cache import CacheManager
@@ -129,6 +130,12 @@ def _names(tab: OverlaysTab) -> list[str]:
     return [overlay.name for overlay in tab.filtered_overlays]
 
 
+def _header_event(table, index: int):
+
+    column = table.ordered_columns[index]
+    return DataTable.HeaderSelected(data_table=table, column_key=column.key, column_index=index, label=column.label)
+
+
 def _first_cells(tab: OverlaysTab) -> list[str]:
     table = tab.table
     return [str(table.get_cell_at(Coordinate(row, 0))) for row in range(table.row_count)]
@@ -226,3 +233,61 @@ async def test_no_remote_cache_never_warns(monkeypatch: pytest.MonkeyPatch) -> N
         tab._maybe_notify_remote_cache(False)
 
         assert notices == []
+
+
+async def test_overlay_header_click_sorts_with_sink(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(OverlaysTab, "load_overlays", lambda self: None)
+
+    async with _Harness().run_test() as pilot:
+        tab = pilot.app.query_one(OverlaysTab)
+        tab.overlays = [
+            _overlay("beta", installed=False, package_count=2),
+            _overlay("zero-b", installed=False, package_count=0),
+            _overlay("alpha", installed=False, package_count=5),
+            _overlay("zero-a", installed=False, package_count=0),
+        ]
+        tab.filtered_overlays = list(tab.overlays)
+        tab._populate_table()
+        await pilot.pause(0.1)
+        table = tab.query_one("#overlays-table", DataTable)
+
+        assert _names(tab) == ["beta", "alpha", "zero-b", "zero-a"]
+
+        tab.on_data_table_header_selected(_header_event(table, 0))
+        await pilot.pause(0.1)
+        assert _names(tab) == ["alpha", "beta", "zero-a", "zero-b"]
+        assert str(table.ordered_columns[0].label) == "Name ▲"
+
+        tab.on_data_table_header_selected(_header_event(table, 0))
+        await pilot.pause(0.1)
+        assert _names(tab) == ["beta", "alpha", "zero-b", "zero-a"]
+        assert str(table.ordered_columns[0].label) == "Name ▼"
+
+
+async def test_overlay_packages_column_sorts_counts(monkeypatch: pytest.MonkeyPatch) -> None:
+
+    class _CountingConfig(_Config):
+        skip_package_counting = False
+
+    monkeypatch.setattr(overlay_tab_module, "get_config", lambda: _CountingConfig())
+    monkeypatch.setattr(overlay_tab_module, "is_found", lambda: True)
+    monkeypatch.setattr(OverlaysTab, "load_overlays", lambda self: None)
+
+    async with _Harness().run_test() as pilot:
+        tab = pilot.app.query_one(OverlaysTab)
+        tab.overlays = [
+            _overlay("zero", installed=False, package_count=0),
+            _overlay("five", installed=False, package_count=5),
+            _overlay("two", installed=False, package_count=2),
+        ]
+        tab.filtered_overlays = list(tab.overlays)
+        tab._populate_table()
+        await pilot.pause(0.1)
+        table = tab.query_one("#overlays-table", DataTable)
+
+        assert [str(c.label) for c in table.ordered_columns] == ["Name", "Packages", "Description"]
+
+        tab.on_data_table_header_selected(_header_event(table, 1))
+        await pilot.pause(0.1)
+        # Ascending counts, but empties stay sunk.
+        assert _names(tab) == ["two", "five", "zero"]
