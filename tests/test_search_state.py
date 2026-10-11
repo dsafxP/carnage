@@ -11,6 +11,7 @@ from textual.widgets import DataTable
 import carnage.tui.widgets.browse.browse_tab as browse_tab_module
 import carnage.tui.widgets.use_tab as use_tab_module
 from carnage.core.cache import CacheManager
+from carnage.core.eix.search import Package
 from carnage.core.portage.use import UseFlag
 from carnage.tui.widgets.browse.browse_tab import BrowseTab
 from carnage.tui.widgets.use_tab import UseFlagsTab
@@ -285,3 +286,61 @@ async def test_use_sort_survives_repopulate() -> None:
         await pilot.pause(0.1)
 
         assert [flag.name for flag in tab.filtered_useflags] == ["alsa", "python"]
+
+
+def _browse_package(category: str, name: str, description: str | None = None) -> Package:
+    from carnage.core.eix.search import PackageVersion
+
+    version = PackageVersion(
+        id="1.0",
+        eapi="8",
+        repository="gentoo",
+        virtual=False,
+        installed=False,
+        install_date=None,
+        install_eapi=None,
+        src_uri=None,
+        iuse=[],
+        iuse_default=[],
+        required_use=None,
+        depend=None,
+        rdepend=None,
+        bdepend=None,
+        pdepend=None,
+        idepend=None,
+        masks=[],
+        unmasks=[],
+        properties=[],
+        restricts=[],
+        use_enabled=[],
+        use_disabled=[],
+    )
+    return Package(
+        category=category, name=name, description=description, homepage=None, licenses=[], versions=[version]
+    )
+
+
+async def test_browse_header_click_sorts_packages() -> None:
+    async with _BrowseTabHarness().run_test() as pilot:
+        tab = pilot.app.query_one(BrowseTab)
+        tab._populate_table(
+            [
+                _browse_package("sys-apps", "zebra", "Alpha"),
+                _browse_package("app-editors", "apple", "Zulu"),
+            ],
+            frozenset(),
+        )
+        await pilot.pause(0.1)
+        table = tab.query_one("#browse-table", DataTable)
+
+        tab.on_data_table_header_selected(_header_event(table, 0))
+        await pilot.pause(0.1)
+
+        assert [p.full_name for p in tab.packages] == ["app-editors/apple", "sys-apps/zebra"]
+        assert str(table.ordered_columns[0].label) == "Package ▲"
+
+        tab.on_data_table_header_selected(_header_event(table, 2))
+        await pilot.pause(0.1)
+
+        assert [p.full_name for p in tab.packages] == ["sys-apps/zebra", "app-editors/apple"]
+        assert str(table.ordered_columns[2].label) == "Description ▲"

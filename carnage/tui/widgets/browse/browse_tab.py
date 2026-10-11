@@ -1,5 +1,8 @@
 """Browse tab widget for searching and managing Gentoo packages."""
 
+from collections.abc import Callable
+from typing import Any, ClassVar
+
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Vertical
@@ -30,11 +33,31 @@ def _exists_in_repo(package: Package) -> bool:
     return version.to_gentoolkit(package.category, package.name).exists_f
 
 
+def _package_overlay(package: Package) -> str:
+    """Overlay cell as shown in the table, reused as the sort key."""
+    overlay: str = "?"
+
+    if package.versions:
+        repo = package.versions[0].repository
+        if repo:
+            overlay = repo
+            if repo != "gentoo" and any(v.repository == "gentoo" for v in package.versions[1:]):
+                overlay = f"{repo} / gentoo"
+
+    return overlay
+
+
 class BrowseTab(TableTab):
     """Widget for browsing Gentoo packages. Handles search and table only."""
 
     TABLE_ID = "browse-table"
     LOADING_ID = "browse-loading"
+
+    _SORT_KEYS: ClassVar[dict[str, Callable[[Package], Any]]] = {
+        "Package": lambda package: package.full_name.lower(),
+        "Overlay": lambda package: _package_overlay(package).lower(),
+        "Description": lambda package: (package.description or "").lower(),
+    }
 
     def __init__(self) -> None:
         super().__init__()
@@ -57,6 +80,26 @@ class BrowseTab(TableTab):
 
         table.clear()
         table.add_columns("Package", "Overlay", "Description")
+        self._capture_header_labels()
+
+    def on_data_table_header_selected(self, event: DataTable.HeaderSelected) -> None:
+        """Sort by the clicked column; repeat clicks toggle direction."""
+        index = event.column_index
+        if not 0 <= index < len(self._header_labels):
+            return
+
+        if not self._cycle_sort(self._header_labels[index]):
+            return
+
+        self._populate_table(self.packages, self._missing_packages)
+        self._mark_sorted_column()
+
+    def _apply_sort(self) -> None:
+        """Order the displayed packages by the active sort spec."""
+        if self._sort_column is None:
+            return
+
+        self.packages.sort(key=self._SORT_KEYS[self._sort_column], reverse=self._sort_reverse)
 
     def search_packages(self, query: str) -> None:
         """Debounced package search — called by the parent on input changes."""
@@ -133,6 +176,7 @@ class BrowseTab(TableTab):
 
     def _populate_table(self, packages: list[Package], missing: frozenset[str] | None = None) -> None:
         self.packages = packages
+        self._apply_sort()
 
         if missing is not None:
             self._missing_packages = missing
@@ -142,13 +186,7 @@ class BrowseTab(TableTab):
         table.clear()
 
         for i, package in enumerate(packages):
-            overlay: str = "?"
-            if package.versions:
-                repo = package.versions[0].repository
-                if repo:
-                    overlay = repo
-                    if repo != "gentoo" and any(v.repository == "gentoo" for v in package.versions[1:]):
-                        overlay = f"{repo} / gentoo"
+            overlay: str = _package_overlay(package)
 
             description: str = package.description or "No description"
 
