@@ -27,6 +27,7 @@ from carnage.core.portage.emerge import (
     emerge_noreplace,
     emerge_uninstall,
 )
+from carnage.core.portage.overlays import get_installed
 from carnage.tui.widgets.cachetabbedcontent import CachedTabbedContent
 from carnage.tui.widgets.table import NavigableDataTable, row_key_value
 
@@ -533,13 +534,14 @@ class PackageDetailWidget(Widget):
 
             # Portage is not thread-safe: serialize against the other workers.
             with portage_lock:
+                installed_overlays = frozenset(get_installed())
                 for i, version in enumerate(self.package.versions):
                     if version.virtual and version.id in non_virtual_ids:
                         continue
                     rows.append(
                         (
                             f"{version.id}-{i}",
-                            self._version_label(version, self.package),
+                            self._version_label(version, self.package, installed_overlays=installed_overlays),
                             version.repository or "gentoo",
                         )
                     )
@@ -583,14 +585,22 @@ class PackageDetailWidget(Widget):
             table.update_cell_at(Coordinate(row, 0), cell)
 
     @staticmethod
-    def _version_label(version: PackageVersion, pkg: Package) -> str:
-        suffix = " (Virtual)" if version.virtual else ""
+    def _version_label(version: PackageVersion, pkg: Package, *, installed_overlays: frozenset[str]) -> str:
+        """Build one versions-table row label without blocking.
+
+        Versions from overlays with no local tree are unavailable by
+        definition - portage cannot see them - so they skip the query
+        entirely. Everything else still asks portage.
+        """
         if version.installed:
-            return f"[green]✓[/green] {version.id}{suffix}"
+            return f"[green]✓[/green] {version.id}"
+        repository = version.repository or "gentoo"
+        if repository not in installed_overlays:
+            return f"[red]✗[/red] {version.id}"
         gt_pkg: GentoolkitPackage = version.to_gentoolkit(pkg.category, pkg.name)
         if not gt_pkg.available:
-            return f"[red]✗[/red] {version.id}{suffix}"
-        return f"  {version.id}{suffix}"
+            return f"[red]✗[/red] {version.id}"
+        return f"  {version.id}"
 
     @staticmethod
     def _mark_selected(label: str) -> str:

@@ -104,7 +104,7 @@ def test_mark_selected_skips_the_status_area() -> None:
     mark = PackageDetailWidget._mark_selected
 
     assert mark("[green]✓[/green] 9.2.1152") == "[green]✓[/green] [reverse]9.2.1152[/]"
-    assert mark("[red]✗[/red] 9999 (Virtual)") == "[red]✗[/red] [reverse]9999 (Virtual)[/]"
+    assert mark("[red]✗[/red] 9999") == "[red]✗[/red] [reverse]9999[/]"
     assert mark("  9.0.0") == "  [reverse]9.0.0[/]"
 
 
@@ -141,3 +141,119 @@ async def test_reselecting_the_same_version_is_a_noop(monkeypatch: pytest.Monkey
 
         assert calls == []
         assert notes == []
+
+
+def _labeled_version(version_id: str, **overrides) -> PackageVersion:
+    fields: dict = {
+        "id": version_id,
+        "eapi": "8",
+        "repository": "gentoo",
+        "virtual": False,
+        "installed": False,
+        "install_date": None,
+        "install_eapi": None,
+        "src_uri": None,
+        "iuse": [],
+        "iuse_default": [],
+        "required_use": None,
+        "depend": None,
+        "rdepend": None,
+        "bdepend": None,
+        "pdepend": None,
+        "idepend": None,
+        "masks": [],
+        "unmasks": [],
+        "properties": [],
+        "restricts": [],
+        "use_enabled": [],
+        "use_disabled": [],
+    }
+    fields.update(overrides)
+    return PackageVersion(**fields)
+
+
+def test_version_label_never_mentions_virtual() -> None:
+    """The parenthetical is gone; virtual versions read as plain unavailable."""
+    from carnage.tui.widgets.browse.package_detail import PackageDetailWidget
+
+    package = _package()
+    label = PackageDetailWidget._version_label(
+        _labeled_version("1.0", virtual=True, repository="some-overlay"),
+        package,
+        installed_overlays=frozenset({"gentoo"}),
+    )
+
+    assert label == "[red]✗[/red] 1.0"
+
+
+def test_version_label_skips_portage_for_missing_overlays(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No local tree means portage cannot see the version: no query needed."""
+    from carnage.tui.widgets.browse.package_detail import PackageDetailWidget
+
+    def explode(*args: object, **kwargs: object) -> object:
+        raise AssertionError("portage must not be consulted")
+
+    monkeypatch.setattr(PackageVersion, "to_gentoolkit", explode)
+
+    package = _package()
+    label = PackageDetailWidget._version_label(
+        _labeled_version("1.0", repository="no-such-overlay"),
+        package,
+        installed_overlays=frozenset({"gentoo"}),
+    )
+
+    assert label == "[red]✗[/red] 1.0"
+
+
+def test_version_label_asks_portage_for_present_overlays(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Versions from installed overlays still get their real answer."""
+    from unittest.mock import Mock
+
+    from carnage.tui.widgets.browse.package_detail import PackageDetailWidget
+
+    package = _package()
+    overlays = frozenset({"gentoo"})
+
+    monkeypatch.setattr(PackageVersion, "to_gentoolkit", lambda self, category, name: Mock(available=True))
+    assert PackageDetailWidget._version_label(_labeled_version("1.0"), package, installed_overlays=overlays) == "  1.0"
+
+    monkeypatch.setattr(PackageVersion, "to_gentoolkit", lambda self, category, name: Mock(available=False))
+    assert (
+        PackageDetailWidget._version_label(_labeled_version("1.0"), package, installed_overlays=overlays)
+        == "[red]✗[/red] 1.0"
+    )
+
+
+def test_version_label_prefers_installed_over_everything(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Installed wins even for a virtual version from a missing overlay."""
+    from carnage.tui.widgets.browse.package_detail import PackageDetailWidget
+
+    monkeypatch.setattr(
+        PackageVersion, "to_gentoolkit", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("no query"))
+    )
+
+    package = _package()
+    label = PackageDetailWidget._version_label(
+        _labeled_version("1.0", virtual=True, installed=True, repository="gone"),
+        package,
+        installed_overlays=frozenset(),
+    )
+
+    assert label == "[green]✓[/green] 1.0"
+
+
+def test_version_label_treats_missing_repository_as_gentoo(monkeypatch: pytest.MonkeyPatch) -> None:
+    from unittest.mock import Mock
+
+    from carnage.tui.widgets.browse.package_detail import PackageDetailWidget
+
+    package = _package()
+    monkeypatch.setattr(PackageVersion, "to_gentoolkit", lambda self, category, name: Mock(available=True))
+
+    label = PackageDetailWidget._version_label(
+        _labeled_version("1.0", repository=None),
+        package,
+        installed_overlays=frozenset({"gentoo"}),
+    )
+
+    assert label == "  1.0"
