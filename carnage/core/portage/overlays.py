@@ -1,7 +1,5 @@
 """Utilities for managing Gentoo overlays."""
 
-import concurrent.futures
-import os
 import urllib.error
 import urllib.request
 from collections.abc import Callable
@@ -17,7 +15,7 @@ from textual.app import App
 from carnage.core.cache import CacheManager
 from carnage.core.commands_config import is_valid_component
 from carnage.core.config import Configuration, get_config
-from carnage.core.eix.overlay import NO_CACHE_PACKAGE_COUNT, get_package_count
+from carnage.core.eix.overlay import NO_CACHE_PACKAGE_COUNT, get_all_package_counts
 from carnage.core.operation import start_operation
 from carnage.core.portage.portageq import ctx
 
@@ -351,36 +349,22 @@ def get_installed() -> list[str]:
     return [item.name for item in repos_path.iterdir() if item.is_dir()]
 
 
-def _get_overlay_package_count(overlay: Overlay) -> tuple[Overlay, int]:
-    """Get package count for a single overlay."""
-    try:
-        count: int = get_package_count(overlay.name)
-        return overlay, count
-    except Exception:
-        return overlay, -1
-
-
 def _populate_package_counts(overlays: list[Overlay]) -> None:
-    """Populate package counts for all overlays in parallel."""
+    """Populate package counts for all overlays with a single eix query."""
+    try:
+        counts = get_all_package_counts()
+    except Exception:
+        for overlay in overlays:
+            overlay.package_count = -1
+        return
 
-    # Calculate optimal worker count
-    cpu_count: int = os.cpu_count() or 1
-    max_workers: int = max(2, min(cpu_count // 2, 8))
+    if counts is None:
+        for overlay in overlays:
+            overlay.package_count = NO_CACHE_PACKAGE_COUNT
+        return
 
-    # Use ThreadPoolExecutor for parallel execution
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # Submit all tasks
-        future_to_overlay = {executor.submit(_get_overlay_package_count, overlay): overlay for overlay in overlays}
-
-        # Process completed tasks as they finish
-        for future in concurrent.futures.as_completed(future_to_overlay):
-            try:
-                overlay, count = future.result()
-                overlay.package_count = count
-            except Exception:
-                # If anything goes wrong with the future itself, set count to -1
-                overlay: Overlay = future_to_overlay[future]
-                overlay.package_count = -1
+    for overlay in overlays:
+        overlay.package_count = counts.get(overlay.name, 0)
 
 
 def _populate_skipped_package_counts(overlays: list[Overlay]) -> None:

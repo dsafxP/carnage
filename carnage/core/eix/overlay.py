@@ -1,43 +1,57 @@
 """Interactions with eix for overlay-specific operations."""
 
 import os
-import subprocess
 from subprocess import CompletedProcess
 
-from carnage.core.eix.eix import count_matches, has_cache, has_remote_cache
+from lxml import etree
+
+from carnage.core.eix.eix import has_cache, has_remote_cache
 from carnage.core.process import tracked_run
 
 NO_CACHE_PACKAGE_COUNT = -3
 
 
-def get_package_count(overlay: str) -> int:
+def get_all_package_counts() -> dict[str, int] | None:
     """
-    Get the number of packages in a specific overlay.
+    Count packages found exclusively in each overlay with a single eix query.
 
-    Args:
-        overlay: The overlay name to count packages from
+    Equivalent to calling get_package_count() per overlay: a package counts
+    for an overlay only when all its versions come from there. One database
+    scan replaces hundreds of subprocess spawns.
 
     Returns:
-        Number of packages in the overlay, or -1 if error occurs
+        Mapping of overlay name to package count, or None when no eix
+        cache exists at all.
+
+    Raises:
+        subprocess.SubprocessError: If eix fails.
+        OSError: If eix cannot be run.
+        etree.ParseError: If eix output is not valid XML.
     """
     # Set environment to disable limits
     env: dict[str, str] = os.environ.copy()
     env["EIX_LIMIT"] = "0"
 
-    # Build command based on remote cache availability
+    # Same database view as the per-overlay queries: remote cache when
+    # available, local otherwise.
     if has_remote_cache():
-        cmd: list[str] = ["eix", "-RQ*", "--format", "1", "--only-in-overlay", overlay]
+        cmd: list[str] = ["eix", "-R", "--xml", "*"]
     elif has_cache():
-        cmd = ["eix", "-Q*", "--format", "1", "--only-in-overlay", overlay]
+        cmd = ["eix", "--xml", "*"]
     else:
-        return NO_CACHE_PACKAGE_COUNT  # No cache available
+        return None  # No cache available
 
-    try:
-        result: CompletedProcess[bytes] = tracked_run(cmd, env=env)
+    result: CompletedProcess[bytes] = tracked_run(cmd, env=env)
 
-        if result.returncode == 0:
-            return count_matches(result.stdout)
-        else:
-            return 0
-    except (subprocess.SubprocessError, OSError):
-        return -2
+    parser = etree.XMLParser(remove_comments=True)
+    root = etree.fromstring(result.stdout, parser=parser)
+
+    counts: dict[str, int] = {}
+
+    for package_elem in root.iter("package"):
+        repos = {(v.get("repository") or "gentoo") for v in package_elem.findall("version")}
+        if len(repos) == 1:
+            name = next(iter(repos))
+            counts[name] = counts.get(name, 0) + 1
+
+    return counts
