@@ -125,3 +125,65 @@ async def test_glsa_mount_starts_no_load_but_ensure_does_once(monkeypatch: pytes
         tab.ensure_loaded()
 
         assert calls == ["load"]
+
+
+def _glsa(glsa_id: str, product: str | None, title: str | None):
+    from carnage.core.portage.glsas import GLSA
+
+    return GLSA(
+        id=glsa_id,
+        title=title,
+        synopsis="syn",
+        product=product,
+        announced=None,
+        revised=None,
+        revision_count="01",
+        bugs=[],
+        access=None,
+        background=None,
+        description="desc",
+        impact="impact",
+        impact_type="normal",
+        workaround=None,
+        resolutions=[],
+        affected_packages=[],
+        references=[],
+    )
+
+
+def _glsa_header_event(table, index: int):
+    from textual.widgets import DataTable
+
+    column = table.ordered_columns[index]
+    return DataTable.HeaderSelected(data_table=table, column_key=column.key, column_index=index, label=column.label)
+
+
+async def test_glsa_header_click_sorts_advisories(monkeypatch: pytest.MonkeyPatch) -> None:
+    from textual.widgets import DataTable
+
+    monkeypatch.setattr(GLSATab, "load_glsas", lambda self: None)
+
+    async with _GlsaHarness().run_test() as pilot:
+        tab = pilot.app.query_one(GLSATab)
+        tab._populate_table(
+            [
+                _glsa("GLSA-2024-0002", "apple", "Zulu"),
+                _glsa("GLSA-2024-0001", "zebra", "Alpha"),
+            ]
+        )
+        await pilot.pause(0.1)
+        table = tab.query_one("#glsa-table", DataTable)
+
+        tab.on_data_table_header_selected(_glsa_header_event(table, 0))
+        await pilot.pause(0.1)
+        assert [g.id for g in tab.glsa_items] == ["GLSA-2024-0001", "GLSA-2024-0002"]
+        assert str(table.ordered_columns[0].label) == "ID ▲"
+
+        tab.on_data_table_header_selected(_glsa_header_event(table, 1))
+        await pilot.pause(0.1)
+        assert [g.id for g in tab.glsa_items] == ["GLSA-2024-0002", "GLSA-2024-0001"]
+
+        tab.on_data_table_header_selected(_glsa_header_event(table, 1))
+        await pilot.pause(0.1)
+        assert [g.id for g in tab.glsa_items] == ["GLSA-2024-0001", "GLSA-2024-0002"]
+        assert str(table.ordered_columns[1].label) == "Product ▼"

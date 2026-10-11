@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from textual import work
 from textual.app import ComposeResult
@@ -23,6 +24,12 @@ class GLSATab(TableTab):
 
     TABLE_ID = "glsa-table"
     LOADING_ID = "glsa-loading"
+
+    _SORT_KEYS: ClassVar[dict[str, Callable[[GLSA], Any]]] = {
+        "ID": lambda glsa: glsa.id,
+        "Product": lambda glsa: (glsa.product or "").lower(),
+        "Title": lambda glsa: (glsa.title or glsa.synopsis).lower(),
+    }
 
     def __init__(self) -> None:
         super().__init__()
@@ -54,10 +61,30 @@ class GLSATab(TableTab):
         table: DataTable = self.query_one("#glsa-table", DataTable)
 
         table.add_columns("ID", "Product", "Title")
+        self._capture_header_labels()
 
         # Nothing is selected yet: park the button instead of showing the
         # compose-time default over an empty table.
         self.update_button_states()
+
+    def on_data_table_header_selected(self, event: DataTable.HeaderSelected) -> None:
+        """Sort by the clicked column; repeat clicks toggle direction."""
+        index = event.column_index
+        if not 0 <= index < len(self._header_labels):
+            return
+
+        if not self._cycle_sort(self._header_labels[index]):
+            return
+
+        self._populate_table(self.glsa_items)
+        self._mark_sorted_column()
+
+    def _apply_sort(self) -> None:
+        """Order the displayed advisories by the active sort spec."""
+        if self._sort_column is None:
+            return
+
+        self.glsa_items.sort(key=self._SORT_KEYS[self._sort_column], reverse=self._sort_reverse)
 
     def ensure_loaded(self) -> None:
         """Start the first load, once, instead of at mount."""
@@ -111,6 +138,8 @@ class GLSATab(TableTab):
     def _populate_table(self, glsa_items: list[GLSA]) -> None:
         """Populate the table with GLSA items (runs on main thread)."""
         self.glsa_items = glsa_items
+        self._apply_sort()
+
         table: DataTable = self.query_one("#glsa-table", DataTable)
 
         table.clear()
