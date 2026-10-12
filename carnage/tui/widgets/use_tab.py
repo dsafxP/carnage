@@ -125,7 +125,6 @@ class UseFlagsTab(TableTab):
             return
 
         self._populate_table(self.filtered_useflags)
-        self._mark_sorted_column()
 
     def _apply_sort(self) -> None:
         """Order the displayed flags by the active sort spec."""
@@ -173,7 +172,6 @@ class UseFlagsTab(TableTab):
         self._apply_sort()
 
         table: DataTable = self.query_one("#useflags-table", DataTable)
-
         table.clear()
 
         for i, useflag in enumerate(self.filtered_useflags):

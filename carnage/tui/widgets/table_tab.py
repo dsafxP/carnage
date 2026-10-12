@@ -3,7 +3,6 @@
 from collections.abc import Callable
 from typing import Any, ClassVar
 
-from rich.text import Text
 from textual.widget import Widget
 from textual.widgets import DataTable, LoadingIndicator
 
@@ -52,7 +51,7 @@ class TableTab(Widget):
         self.table.display = True
 
     def _capture_header_labels(self) -> None:
-        """Remember the plain header labels for sort markers (call after add_columns)."""
+        """Remember the header labels to map clicks to sort keys (call after add_columns)."""
         self._header_labels = [str(column.label) for column in self.table.ordered_columns]
 
     def _cycle_sort(self, base_label: str | None) -> bool:
@@ -71,17 +70,3 @@ class TableTab(Widget):
             self._sort_reverse = False
 
         return True
-
-    def _mark_sorted_column(self) -> None:
-        """Show the sort direction on its header (event loop only)."""
-        table = self.table
-
-        for index, base in enumerate(self._header_labels):
-            if index >= len(table.ordered_columns):
-                break
-
-            mark = ""
-            if base == self._sort_column:
-                mark = " ▼" if self._sort_reverse else " ▲"
-
-            table.ordered_columns[index].label = Text(f"{base}{mark}")

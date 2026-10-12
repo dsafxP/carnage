@@ -121,7 +121,6 @@ class OverlaysTab(TableTab):
             return
 
         self._populate_table()
-        self._mark_sorted_column()
 
     def _apply_sort(self) -> None:
         """Order the displayed overlays by the active sort spec."""
@@ -195,13 +194,12 @@ class OverlaysTab(TableTab):
         self._apply_sort()
 
         table: DataTable = self.query_one("#overlays-table", DataTable)
+        table.clear()
 
         # Clear current selection when filtering
         self.selected_overlay = None
         content_widget: Static = self.query_one("#overlays-content", Static)
         content_widget.update("Select an overlay to view details")
-
-        table.clear()
 
         for i, overlay in enumerate(self.filtered_overlays):
             # The flag is populated at fetch and kept up to date by the

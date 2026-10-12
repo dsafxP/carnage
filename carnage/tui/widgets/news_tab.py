@@ -75,7 +75,6 @@ class NewsTab(TableTab):
             return
 
         self._populate_table(self.news_items)
-        self._mark_sorted_column()
 
     def _apply_sort(self) -> None:
         """Order the displayed items by the active sort spec."""
@@ -110,7 +109,6 @@ class NewsTab(TableTab):
         self._apply_sort()
 
         table: DataTable = self.query_one("#news-table", DataTable)
-
         table.clear()
 
         for news in self.news_items:

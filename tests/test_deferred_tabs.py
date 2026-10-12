@@ -177,7 +177,6 @@ async def test_glsa_header_click_sorts_advisories(monkeypatch: pytest.MonkeyPatc
         tab.on_data_table_header_selected(_glsa_header_event(table, 0))
         await pilot.pause(0.1)
         assert [g.id for g in tab.glsa_items] == ["GLSA-2024-0001", "GLSA-2024-0002"]
-        assert str(table.ordered_columns[0].label) == "ID ▲"
 
         tab.on_data_table_header_selected(_glsa_header_event(table, 1))
         await pilot.pause(0.1)
@@ -186,4 +185,3 @@ async def test_glsa_header_click_sorts_advisories(monkeypatch: pytest.MonkeyPatc
         tab.on_data_table_header_selected(_glsa_header_event(table, 1))
         await pilot.pause(0.1)
         assert [g.id for g in tab.glsa_items] == ["GLSA-2024-0001", "GLSA-2024-0002"]
-        assert str(table.ordered_columns[1].label) == "Product ▼"

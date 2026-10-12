@@ -92,7 +92,6 @@ class BrowseTab(TableTab):
             return
 
         self._populate_table(self.packages, self._missing_packages)
-        self._mark_sorted_column()
 
     def _apply_sort(self) -> None:
         """Order the displayed packages by the active sort spec."""
@@ -182,7 +181,6 @@ class BrowseTab(TableTab):
             self._missing_packages = missing
 
         table: DataTable = self.query_one("#browse-table", DataTable)
-
         table.clear()
 
         for i, package in enumerate(packages):

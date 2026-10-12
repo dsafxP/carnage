@@ -256,12 +256,10 @@ async def test_overlay_header_click_sorts_with_sink(monkeypatch: pytest.MonkeyPa
         tab.on_data_table_header_selected(_header_event(table, 0))
         await pilot.pause(0.1)
         assert _names(tab) == ["alpha", "beta", "zero-a", "zero-b"]
-        assert str(table.ordered_columns[0].label) == "Name ▲"
 
         tab.on_data_table_header_selected(_header_event(table, 0))
         await pilot.pause(0.1)
         assert _names(tab) == ["beta", "alpha", "zero-b", "zero-a"]
-        assert str(table.ordered_columns[0].label) == "Name ▼"
 
 
 async def test_overlay_packages_column_sorts_counts(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -254,18 +254,14 @@ async def test_use_header_click_sorts_and_toggles() -> None:
         tab.on_data_table_header_selected(_header_event(table, 0))
         await pilot.pause(0.1)
         assert [flag.name for flag in tab.filtered_useflags] == ["alsa", "gui", "python"]
-        assert str(table.ordered_columns[0].label) == "USE Flag ▲"
 
         tab.on_data_table_header_selected(_header_event(table, 0))
         await pilot.pause(0.1)
         assert [flag.name for flag in tab.filtered_useflags] == ["python", "gui", "alsa"]
-        assert str(table.ordered_columns[0].label) == "USE Flag ▼"
 
         tab.on_data_table_header_selected(_header_event(table, 1))
         await pilot.pause(0.1)
         assert [flag.name for flag in tab.filtered_useflags] == ["gui", "alsa", "python"]
-        assert str(table.ordered_columns[0].label) == "USE Flag"
-        assert str(table.ordered_columns[1].label) == "Description ▲"
 
 
 async def test_use_sort_survives_repopulate() -> None:
@@ -337,13 +333,11 @@ async def test_browse_header_click_sorts_packages() -> None:
         await pilot.pause(0.1)
 
         assert [p.full_name for p in tab.packages] == ["app-editors/apple", "sys-apps/zebra"]
-        assert str(table.ordered_columns[0].label) == "Package ▲"
 
         tab.on_data_table_header_selected(_header_event(table, 2))
         await pilot.pause(0.1)
 
         assert [p.full_name for p in tab.packages] == ["sys-apps/zebra", "app-editors/apple"]
-        assert str(table.ordered_columns[2].label) == "Description ▲"
 
 
 def _news_item(index: int, date: str, title: str, read: bool):

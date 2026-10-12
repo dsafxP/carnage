@@ -90,28 +90,12 @@ async def test_cycle_sort_toggles_and_rejects_unknown() -> None:
         assert (tab._sort_column, tab._sort_reverse) == ("Name", True)
 
 
-async def test_mark_sorted_column_shows_direction() -> None:
+async def test_capture_header_labels_remembers_plain_labels() -> None:
     app = _Harness()
 
     async with app.run_test():
         tab = app.query_one(_Bare)
-        table = tab.table
-        table.add_columns("Name", "Description")
+        tab.table.add_columns("Name", "Description")
         tab._capture_header_labels()
 
-        tab._sort_column = "Name"
-        tab._sort_reverse = False
-        tab._mark_sorted_column()
-
-        assert str(table.ordered_columns[0].label) == "Name ▲"
-        assert str(table.ordered_columns[1].label) == "Description"
-
-        tab._sort_reverse = True
-        tab._mark_sorted_column()
-
-        assert str(table.ordered_columns[0].label) == "Name ▼"
-
-        tab._sort_column = None
-        tab._mark_sorted_column()
-
-        assert str(table.ordered_columns[0].label) == "Name"
+        assert tab._header_labels == ["Name", "Description"]

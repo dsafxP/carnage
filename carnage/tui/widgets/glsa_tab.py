@@ -77,7 +77,6 @@ class GLSATab(TableTab):
             return
 
         self._populate_table(self.glsa_items)
-        self._mark_sorted_column()
 
     def _apply_sort(self) -> None:
         """Order the displayed advisories by the active sort spec."""
@@ -141,7 +140,6 @@ class GLSATab(TableTab):
         self._apply_sort()
 
         table: DataTable = self.query_one("#glsa-table", DataTable)
-
         table.clear()
 
         for glsa in self.glsa_items:
