@@ -207,17 +207,16 @@ def test_version_label_skips_portage_for_missing_overlays(monkeypatch: pytest.Mo
 
 def test_version_label_asks_portage_for_present_overlays(monkeypatch: pytest.MonkeyPatch) -> None:
     """Versions from installed overlays still get their real answer."""
-    from unittest.mock import Mock
-
+    import carnage.tui.widgets.browse.package_detail as detail_module
     from carnage.tui.widgets.browse.package_detail import PackageDetailWidget
 
     package = _package()
     overlays = frozenset({"gentoo"})
 
-    monkeypatch.setattr(PackageVersion, "to_gentoolkit", lambda self, category, name: Mock(available=True))
+    monkeypatch.setattr(detail_module, "repo_available", lambda cpv, repo: True)
     assert PackageDetailWidget._version_label(_labeled_version("1.0"), package, installed_overlays=overlays) == "  1.0"
 
-    monkeypatch.setattr(PackageVersion, "to_gentoolkit", lambda self, category, name: Mock(available=False))
+    monkeypatch.setattr(detail_module, "repo_available", lambda cpv, repo: False)
     assert (
         PackageDetailWidget._version_label(_labeled_version("1.0"), package, installed_overlays=overlays)
         == "[red]✗[/red] 1.0"
@@ -243,12 +242,12 @@ def test_version_label_prefers_installed_over_everything(monkeypatch: pytest.Mon
 
 
 def test_version_label_treats_missing_repository_as_gentoo(monkeypatch: pytest.MonkeyPatch) -> None:
-    from unittest.mock import Mock
-
+    import carnage.tui.widgets.browse.package_detail as detail_module
     from carnage.tui.widgets.browse.package_detail import PackageDetailWidget
 
     package = _package()
-    monkeypatch.setattr(PackageVersion, "to_gentoolkit", lambda self, category, name: Mock(available=True))
+    calls: list[tuple[str, str | None]] = []
+    monkeypatch.setattr(detail_module, "repo_available", lambda cpv, repo: calls.append((cpv, repo)) or True)
 
     label = PackageDetailWidget._version_label(
         _labeled_version("1.0", repository=None),
@@ -257,3 +256,4 @@ def test_version_label_treats_missing_repository_as_gentoo(monkeypatch: pytest.M
     )
 
     assert label == "  1.0"
+    assert calls == [("app-editors/vim-1.0", None)]

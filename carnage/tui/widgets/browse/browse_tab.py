@@ -25,12 +25,14 @@ def _exists_in_repo(package: Package) -> bool:
     Runs a portage query, so it belongs in a worker rather than in the row
     loop of a widget update.
     """
+    from carnage.core.gentoolkit.package import repo_available
+
     version = default_version(package)
 
     if version is None:
         return False
 
-    return version.to_gentoolkit(package.category, package.name).exists_f
+    return repo_available(f"{package.category}/{package.name}-{version.id}", version.repository)
 
 
 def _package_overlay(package: Package) -> str:
@@ -263,8 +265,11 @@ class BrowseTab(TableTab):
 
         # Update the package's installed status
         installed_version = package.installed_version()
+        installed_identity = (installed_version.id, installed_version.repository or None) if installed_version else None
         for v in package.versions:
-            v.installed = v.id == installed_version.id if installed_version and installed else False
+            v.installed = (
+                (v.id, v.repository or None) == installed_identity if installed_identity and installed else False
+            )
 
         name_cell = (
             f"[green]✓[/green] {package.category}/[bold]{package.name}[/bold]"

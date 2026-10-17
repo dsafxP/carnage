@@ -15,6 +15,17 @@ if TYPE_CHECKING:
     from carnage.core.portage.glsas import GLSA
 
 
+def version_display(version: PackageVersion) -> str:
+    """
+    Version as shown next to the package name, overlay-qualified.
+
+    Bare for gentoo/unknown (the common case); explicit otherwise so two
+    rows with the same id from different overlays are distinguishable.
+    """
+    repo = version.repository
+    return f"{version.id}::{repo}" if repo and repo != "gentoo" else version.id
+
+
 def format_package_details(package: Package, selected_version: PackageVersion | None) -> str:
     """
     Format the top-level package details block of the browse detail pane.
@@ -26,7 +37,7 @@ def format_package_details(package: Package, selected_version: PackageVersion | 
     Returns:
         Markup string ready for a Textual Static
     """
-    version_label: str = f" {selected_version.id}" if selected_version else ""
+    version_label: str = f" {version_display(selected_version)}" if selected_version else ""
     details: str = f"[r]{package.category}/[b]{package.name}[/][/]{version_label}\n\n"
 
     if package.description:

@@ -79,10 +79,10 @@ async def test_stale_version_results_are_dropped() -> None:
         # A worker that finished after the selection moved on must not paint.
         widget.selected_version = widget.package.versions[0]
         before = dict(widget._use_flag_originals)
-        widget._show_use_flags("9.1.0", ["gui"], {"gui"})
+        widget._show_use_flags("9.1.0", "gentoo", ["gui"], {"gui"})
         assert widget._use_flag_originals == before
 
-        widget._show_use_flags("9.0.0", ["gui"], {"gui"})
+        widget._show_use_flags("9.0.0", "gentoo", ["gui"], {"gui"})
         assert widget._use_flag_originals == {"gui": True}
 
         use_list = widget.query_one("#pkg-use-list", SelectionList)

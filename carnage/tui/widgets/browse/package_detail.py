@@ -18,9 +18,10 @@ from textual.widgets._tree import TreeNode
 
 from carnage.core import Configuration, get_config
 from carnage.core.eix.search import Package, PackageVersion
-from carnage.core.formatting import format_package_details
+from carnage.core.formatting import format_package_details, version_display
 from carnage.core.gentoolkit import portage_lock
 from carnage.core.gentoolkit.euse import euse_disable, euse_enable
+from carnage.core.gentoolkit.package import find_ebuild, installed_use, repo_available, repo_iuse
 from carnage.core.portage.emerge import (
     emerge_deselect,
     emerge_install,
@@ -33,8 +34,6 @@ from carnage.tui.widgets.table import NavigableDataTable, row_key_value
 
 if TYPE_CHECKING:
     from rich.console import RenderableType
-
-    from carnage.core.gentoolkit.package import GentoolkitPackage
 
 
 def default_version(package: Package) -> PackageVersion | None:
@@ -61,6 +60,32 @@ def default_version(package: Package) -> PackageVersion | None:
         return non_live[-1]
 
     return package.versions[0] if package.versions else None
+
+
+def version_key(version: PackageVersion, index: int) -> str:
+    """Unique row key for a version: same id from two overlays stays distinct."""
+    return f"{version.id}::{version.repository or ''}::{index}"
+
+
+def version_identity(version: PackageVersion) -> tuple[str, str | None]:
+    """(id, repository) pair identifying a version across workers and rows."""
+    return (version.id, version.repository or None)
+
+
+def find_version(package: Package, key: str) -> PackageVersion | None:
+    """Resolve a row key back to its version object, or None when stale."""
+    try:
+        version_id, repo, _index = key.rsplit("::", 2)
+    except ValueError:
+        return None
+
+    want = repo or None
+
+    for v in package.versions:
+        if v.id == version_id and (v.repository or None) == want:
+            return v
+
+    return None
 
 
 def _dep_label(pkg) -> str:
@@ -271,25 +296,33 @@ class PackageDetailWidget(Widget):
             self.query_one("#pkg-ebuild-content", Static).update(Text.from_markup("[red]No version selected.[/]"))
             return
 
-        self._fetch_ebuild(self.selected_version.id)
+        self._fetch_ebuild(self.selected_version.id, self.selected_version.repository)
 
     @work(thread=True, group="pkg-ebuild")
-    def _fetch_ebuild(self, version_id: str) -> None:
+    def _fetch_ebuild(self, version_id: str, version_repo: str | None) -> None:
         """Read and highlight the ebuild off the event loop."""
         from rich.console import Group
         from rich.syntax import Syntax
         from rich.text import Text
 
         try:
-            version = next((v for v in self.package.versions if v.id == version_id), None)
+            version = next(
+                (
+                    v
+                    for v in self.package.versions
+                    if v.id == version_id and (v.repository or None) == (version_repo or None)
+                ),
+                None,
+            )
 
             if version is None:
                 return
 
             # Portage is not thread-safe: serialize against the other workers.
             with portage_lock:
-                gt_pkg: GentoolkitPackage = version.to_gentoolkit(self.package.category, self.package.name)
-                path_str: str | None = gt_pkg.ebuild_path()
+                path_str: str | None = find_ebuild(
+                    f"{self.package.category}/{self.package.name}-{version.id}", version.repository
+                )
 
             if not path_str:
                 renderable = Text.from_markup(
@@ -313,13 +346,17 @@ class PackageDetailWidget(Widget):
                             Syntax(content, "bash", theme=config.syntax_style, line_numbers=True, word_wrap=False),
                         )
 
-            self._post_to_loop(self._show_ebuild, version_id, renderable)
+            self._post_to_loop(self._show_ebuild, version_id, version_repo, renderable)
         except Exception as e:
             self._post_to_loop(self.notify, f"Failed to load ebuild: {e}", severity="error")
 
-    def _show_ebuild(self, version_id: str, renderable: "RenderableType") -> None:
+    def _show_ebuild(self, version_id: str, version_repo: str | None, renderable: "RenderableType") -> None:
         """Display a fetched ebuild unless the selection moved on (event loop only)."""
-        if self.selected_version is None or self.selected_version.id != version_id:
+        if (
+            self.selected_version is None
+            or self.selected_version.id != version_id
+            or (self.selected_version.repository or None) != (version_repo or None)
+        ):
             return
 
         try:
@@ -346,7 +383,7 @@ class PackageDetailWidget(Widget):
             use_list.disabled = True
             return
 
-        version_label.update(f"[dim]{self.package.full_name}-{self.selected_version.id}[/dim]")
+        version_label.update(f"[dim]{self.package.full_name}-{version_display(self.selected_version)}[/dim]")
 
         flags: set[str] = set(self.selected_version.iuse)
         if not flags:
@@ -359,13 +396,17 @@ class PackageDetailWidget(Widget):
         if self.selected_version.virtual:
             apply_btn.display = False
             use_list.disabled = True
-            self._show_use_flags(self.selected_version.id, sorted(flags), set())
+            self._show_use_flags(self.selected_version.id, self.selected_version.repository, sorted(flags), set())
             return
 
-        self._fetch_use_flags(self.selected_version.id, sorted(flags))
+        self._fetch_use_flags(
+            self.selected_version.id, self.selected_version.repository, self.selected_version.installed, sorted(flags)
+        )
 
     @work(thread=True, group="pkg-use-flags")
-    def _fetch_use_flags(self, version_id: str, flags: list[str]) -> None:
+    def _fetch_use_flags(
+        self, version_id: str, version_repo: str | None, is_installed: bool, eix_flags: list[str]
+    ) -> None:
         """Ask portage which flags are enabled, off the event loop."""
         from carnage.core.gentoolkit.flag import get_all_cpv_usef
 
@@ -374,15 +415,33 @@ class PackageDetailWidget(Widget):
 
             # Portage is not thread-safe: serialize against the other workers.
             with portage_lock:
-                portage_enabled = set(get_all_cpv_usef(cpv_str)[0])
+                # The flag list comes from this overlay's ebuild when portage
+                # can see it (live truth beats possibly-stale eix); remote-only
+                # versions keep their eix flags.
+                flags: list[str] = eix_flags
+                pinned = repo_iuse(cpv_str, version_repo)
+                if pinned:
+                    flags = sorted(set(pinned))
 
-            self._post_to_loop(self._show_use_flags, version_id, flags, portage_enabled)
+                enabled: set[str] | None = None
+                if is_installed:
+                    enabled = installed_use(cpv_str)
+                if enabled is None:
+                    enabled = set(get_all_cpv_usef(cpv_str)[0])
+
+            self._post_to_loop(self._show_use_flags, version_id, version_repo, flags, enabled)
         except Exception as e:
             self._post_to_loop(self.notify, f"Failed to load USE flags: {e}", severity="error")
 
-    def _show_use_flags(self, version_id: str, flags: list[str], portage_enabled: set[str]) -> None:
+    def _show_use_flags(
+        self, version_id: str, version_repo: str | None, flags: list[str], portage_enabled: set[str]
+    ) -> None:
         """Fill the checklist unless the selection moved on (event loop only)."""
-        if self.selected_version is None or self.selected_version.id != version_id:
+        if (
+            self.selected_version is None
+            or self.selected_version.id != version_id
+            or (self.selected_version.repository or None) != (version_repo or None)
+        ):
             return
 
         try:
@@ -437,6 +496,8 @@ class PackageDetailWidget(Widget):
         from gentoolkit.dependencies import Dependencies
 
         cpv_str: str = f"{self.package.category}/{self.package.name}-{self.selected_version.id}"
+        if self.selected_version.repository:
+            cpv_str += f"::{self.selected_version.repository}"
         dep = Dependencies(cpv_str)
 
         config: Configuration = get_config()
@@ -459,7 +520,9 @@ class PackageDetailWidget(Widget):
         tree.clear()
 
         if self.selected_version:
-            tree.root.label = f"{self.package.category}/[bold]{self.package.name}[/bold]-{self.selected_version.id}"
+            tree.root.label = (
+                f"{self.package.category}/[bold]{self.package.name}[/bold]-{version_display(self.selected_version)}"
+            )
 
         tree.root.expand()
 
@@ -540,7 +603,7 @@ class PackageDetailWidget(Widget):
                         continue
                     rows.append(
                         (
-                            f"{version.id}-{i}",
+                            version_key(version, i),
                             self._version_label(version, self.package, installed_overlays=installed_overlays),
                             version.repository or "gentoo",
                         )
@@ -577,10 +640,12 @@ class PackageDetailWidget(Widget):
         except NoMatches:
             return
 
-        selected_id = self.selected_version.id if self.selected_version else None
+        selected = self.selected_version
+        selected_identity = version_identity(selected) if selected is not None else None
 
         for row, (key, label, _overlay) in enumerate(self._version_rows):
-            marked = key.rsplit("-", 1)[0] == selected_id
+            version = find_version(self.package, key)
+            marked = version is not None and version_identity(version) == selected_identity
             cell = PackageDetailWidget._mark_selected(label) if marked else label
             table.update_cell_at(Coordinate(row, 0), cell)
 
@@ -590,15 +655,16 @@ class PackageDetailWidget(Widget):
 
         Versions from overlays with no local tree are unavailable by
         definition - portage cannot see them - so they skip the query
-        entirely. Everything else still asks portage.
+        entirely. Everything else asks portage about that overlay's ebuild
+        specifically, not the best-visible one.
         """
         if version.installed:
             return f"[green]✓[/green] {version.id}"
-        repository = version.repository or "gentoo"
-        if repository not in installed_overlays:
+        repository = version.repository
+        if repository is not None and repository not in installed_overlays:
             return f"[red]✗[/red] {version.id}"
-        gt_pkg: GentoolkitPackage = version.to_gentoolkit(pkg.category, pkg.name)
-        if not gt_pkg.available:
+        cpv: str = f"{pkg.category}/{pkg.name}-{version.id}"
+        if not repo_available(cpv, repository):
             return f"[red]✗[/red] {version.id}"
         return f"  {version.id}"
 
@@ -626,14 +692,13 @@ class PackageDetailWidget(Widget):
         if key_value is None or event.data_table.id != "pkg-versions-table":
             return
 
-        version_id = key_value.rsplit("-", 1)[0]
-        version = next((v for v in self.package.versions if v.id == version_id), None)
+        version = find_version(self.package, key_value)
         if version is None:
             return
 
         # Re-selecting the displayed version changes nothing: without this,
         # every click restarted three workers and fired another notification.
-        if self.selected_version is not None and self.selected_version.id == version.id:
+        if self.selected_version is not None and version_identity(self.selected_version) == version_identity(version):
             return
 
         self.selected_version = version
@@ -643,12 +708,12 @@ class PackageDetailWidget(Widget):
         self._load_ebuild()
         self._update_buttons()
 
-        gt_pkg: GentoolkitPackage = version.to_gentoolkit(self.package.category, self.package.name)
-        if gt_pkg.available:
-            self.notify(f"{self.package.full_name}-{version_id} selected")
+        cpv: str = f"{self.package.category}/{self.package.name}-{version.id}"
+        if repo_available(cpv, version.repository):
+            self.notify(f"{self.package.full_name}-{version_display(version)} selected")
         else:
             self.notify(
-                f"{self.package.full_name}-{version_id} is unavailable",
+                f"{self.package.full_name}-{version_display(version)} is unavailable",
                 severity="warning",
             )
 
@@ -687,10 +752,8 @@ class PackageDetailWidget(Widget):
         else:
             # Emerge availability is version-specific
             if self.selected_version is not None:
-                gt_pkg: GentoolkitPackage = self.selected_version.to_gentoolkit(
-                    self.package.category, self.package.name
-                )
-                emerge_btn.display = gt_pkg.available
+                cpv: str = f"{self.package.category}/{self.package.name}-{self.selected_version.id}"
+                emerge_btn.display = repo_available(cpv, self.selected_version.repository)
             else:
                 emerge_btn.display = False
 
@@ -705,15 +768,16 @@ class PackageDetailWidget(Widget):
         deselect_btn.disabled = not deselect_btn.display or is_blocked
         noreplace_btn.disabled = not noreplace_btn.display or is_blocked
 
-    def _mark_installed(self, version_id: str, saved_package_name: str) -> None:
+    def _mark_installed(self, version_id: str, version_repo: str | None, saved_package_name: str) -> None:
         """Update the Package instance to reflect a successful emerge."""
         # Notify the browse tab to update the checkmark
         browse_tab = self.app.screen.query_one("BrowseTab")
 
         browse_tab.update_package_installation_status(saved_package_name, True)  # type: ignore
 
+        identity = (version_id, version_repo or None)
         for v in self.package.versions:
-            v.installed = v.id == version_id
+            v.installed = version_identity(v) == identity
         self._load_world_file_status()
         self._load_installed_files()
         self._load_versions_table()
@@ -810,9 +874,12 @@ class PackageDetailWidget(Widget):
         emerge_btn.label = "Emerging..."
 
         atom: str = f"={self.package.full_name}-{self.selected_version.id}"
+        if self.selected_version.repository:
+            atom += f"::{self.selected_version.repository}"
 
         saved_package_name = self.package.full_name
         installed: bool = self.package.is_installed()
+        selected_identity = version_identity(self.selected_version)
 
         self.notify(f"Installing {atom}... (don't close until finished!)", severity="warning", timeout=15)
 
@@ -821,10 +888,10 @@ class PackageDetailWidget(Widget):
                 self.notify(f"Successfully installed {atom}")
                 try:
                     if not installed:
-                        self._mark_installed(self.selected_version.id, saved_package_name)
+                        self._mark_installed(selected_identity[0], selected_identity[1], saved_package_name)
                     else:
                         for v in self.package.versions:
-                            v.installed = v.id == self.selected_version.id
+                            v.installed = version_identity(v) == selected_identity
 
                         self._load_versions_table()
                 except NoMatches:
