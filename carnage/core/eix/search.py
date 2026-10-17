@@ -6,7 +6,7 @@ import subprocess
 from dataclasses import dataclass, field
 from functools import lru_cache
 from subprocess import CompletedProcess
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from lxml import etree
 
@@ -276,7 +276,9 @@ def _parse_version(version_elem: etree._Element) -> PackageVersion:
     return PackageVersion(
         id=version_elem.get("id", ""),
         eapi=version_elem.get("EAPI"),
-        repository=version_elem.get("repository") or "gentoo",
+        # None means eix did not report one (local queries omit overlay
+        # info): unknown, not gentoo. Display layers fall back to "gentoo".
+        repository=version_elem.get("repository"),
         virtual=version_elem.get("virtual") == "1",
         installed=version_elem.get("installed") == "1",
         install_date=int(d) if (d := version_elem.get("installDate")) is not None else None,
@@ -343,6 +345,72 @@ def _parse_package(package_elem: etree._Element, category: str) -> Package | Non
     )
 
 
+def _vardb() -> Any:
+    """Live installed-packages database (tiny seam so tests can fake it)."""
+    import portage
+
+    return portage.db[portage.root]["vartree"].dbapi  # type: ignore
+
+
+def _correct_installed_repos(packages: list[Package]) -> None:
+    """
+    Ground eix installed flags in the live vardb.
+
+    Remote eix data can attribute an installed version to the wrong overlay
+    (stale cache) or mark it virtual. Vardb knows which repo each installed
+    version really came from, so trust it: fix the repo, clear the virtual
+    flag, and drop installed flags vardb no longer knows. Never fails a
+    search: any portage error leaves the eix data untouched.
+    """
+    flagged: list[Package] = [p for p in packages if any(v.installed for v in p.versions)]
+
+    if not flagged:
+        return
+
+    try:
+        from portage.versions import cpv_getversion
+
+        from carnage.core.gentoolkit import portage_lock
+
+        with portage_lock:
+            vardb = _vardb()
+
+            for pkg in flagged:
+                try:
+                    installed_cpvs: list[str] = vardb.cp_list(pkg.full_name)
+                except Exception:
+                    continue
+
+                if not installed_cpvs:
+                    for v in pkg.versions:
+                        v.installed = False
+                    continue
+
+                repo_by_version: dict[str, str] = {}
+
+                for cpv in installed_cpvs:
+                    try:
+                        version = cpv_getversion(cpv)
+                        if version is None:
+                            continue
+                        repo_by_version[version] = vardb.aux_get(cpv, ["repository"])[0]
+                    except Exception:
+                        continue
+
+                for v in pkg.versions:
+                    if not v.installed:
+                        continue
+
+                    if v.id not in repo_by_version:
+                        v.installed = False
+                    else:
+                        if repo_by_version[v.id]:
+                            v.repository = repo_by_version[v.id]
+                        v.virtual = False
+    except Exception:
+        pass
+
+
 def fetch_packages_by_query(query: list[str], append_cfg: bool = True) -> list[Package]:
     """
     Fetch packages from eix using search query arguments.
@@ -400,6 +468,8 @@ def fetch_packages_by_query(query: list[str], append_cfg: bool = True) -> list[P
             pkg: Package | None = _parse_package(package_elem, category_name)
             if pkg is not None:
                 packages.append(pkg)
+
+    _correct_installed_repos(packages)
 
     return packages
 

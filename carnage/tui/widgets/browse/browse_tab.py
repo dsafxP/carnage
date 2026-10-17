@@ -38,11 +38,10 @@ def _package_overlay(package: Package) -> str:
     overlay: str = "?"
 
     if package.versions:
-        repo = package.versions[0].repository
-        if repo:
-            overlay = repo
-            if repo != "gentoo" and any(v.repository == "gentoo" for v in package.versions[1:]):
-                overlay = f"{repo} / gentoo"
+        repo = package.versions[0].repository or "gentoo"
+        overlay = repo
+        if repo != "gentoo" and any(v.repository == "gentoo" for v in package.versions[1:]):
+            overlay = f"{repo} / gentoo"
 
     return overlay
 
