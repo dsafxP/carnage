@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from typing import Any, ClassVar
 
+from textual._context import NoActiveAppError
 from textual.widget import Widget
 from textual.widgets import DataTable, LoadingIndicator
 
@@ -19,6 +20,7 @@ class TableTab(Widget):
 
     TABLE_ID: ClassVar[str]
     LOADING_ID: ClassVar[str]
+    DETAIL_ID: ClassVar[str]
 
     # Maps a plain header label to a sort key function for its column.
     # Subclasses override this; empty means "not sortable".
@@ -39,6 +41,43 @@ class TableTab(Widget):
     def loading_widget(self) -> LoadingIndicator:
         """The tab's loading indicator (event loop only)."""
         return self.query_one(f"#{self.LOADING_ID}", LoadingIndicator)
+
+    @property
+    def details(self) -> Widget:
+        """The tab's detail pane (event loop only)."""
+        return self.query_one(f"#{self.DETAIL_ID}", Widget)
+
+    def show_details(self) -> None:
+        """Reveal the detail pane (event loop only)."""
+        self.details.display = True
+
+    def hide_details(self) -> None:
+        """Hide the detail pane, returning focus to the table (event loop only)."""
+        if self._focus_within(self.details):
+            self.table.focus()
+        self.details.display = False
+
+    def toggle_details(self) -> None:
+        """Flip the detail pane visibility (event loop only)."""
+        if self.details.display:
+            self.hide_details()
+        else:
+            self.show_details()
+
+    def _focus_within(self, widget: Widget) -> bool:
+        """Whether keyboard focus is currently inside the widget."""
+        try:
+            focused = self.app.focused
+        except NoActiveAppError:
+            return False
+
+        node: Widget | None = focused
+        while node is not None:
+            if node is widget:
+                return True
+            parent = node.parent
+            node = parent if isinstance(parent, Widget) else None
+        return False
 
     def _show_loading(self) -> None:
         """Show the loading indicator and hide the table (event loop only)."""

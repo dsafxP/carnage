@@ -21,6 +21,7 @@ class NewsTab(TableTab):
 
     TABLE_ID = "news-table"
     LOADING_ID = "news-loading"
+    DETAIL_ID = "news-detail"
 
     _SORT_KEYS: ClassVar[dict[str, Callable[[News], Any]]] = {
         "Status": lambda news: news.read,
@@ -47,7 +48,7 @@ class NewsTab(TableTab):
 
             with Vertical(id="news-detail"):
                 with VerticalScroll(id="news-content-scroll"):
-                    yield Static("Select a news item to view details", id="news-header")
+                    yield Static("", id="news-header")
                     yield Rule(line_style="heavy")
                     yield Static(id="news-content")
 
@@ -64,6 +65,7 @@ class NewsTab(TableTab):
 
         table.add_columns("Status", "Date", "Title")
         self._capture_header_labels()
+        self.hide_details()
 
     def on_data_table_header_selected(self, event: DataTable.HeaderSelected) -> None:
         """Sort by the clicked column; repeat clicks toggle direction."""
@@ -142,6 +144,8 @@ class NewsTab(TableTab):
 
         if self.selected_news is None:
             return
+
+        self.show_details()
 
         # Display news details
         header_widget: Static = self.query_one("#news-header", Static)

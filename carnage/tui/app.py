@@ -165,6 +165,13 @@ class CarnageApp(App[None]):
             lambda: cast(MainScreen, self.screen)._action_toggle_operation_log(),
         )
 
+        # Toggle details pane
+        yield SystemCommand(
+            "Toggle details pane",
+            "Display or hide the active tab's detail pane",
+            lambda: cast(MainScreen, self.screen)._action_toggle_details(),
+        )
+
         # Cancel all operations
         if self.blocked:
             yield SystemCommand(

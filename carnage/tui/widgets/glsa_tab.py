@@ -24,6 +24,7 @@ class GLSATab(TableTab):
 
     TABLE_ID = "glsa-table"
     LOADING_ID = "glsa-loading"
+    DETAIL_ID = "glsa-detail"
 
     _SORT_KEYS: ClassVar[dict[str, Callable[[GLSA], Any]]] = {
         "ID": lambda glsa: glsa.id,
@@ -45,7 +46,7 @@ class GLSATab(TableTab):
 
             with Vertical(id="glsa-detail"):
                 with VerticalScroll(id="glsa-content-scroll"):
-                    yield Static("Select a GLSA to view details", id="glsa-header")
+                    yield Static("", id="glsa-header")
                     yield Rule(line_style="heavy")
                     yield Static(id="glsa-content")
 
@@ -66,6 +67,7 @@ class GLSATab(TableTab):
         # Nothing is selected yet: park the button instead of showing the
         # compose-time default over an empty table.
         self.update_button_states()
+        self.hide_details()
 
     def on_data_table_header_selected(self, event: DataTable.HeaderSelected) -> None:
         """Sort by the clicked column; repeat clicks toggle direction."""
@@ -162,6 +164,8 @@ class GLSATab(TableTab):
 
         if self.selected_glsa is None:
             return
+
+        self.show_details()
 
         # Display GLSA details
         self.query_one("#glsa-header", Static).update(format_glsa_header(self.selected_glsa))

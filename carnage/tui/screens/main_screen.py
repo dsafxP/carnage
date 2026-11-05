@@ -7,6 +7,7 @@ from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal
+from textual.css.query import NoMatches
 from textual.screen import Screen
 from textual.widgets import Header, Input, TabbedContent, TabPane
 
@@ -18,6 +19,7 @@ from carnage.tui.widgets.glsa_tab import GLSATab
 from carnage.tui.widgets.news_tab import NewsTab
 from carnage.tui.widgets.operation_log import OperationLog
 from carnage.tui.widgets.overlay_tab import OverlaysTab
+from carnage.tui.widgets.table_tab import TableTab
 from carnage.tui.widgets.use_tab import UseFlagsTab
 
 
@@ -25,7 +27,8 @@ class MainScreen(Screen):
     """Main screen with search bar and tabbed content."""
 
     BINDINGS: ClassVar[list[BindingType]] = [
-        Binding("ctrl+l", "toggle_operation_log", "Toggle log view pane", show=True)
+        Binding("ctrl+l", "toggle_operation_log", "Toggle log view pane", show=True),
+        Binding("ctrl+t", "toggle_details", "Toggle details pane", show=True),
     ]
 
     def __init__(self) -> None:
@@ -245,3 +248,15 @@ class MainScreen(Screen):
         """Toggle the operation log pane visibility."""
         log_pane = self.query_one("#operation-log", OperationLog)
         log_pane.display = not log_pane.display
+
+    def _action_toggle_details(self) -> None:
+        """Toggle the active tab's detail pane visibility."""
+        tabbed_content: TabbedContent = self.query_one(TabbedContent)
+
+        try:
+            pane = tabbed_content.query_one(f"#{tabbed_content.active}", TabPane)
+            tab = pane.query_one(TableTab)
+        except NoMatches:
+            return
+
+        tab.toggle_details()

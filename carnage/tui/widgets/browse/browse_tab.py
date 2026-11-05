@@ -53,6 +53,7 @@ class BrowseTab(TableTab):
 
     TABLE_ID = "browse-table"
     LOADING_ID = "browse-loading"
+    DETAIL_ID = "browse-detail"
 
     _SORT_KEYS: ClassVar[dict[str, Callable[[Package], Any]]] = {
         "Package": lambda package: package.full_name.lower(),
@@ -82,6 +83,7 @@ class BrowseTab(TableTab):
         table.clear()
         table.add_columns("Package", "Overlay", "Description")
         self._capture_header_labels()
+        self.hide_details()
 
     def on_data_table_header_selected(self, event: DataTable.HeaderSelected) -> None:
         """Sort by the clicked column; repeat clicks toggle direction."""
@@ -224,9 +226,11 @@ class BrowseTab(TableTab):
     def _remove_detail_widget(self) -> None:
         for widget in self.query(PackageDetailWidget):
             widget.remove()
+        self.hide_details()
 
     def _mount_detail_widget(self, package: Package) -> None:
         self._remove_detail_widget()
+        self.show_details()
         self.query_one("#browse-detail").mount(PackageDetailWidget(package))
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
@@ -239,6 +243,8 @@ class BrowseTab(TableTab):
             return
 
         package = self.packages[row_index]
+
+        self.show_details()
 
         # Don't remount if the same package is already displayed
         existing = self.query(PackageDetailWidget)

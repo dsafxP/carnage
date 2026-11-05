@@ -22,6 +22,7 @@ class UseFlagsTab(TableTab):
 
     TABLE_ID = "useflags-table"
     LOADING_ID = "useflags-loading"
+    DETAIL_ID = "useflags-content-scroll"
 
     _SORT_KEYS: ClassVar[dict[str, Callable[[UseFlag], Any]]] = {
         "USE Flag": lambda useflag: useflag.name.lower(),
@@ -46,13 +47,14 @@ class UseFlagsTab(TableTab):
             yield NavigableDataTable(id="useflags-table", cursor_type="row")
 
             with VerticalScroll(id="useflags-content-scroll"):
-                yield Static("Select a USE flag to view details", id="useflags-content")
+                yield Static("", id="useflags-content")
                 yield LoadingIndicator(id="useflags-detail-loading")
 
     def on_mount(self) -> None:
         """Initialize the USE flags tab."""
         self._hide_loading()
         self._hide_detail_loading()
+        self.hide_details()
 
         table: DataTable = self.query_one("#useflags-table", DataTable)
 
@@ -161,9 +163,7 @@ class UseFlagsTab(TableTab):
         table.clear()
         self.filtered_useflags = []
         self.selected_useflag = None
-
-        content_widget: Static = self.query_one("#useflags-content", Static)
-        content_widget.update("Select a USE flag to view details")
+        self.hide_details()
         self._hide_detail_loading()
 
     def _populate_table(self, useflags: list[UseFlag]) -> None:
@@ -226,6 +226,10 @@ class UseFlagsTab(TableTab):
         if selected is None:
             self.selected_useflag = None
             return
+
+        # Selecting a row reveals the details, even a repeat click on the
+        # row already shown after the pane was manually hidden.
+        self.show_details()
 
         # Re-selecting the displayed flag changes nothing: without this,
         # every click re-ran the details worker and its eix subprocess.

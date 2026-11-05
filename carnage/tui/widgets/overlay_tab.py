@@ -52,6 +52,7 @@ class OverlaysTab(TableTab):
 
     TABLE_ID = "overlays-table"
     LOADING_ID = "overlays-loading"
+    DETAIL_ID = "overlays-detail"
 
     _SORT_KEYS: ClassVar[dict[str, Callable[[Overlay], Any]]] = {
         "Name": lambda overlay: overlay.name.lower(),
@@ -85,7 +86,7 @@ class OverlaysTab(TableTab):
 
             with Vertical(id="overlays-detail"):
                 with VerticalScroll(id="overlays-content-scroll"):
-                    yield Static("Select an overlay to view details", id="overlays-content")
+                    yield Static("", id="overlays-content")
 
                 with Vertical(id="overlays-actions"):
                     yield Button("Enable & Sync", id="enable-sync-btn", variant="success")
@@ -110,6 +111,7 @@ class OverlaysTab(TableTab):
         # Nothing is selected yet: park the buttons instead of showing the
         # compose-time defaults over an empty table.
         self.update_button_states()
+        self.hide_details()
 
     def on_data_table_header_selected(self, event: DataTable.HeaderSelected) -> None:
         """Sort by the clicked column; repeat clicks toggle direction."""
@@ -198,8 +200,7 @@ class OverlaysTab(TableTab):
 
         # Clear current selection when filtering
         self.selected_overlay = None
-        content_widget: Static = self.query_one("#overlays-content", Static)
-        content_widget.update("Select an overlay to view details")
+        self.hide_details()
 
         for i, overlay in enumerate(self.filtered_overlays):
             # The flag is populated at fetch and kept up to date by the
@@ -337,6 +338,8 @@ class OverlaysTab(TableTab):
 
         if self.selected_overlay is None:
             return
+
+        self.show_details()
 
         # Display overlay details
         content_widget: Static = self.query_one("#overlays-content", Static)
