@@ -203,7 +203,7 @@ LoadingIndicator,
 /*  News tab  */
 
 #news-table {
-    height: 30%;
+    height: 1fr;
     min-height: 5;
     margin-bottom: 1;
 }
@@ -238,7 +238,7 @@ LoadingIndicator,
 /*  GLSAs tab  */
 
 #glsa-table {
-    height: 30%;
+    height: 1fr;
     min-height: 5;
     margin-bottom: 1;
 }
@@ -273,9 +273,8 @@ LoadingIndicator,
 /*  Overlays tab  */
 
 #overlays-table {
-    height: 40%;
+    height: 1fr;
     min-height: 8;
-    max-height: 25;
     margin-bottom: 1;
 }
 
@@ -308,9 +307,8 @@ LoadingIndicator,
 /*  USE Flags tab  */
 
 #useflags-table {
-    height: 40%;
+    height: 1fr;
     min-height: 8;
-    max-height: 26;
     margin-bottom: 1;
 }
 
@@ -332,9 +330,8 @@ LoadingIndicator,
 /*  Browse tab  */
 
 #browse-table {
-    height: 40%;
+    height: 1fr;
     min-height: 8;
-    max-height: 25;
     margin-bottom: 1;
 }
 
@@ -454,7 +451,7 @@ PackageDetailWidget {
 
     /* News tab */
     #news-table {
-        height: 35%;
+        height: 1fr;
         min-height: 4;
         margin-bottom: 0;
     }
@@ -480,7 +477,7 @@ PackageDetailWidget {
 
     /* GLSAs tab */
     #glsa-table {
-        height: 35%;
+        height: 1fr;
         min-height: 4;
         margin-bottom: 0;
     }
@@ -506,9 +503,8 @@ PackageDetailWidget {
 
     /* Overlays tab */
     #overlays-table {
-        height: 45%;
+        height: 1fr;
         min-height: 5;
-        max-height: 30;
         margin-bottom: 0;
     }
 
@@ -532,9 +528,8 @@ PackageDetailWidget {
 
     /* USE Flags tab */
     #useflags-table {
-        height: 40%;
+        height: 1fr;
         min-height: 4;
-        max-height: 25;
         margin-bottom: 0;
     }
 
@@ -553,9 +548,8 @@ PackageDetailWidget {
 
     /* Browse tab */
     #browse-table {
-        height: 45%;
+        height: 1fr;
         min-height: 5;
-        max-height: 30;
         margin-bottom: 0;
     }
 
