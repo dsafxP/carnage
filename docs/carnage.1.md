@@ -106,6 +106,7 @@ Bindings are available for each button in a tab.
 | Key    | Description           |
 |--------|-----------------------|
 | ctrl+l | Toggle log view pane. |
+| ctrl+t | Toggle details pane.  |
 
 ## Log pane
 
